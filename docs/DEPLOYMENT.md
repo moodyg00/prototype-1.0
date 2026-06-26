@@ -185,24 +185,25 @@ Build wizard is **dropdown-only** (reads root `package.json` scripts). Webroot s
 
 | Setting | Value |
 |---------|-------|
-| Build command | `hostinger:admin` |
-| Start command | `hostinger:admin:start` |
+| Framework | **Other** |
+| Entry file | `scripts/hostinger-serve-admin.mjs` |
+| Build command | `build` (requires `HOSTINGER_APP=admin`) or `hostinger:admin` |
 | Output directory | `apps/admin/.next` |
-| Framework | Next.js |
 | Node | 22 |
 
-Env: see `apps/admin/.env.example` — `DATABASE_URL`, `DIRECT_DATABASE_URL`, `AUTH_*`, `AUTH_REQUIRED=true`, `NEXT_PUBLIC_APP_URL=https://admin.yourdomain.com`.
+Env: see `apps/admin/.env.example` — `DATABASE_URL`, `DIRECT_DATABASE_URL`, `AUTH_*`, `AUTH_REQUIRED=true`, `NEXT_PUBLIC_APP_URL=https://admin.yourdomain.com`, **`HOSTINGER_APP=admin`** (if build command is `build`).
 
 ### Agent (`agent.yourdomain.com`)
 
 | Setting | Value |
 |---------|-------|
-| Build command | `hostinger:agent` |
-| Start command | `hostinger:agent:start` |
+| Framework | **Other** |
+| Entry file | `scripts/hostinger-serve-agent.mjs` |
+| Build command | `build` (requires `HOSTINGER_APP=agent`) or `hostinger:agent` |
 | Output directory | `apps/agent/.next` |
-| Framework | Next.js |
+| Node | 22 |
 
-Same `DATABASE_URL` and `AUTH_*` as admin. `NEXT_PUBLIC_APP_URL=https://agent.yourdomain.com`.
+Same `DATABASE_URL` and `AUTH_*` as admin. `NEXT_PUBLIC_APP_URL=https://agent.yourdomain.com`, **`HOSTINGER_APP=agent`** (if build command is `build`).
 
 ### Worker (`worker.yourdomain.com`)
 
