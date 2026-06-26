@@ -150,7 +150,8 @@ export function AdvancedSettingsPanel({ modules }: Props): React.ReactElement {
       <div className="space-y-1">
         <h3 className="text-base font-semibold">Advanced settings editor</h3>
         <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
-          Raw module/key JSON editor. System keys <code>app</code> and <code>cron</code> are protected from deletion.
+          Raw module/key JSON editor. System keys <code>app</code> and <code>cron</code> use the
+          Business settings panel and cannot be created or deleted here.
         </p>
       </div>
 

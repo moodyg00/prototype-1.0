@@ -60,6 +60,7 @@ const MONTHS = [
 export function BusinessPanel(): React.ReactElement {
   const [business, setBusiness] = useState<PrimaryBusiness | null>(null);
   const [appUrl, setAppUrl] = useState('');
+  const [cronSecret, setCronSecret] = useState('');
   const [fiscalMonth, setFiscalMonth] = useState('1');
   const [taxRate, setTaxRate] = useState('0');
   const [loading, setLoading] = useState(true);
@@ -77,6 +78,7 @@ export function BusinessPanel(): React.ReactElement {
         const businessBody = (await businessRes.json()) as {
           business?: PrimaryBusiness;
           appUrl?: string;
+          cronSecret?: string;
           error?: string;
         };
         const accountingBody = (await accountingRes.json()) as {
@@ -88,6 +90,7 @@ export function BusinessPanel(): React.ReactElement {
         if (active) {
           if (businessBody.business) setBusiness(businessBody.business);
           setAppUrl(businessBody.appUrl ?? '');
+          setCronSecret(businessBody.cronSecret ?? '');
 
           const accounting = Object.fromEntries(
             (accountingBody.settings ?? []).map((row) => [row.key, row.value]),
@@ -118,9 +121,13 @@ export function BusinessPanel(): React.ReactElement {
       const businessRes = await fetch('/api/admin/business/primary', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ business, appUrl }),
+        body: JSON.stringify({ business, appUrl, cronSecret }),
       });
-      const businessBody = (await businessRes.json()) as { error?: string; business?: PrimaryBusiness };
+      const businessBody = (await businessRes.json()) as {
+        error?: string;
+        business?: PrimaryBusiness;
+        cronSecret?: string;
+      };
       if (!businessRes.ok) throw new Error(businessBody.error ?? 'Save failed.');
 
       const accountingPayload = [
@@ -139,6 +146,7 @@ export function BusinessPanel(): React.ReactElement {
       }
 
       if (businessBody.business) setBusiness(businessBody.business);
+      if (businessBody.cronSecret !== undefined) setCronSecret(businessBody.cronSecret);
       toast.success('Business settings saved.');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Save failed.');
@@ -168,6 +176,22 @@ export function BusinessPanel(): React.ReactElement {
           <FieldDescription>
             Public base URL for booking links and emails. Stored in settings module{' '}
             <Badge variant="outline">system</Badge> key <code>app</code>.
+          </FieldDescription>
+        </Field>
+
+        <Field>
+          <FieldLabel>Cron secret</FieldLabel>
+          <Input
+            type="password"
+            value={cronSecret}
+            onChange={(event) => setCronSecret(event.target.value)}
+            placeholder="Bearer token for scheduled jobs"
+            autoComplete="off"
+          />
+          <FieldDescription>
+            Authenticates <code>/api/cron/*</code> routes and the worker job runner. Must match{' '}
+            <code>CRON_SECRET</code> on the worker. Leave masked value unchanged to keep the current
+            secret.
           </FieldDescription>
         </Field>
 

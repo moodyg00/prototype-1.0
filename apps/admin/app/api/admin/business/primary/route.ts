@@ -27,6 +27,7 @@ export async function GET() {
     return NextResponse.json({
       business,
       appUrl: system.app.url,
+      cronSecret: system.cron.secret,
     });
   } catch (error) {
     return handleRouteError(error);
@@ -46,27 +47,41 @@ export async function PATCH(request: Request) {
     const body = await readJsonBody<{
       business?: unknown;
       appUrl?: string;
+      cronSecret?: string;
     }>(request);
 
     const business = body.business
       ? await updatePrimaryBusiness(body.business, actingUser.id)
       : await getOrCreatePrimaryBusiness(actingUser.id);
 
+    const { upsertSetting } = await import('@/src/lib/settings/settings-service');
+
     let appUrl = body.appUrl;
     if (appUrl !== undefined) {
-      const { upsertSetting } = await import('@/src/lib/settings/settings-service');
       await upsertSetting({
         module: 'system',
         key: 'app',
         value: { url: appUrl },
         userId: actingUser.id,
       });
-    } else {
-      const system = await getSystemSettingsBundle(true);
-      appUrl = system.app.url;
     }
 
-    return NextResponse.json({ business, appUrl });
+    let cronSecret = body.cronSecret;
+    if (cronSecret !== undefined) {
+      await upsertSetting({
+        module: 'system',
+        key: 'cron',
+        value: { secret: cronSecret },
+        userId: actingUser.id,
+        preserveSecrets: true,
+      });
+    }
+
+    const system = await getSystemSettingsBundle(true);
+    if (appUrl === undefined) appUrl = system.app.url;
+    if (cronSecret === undefined) cronSecret = system.cron.secret;
+
+    return NextResponse.json({ business, appUrl, cronSecret });
   } catch (error) {
     return handleRouteError(error);
   }
