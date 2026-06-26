@@ -35,6 +35,7 @@ interface LogEntry {
   tableName: string;
   recordId: string;
   action: string;
+  userId: string | null;
   createdAt: string | null;
   changes: Record<string, unknown> | null;
   metadata: Record<string, unknown> | null;
@@ -60,11 +61,17 @@ function humanizeTableName(tableName: string) {
 }
 
 function userInitials(user: LogUser | null) {
-  if (!user) return 'SY';
+  if (!user) return '??';
   const parts = user.fullName.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return 'SY';
+  if (parts.length === 0) return '??';
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+}
+
+function actorLabel(entry: LogEntry) {
+  if (entry.user?.fullName) return entry.user.fullName;
+  if (entry.userId) return `Deleted user (${entry.userId.slice(0, 8)})`;
+  return 'System';
 }
 
 function entrySummary(entry: LogEntry) {
@@ -123,6 +130,7 @@ export default function LogPage() {
         const haystack = [
           entry.user?.fullName ?? '',
           entry.user?.email ?? '',
+          entry.userId ?? '',
           entry.tableName,
           entry.recordId,
           entry.action,
@@ -140,7 +148,7 @@ export default function LogPage() {
   const paginated = filtered.slice(startIndex, startIndex + pageSize);
 
   const totalCreates = filtered.filter((entry) => entry.action === 'create').length;
-  const contributorCount = new Set(filtered.map((entry) => entry.user?.id ?? 'system')).size;
+  const contributorCount = new Set(filtered.map((entry) => entry.user?.id ?? entry.userId ?? 'system')).size;
 
   useEffect(() => {
     setCurrentPage(1);
@@ -250,7 +258,7 @@ export default function LogPage() {
             )}
             {!loading && !error && paginated.map((entry) => {
               const timestamp = formatTimestamp(entry.createdAt);
-              const userName = entry.user?.fullName ?? 'System';
+              const userName = actorLabel(entry);
               return (
                 <TableRow
                   key={entry.id}
@@ -308,7 +316,7 @@ export default function LogPage() {
               <DialogHeader>
                 <DialogTitle>Audit detail</DialogTitle>
                 <DialogDescription>
-                  {entrySummary(selectedEntry)} — {selectedEntry.user?.fullName ?? 'System'}
+                  {entrySummary(selectedEntry)} — {actorLabel(selectedEntry)}
                 </DialogDescription>
               </DialogHeader>
               <DialogPanel className="space-y-4">

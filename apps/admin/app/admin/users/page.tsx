@@ -1,9 +1,7 @@
 'use client';
 
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import React, { useState } from 'react';
-import { Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Search, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { StatusBadge } from '../../../src/components/admin/StatusBadge';
 import { Badge } from '../../../components/ui/badge';
@@ -11,41 +9,109 @@ import { Button } from '../../../components/ui/button';
 import { Card } from '../../../components/ui/card';
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '../../../components/ui/empty';
 import { Input } from '../../../components/ui/input';
+import { Spinner } from '../../../components/ui/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
 
-type UserStatus = 'active' | 'pending' | 'blocked';
-type UserRole = 'admin' | 'manager' | 'operator';
+type UserStatus = 'active' | 'blocked';
+type UsersApiRow = {
+  id: string;
+  fullName: string;
+  email: string | null;
+  role: string;
+  isActive: boolean;
+  lastLoginAt: string | null;
+  createdAt: string | null;
+};
 
 interface UserRecord {
   id: string;
   name: string;
   email: string;
-  role: UserRole;
+  role: string;
   status: UserStatus;
-  lastSeen: string;
+  lastSeenLabel: string;
+  createdAtLabel: string;
 }
 
-const mockUsers: UserRecord[] = [
-  { id: 'usr_001', name: 'Jordan Diaz', email: 'jordan@proto2.app', role: 'admin', status: 'active', lastSeen: '2m ago' },
-  { id: 'usr_002', name: 'Nina Tran', email: 'nina@proto2.app', role: 'manager', status: 'active', lastSeen: '19m ago' },
-  { id: 'usr_003', name: 'Sam Ortega', email: 'sam@proto2.app', role: 'operator', status: 'pending', lastSeen: 'never' },
-  { id: 'usr_004', name: 'Maya Chen', email: 'maya@proto2.app', role: 'manager', status: 'active', lastSeen: '1h ago' },
-  { id: 'usr_005', name: 'Alex Reid', email: 'alex@proto2.app', role: 'operator', status: 'blocked', lastSeen: '4d ago' },
-];
+function formatRelativeOrNever(value: string | null) {
+  if (!value) return 'Never';
+  const date = new Date(value);
+  const ms = Date.now() - date.getTime();
+  if (Number.isNaN(ms) || ms < 0) return 'Never';
+  const minute = 60_000;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+  if (ms < minute) return 'Just now';
+  if (ms < hour) return `${Math.floor(ms / minute)}m ago`;
+  if (ms < day) return `${Math.floor(ms / hour)}h ago`;
+  return `${Math.floor(ms / day)}d ago`;
+}
+
+function formatCreatedDate(value: string | null) {
+  if (!value) return 'Unknown';
+  return new Date(value).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+}
 
 export default function UsersPage() {
-  const router = useRouter();
-  const [rows] = useState(mockUsers);
+  const [rows, setRows] = useState<UserRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState<'all' | UserRole>('all');
+  const [roleFilter, setRoleFilter] = useState<'all' | string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 50;
+
+  const loadUsers = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch('/api/admin/users', { cache: 'no-store' });
+      const payload = (await response.json()) as { users?: UsersApiRow[]; error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error ?? 'Unable to load users.');
+      }
+      const normalized = (payload.users ?? []).map((user) => ({
+        id: user.id,
+        name: user.fullName || user.email || user.id,
+        email: user.email ?? 'No email',
+        role: user.role,
+        status: user.isActive ? 'active' : 'blocked',
+        lastSeenLabel: formatRelativeOrNever(user.lastLoginAt),
+        createdAtLabel: formatCreatedDate(user.createdAt),
+      }));
+      setRows(normalized);
+    } catch (err) {
+      setRows([]);
+      setError(err instanceof Error ? err.message : 'Unable to load users.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadUsers();
+  }, [loadUsers]);
+
+  const roleOptions = useMemo(() => {
+    const roles = Array.from(new Set(rows.map((row) => row.role).filter(Boolean))).sort((a, b) =>
+      a.localeCompare(b),
+    );
+    return ['all', ...roles];
+  }, [rows]);
 
   const filtered = rows
     .filter((row) => (roleFilter === 'all' ? true : row.role === roleFilter))
     .filter((row) => {
       const q = search.toLowerCase();
-      return row.name.toLowerCase().includes(q) || row.email.toLowerCase().includes(q);
+      return (
+        row.name.toLowerCase().includes(q) ||
+        row.email.toLowerCase().includes(q) ||
+        row.id.toLowerCase().includes(q)
+      );
     });
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
@@ -63,8 +129,11 @@ export default function UsersPage() {
           Users
         </div>
         <div className="flex gap-3">
-          <Button variant="secondary" onClick={() => toast('Export users list (demo)')}>Export</Button>
-          <Button onClick={() => toast.success('Invite link copied (demo)')}>Invite User</Button>
+          <Button variant="secondary" onClick={() => toast('Export users list (coming soon)')}>Export</Button>
+          <Button onClick={() => void loadUsers()}>
+            <RefreshCw className="w-4 h-4" />
+            Refresh
+          </Button>
         </div>
       </div>
 
@@ -80,7 +149,7 @@ export default function UsersPage() {
           />
         </div>
         <div className="flex gap-2">
-          {(['all', 'admin', 'manager', 'operator'] as const).map((value) => (
+          {roleOptions.map((value) => (
             <Button
               key={value}
               onClick={() => setRoleFilter(value)}
@@ -106,11 +175,33 @@ export default function UsersPage() {
               <TableHead className="w-28">Role</TableHead>
               <TableHead className="w-28">Status</TableHead>
               <TableHead className="w-28">Last Seen</TableHead>
-              <TableHead className="w-24 text-right">Actions</TableHead>
+              <TableHead className="w-32">Created</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginated.length === 0 && (
+            {loading && (
+              <TableRow>
+                <TableCell colSpan={5} className="p-0">
+                  <div className="flex items-center justify-center gap-2 py-12 text-sm text-[var(--muted-foreground)]">
+                    <Spinner className="size-4" />
+                    Loading users...
+                  </div>
+                </TableCell>
+              </TableRow>
+            )}
+            {!loading && error && (
+              <TableRow>
+                <TableCell colSpan={5} className="p-0">
+                  <Empty className="py-12 md:py-14">
+                    <EmptyHeader>
+                      <EmptyTitle>Unable to Load Users</EmptyTitle>
+                      <EmptyDescription>{error}</EmptyDescription>
+                    </EmptyHeader>
+                  </Empty>
+                </TableCell>
+              </TableRow>
+            )}
+            {!loading && !error && paginated.length === 0 && (
               <TableRow>
                 <TableCell colSpan={5} className="p-0">
                   <Empty className="py-12 md:py-14">
@@ -123,30 +214,16 @@ export default function UsersPage() {
               </TableRow>
             )}
             {paginated.map((user) => (
-              <TableRow
-                key={user.id}
-                className="hover:bg-[var(--muted)]/50 group cursor-pointer"
-                onClick={() => router.push(`/admin/users/${user.id}`)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
-                    router.push(`/admin/users/${user.id}`);
-                  }
-                }}
-                tabIndex={0}
-              >
+              <TableRow key={user.id} className="hover:bg-[var(--muted)]/50 group">
                 <TableCell>
-                  <div className="font-medium"><Link href={`/admin/users/${user.id}`} className="underline-offset-4 hover:underline">{user.name}</Link></div>
+                  <div className="font-medium">{user.name}</div>
                   <div className="text-xs text-[var(--muted-foreground)]">{user.email}</div>
+                  <div className="text-[10px] font-mono text-[var(--muted-foreground)]">{user.id}</div>
                 </TableCell>
                 <TableCell className="capitalize">{user.role}</TableCell>
                 <TableCell><StatusBadge status={user.status} /></TableCell>
-                <TableCell className="text-sm text-[var(--muted-foreground)]">{user.lastSeen}</TableCell>
-                <TableCell className="text-right opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Link href={`/admin/users/${user.id}`}>
-                    <Button variant="secondary" size="xs">View</Button>
-                  </Link>
-                </TableCell>
+                <TableCell className="text-sm text-[var(--muted-foreground)]">{user.lastSeenLabel}</TableCell>
+                <TableCell className="text-xs text-[var(--muted-foreground)]">{user.createdAtLabel}</TableCell>
               </TableRow>
             ))}
           </TableBody>

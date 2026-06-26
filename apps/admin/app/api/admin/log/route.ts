@@ -15,6 +15,7 @@ export type LogEntry = {
   tableName: string;
   recordId: string;
   action: string;
+  userId: string | null;
   createdAt: string | null;
   changes: Record<string, unknown> | null;
   metadata: Record<string, unknown> | null;
@@ -40,6 +41,7 @@ export async function GET() {
       tableName: record.tableName,
       recordId: record.recordId,
       action: record.action,
+      userId: record.userId,
       createdAt: record.createdAt ? record.createdAt.toISOString() : null,
       changes: (record.changes as Record<string, unknown> | null) ?? null,
       metadata: (record.metadata as Record<string, unknown> | null) ?? null,
