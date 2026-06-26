@@ -1,42 +1,81 @@
-# prototype-1.0 monorepo
+# prototype-1.0
 
-Moody Home Service monorepo:
+Moody Home Service monorepo — admin, agent workspace, background worker, and static public site.
 
-- `apps/admin` - Next.js admin app (ported from `proto-2`)
-- `apps/agent` - Next.js agent app stub (ported from `admin-agent`)
-- `apps/public-site` - legacy PHP public site (ported as-is)
-- `packages/db` - shared Prisma schema/migrations/generated client
-- `packages/media` - shared media storage adapters + service layer
-- `packages/tsconfig` - shared TS config presets
+## Apps
+
+| App | Package | Dev port | Role |
+|-----|---------|----------|------|
+| Admin | `@prototype/admin` | 3001 | Business ops UI (accounting, billing, banking, CRM, settings) |
+| Agent | `@prototype/agent` | 3002 | Agent workspace — browser automation, workflows, AI operators |
+| Worker | `@prototype/worker` | 3003 | HTTP cron job runner (proxies to admin `/api/cron/*`) |
+| Public site | — | 8080 / 8081 | Static HTML in `apps/public-site/dev` and `live` |
+
+## Packages
+
+| Package | Role |
+|---------|------|
+| `@prototype/db` | Prisma schema, migrations, generated client |
+| `@prototype/auth` | Session auth (`proto_session` cookie) — **not** Supabase Auth |
+| `@prototype/accounting` | Shared accounting helpers (early extraction) |
+| `@prototype/media` | File upload adapters (local + optional Supabase Storage) |
+| `@prototype/tsconfig` | Shared TypeScript configs |
+
+Banking logic currently lives in `apps/admin/src/lib/banking/` until extracted to a package.
+
+## Quick start
+
+**Prerequisites:** Node 22, pnpm 11.9.0
+
+```bash
+pnpm install
+cp apps/admin/.env.example apps/admin/.env.local
+cp apps/agent/.env.example apps/agent/.env.local
+
+pnpm --filter @prototype/db prisma migrate deploy
+pnpm dev:admin
+pnpm dev:agent
+```
+
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for Hostinger setup, env vars, DNS, and cron.
 
 ## Workspace commands
 
-- Install: `pnpm install`
-- Install note: `pnpm install` runs `prisma generate` automatically for `@prototype/db` via the root `postinstall` hook.
-- Build all: `NODE_OPTIONS=--max-old-space-size=6144 pnpm build`
-- Generate Prisma client: `pnpm --filter @prototype/db prisma:generate`
-- Typecheck shared/db+media+agent: `pnpm --filter @prototype/db typecheck && pnpm --filter @prototype/media typecheck && NODE_OPTIONS=--max-old-space-size=6144 pnpm --filter @prototype/agent exec tsc --noEmit`
-- Run Admin app: `pnpm dev:admin` (`http://localhost:3001`)
-- Run Agent app: `pnpm dev:agent` (`http://localhost:3002`)
-- Run Public site (PHP): `pnpm dev:public` (`http://localhost:8080`)
+| Command | Description |
+|---------|-------------|
+| `pnpm install` | Install deps; runs `prisma generate` via postinstall |
+| `pnpm dev:admin` | Admin on :3001 |
+| `pnpm dev:agent` | Agent on :3002 |
+| `pnpm dev:worker` | Worker on :3003 |
+| `pnpm dev:public` | Static dev site on :8080 |
+| `pnpm dev:public:live` | Static live preview on :8081 |
+| `pnpm promote:public` | Copy `dev/` → `live/` |
+| `pnpm build` | Turbo build all apps/packages |
+| `pnpm hostinger:admin` | Production build for Hostinger admin deploy |
+| `pnpm hostinger:agent` | Production build for Hostinger agent deploy |
+| `pnpm hostinger:worker` | Install-only prep for Hostinger worker deploy |
 
-## Database package
+## Database
 
-- Schema path: `packages/db/prisma/schema.prisma`
-- Squashed init migration: `packages/db/prisma/migrations/20260625224500_init/migration.sql`
-- Generated client output: `packages/db/generated`
-- Generated client is intentionally not committed; regenerate with `pnpm --filter @prototype/db prisma:generate` when needed.
+- Schema: `packages/db/prisma/schema.prisma`
+- Migrations: `packages/db/prisma/migrations/`
+- Generated client: `packages/db/generated/` (not committed; regenerated on `pnpm install`)
+- Migrate: `pnpm --filter @prototype/db prisma migrate deploy`
+- Seed: `pnpm --filter @prototype/db prisma:seed`
 
-## Media storage adapters
+Local default: `postgresql://postgres:postgres@localhost:5432/prototype`
 
-`packages/media` auto-selects storage at runtime:
+Production phase 1: Supabase Postgres host only (pooled `DATABASE_URL`, direct `DIRECT_DATABASE_URL` for migrations).
 
-- `SupabaseStorageAdapter` when both `SUPABASE_URL` (or `NEXT_PUBLIC_SUPABASE_URL`) and `SUPABASE_SERVICE_ROLE_KEY` are set.
-- `LocalStorageAdapter` fallback when Supabase is not configured.
+## Auth
 
-Supabase behavior:
+Custom sessions via `@prototype/auth` — shared cookie across admin and agent in production (`AUTH_COOKIE_DOMAIN=.yourdomain.com`). No Supabase Auth.
 
-- `content/` paths resolve to public URLs.
-- `admin_record/` and `submitted/` paths resolve to short-lived signed URLs.
-- Optional `SUPABASE_STORAGE_BUCKET` overrides the default bucket name (`media`).
+Set `AUTH_REQUIRED=false` locally to skip login.
 
+## Agent context
+
+Per-app guides for AI agents:
+
+- `apps/admin/.agents/agents.md`
+- `apps/agent/.agents/agents.md`

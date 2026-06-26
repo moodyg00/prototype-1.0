@@ -1,96 +1,99 @@
 ---
-name: admin-agent
-description: Backend control plane for the proto-2 business operations suite
-argument-hint: Describe a feature, tool, workspace, or agent behavior to build or improve
+name: prototype-agent
+description: Agent app — AI workspaces, browser automation, workflows, LangGraph
+argument-hint: Describe a workspace, tool, operator, or agent behavior to build or improve
 tools: ['read', 'write', 'search', 'vscode/memory', 'execute/runInTerminal', 'execute/getTerminalOutput', 'vscode/askQuestions', 'agent']
 agents: ['Explore']
 ---
 
-You are working on **admin-agent** — a backend control plane for a suite of AI-powered business operations. The application surfaces operators, workflows, and data panels through a workspace-based UI. All intelligence in the application runs through agents powered by the XAI API (Grok models).
+You are working on **`@prototype/agent`** — the agent control plane in the `prototype-1.0` monorepo. Operators, workflows, and data panels surface through a workspace-based UI. Browser automation uses Playwright; AI reasoning uses XAI (Grok) and LangChain/LangGraph where configured.
 
-The codebase is built on Next.js, TypeScript, Tailwind CSS, Prisma, and Playwright. Agent behaviors are defined in `agent.md` files injected as system prompts into XAI API calls. The UI is organized into workspaces — each workspace contains panels and tools backed by operators and agents.
+**Monorepo:** pnpm workspace. Shared: `@prototype/db`, `@prototype/auth`. Run with `pnpm dev:agent` (port **3002**).
+
+**Stack:** Next.js 15 · TypeScript · Tailwind v4 · Prisma 7 · Playwright · Node 22 · pnpm 11.9.0
 
 <rules>
-- **Consult XAI.md first.** Before building or editing any function, tool, operator, or agent, read `XAI.md` to verify API compatibility, check constraints, and look for native features that improve the implementation.
-- **Agent behavior lives in agent.md files.** Never define agent system prompts inline in application code. Each agent has its own `agent.md` injected as the `system` message in the API call.
-- **Credentials stay server-side.** No API keys, passwords, or secrets ever appear in the UI, prompts, or client-side code.
-- **Prefer composition.** Build reusable operators, workflows, and panels instead of hard-coded one-off features.
-- **Keep catalogs centralized.** Constants, workspace definitions, and shared types belong in dedicated files, not scattered across components.
-- **Refactor early.** When the current shape starts blocking new tools or agents, restructure before adding more.
-- **Be concise.** No unnecessary comments, over-explanation, or scaffolding that won't stay true.
+- **Consult `XAI.md` first** for XAI API constraints before building reasoners or tools.
+- **Agent behavior in `*.agent.md` files** under `skills/` — not inline in app code.
+- **Credentials server-side only** — `lib/secure-store.ts`, env vars, never in UI or prompts.
+- **Auth is wired.** `middleware.ts` protects all routes except `/auth/login`, `/api/auth/*`, `/api/workflow/health` when `AUTH_REQUIRED=true`. Same `@prototype/auth` session as admin (`proto_session` cookie). **Not** Supabase Auth.
+- **Prefer composition** — reusable operators, workflows, panels in `lib/`.
+- **Be concise.**
 </rules>
 
 <workflow>
 ## 1. Discovery
-Before writing code, use the Explore subagent to gather:
-- Existing patterns in the codebase to reuse or extend
-- Which workspace, operator, or agent the task touches
-- Relevant XAI API features from `XAI.md` that apply to the task
-- Any blockers or dependencies to resolve first
-
-When the task spans multiple areas (UI + backend, multiple workspaces), launch parallel Explore subagents — one per area.
+Explore existing workspaces, operators, reasoners, and `XAI.md` applicability.
 
 ## 2. Design
-Determine the right layer for the work:
-- **UI change** → workspace panel or toolbar component
-- **External system control** → operator in `lib/operators/`
-- **AI reasoning or decision** → agent with `agent.md` + reasoner in `lib/reasoners/`
-- **Data persistence** → Prisma schema + migration
-- **API endpoint** → route in `app/api/`
-
-Draft the approach before writing code. For multi-step changes, outline the sequence and dependencies.
+- **UI** → workspace panels in `components/panels/`, canvas in `components/WorkspaceCanvas.tsx`
+- **External I/O** → `lib/operators/`
+- **AI calls** → `lib/reasoners/` + `skills/*.agent.md`
+- **Workflows** → `lib/workflow/`, `app/api/workflow/`
+- **Data** → `@prototype/db` (schema in `packages/db/`)
 
 ## 3. Implementation
-- Follow the patterns already in the codebase — check analogous files before starting
-- Operators handle external system I/O; reasoners handle AI calls; components handle UI only
-- API routes must validate all inputs; credentials never leave the server
-- After editing, run type-check to confirm zero TypeScript errors
+- Operators = external I/O; reasoners = AI; components = UI
+- Validate API inputs; credentials never leave server
+- `pnpm --filter @prototype/agent exec tsc --noEmit` or root typecheck
 
 ## 4. Verification
-- Confirm the change works end-to-end in the browser
-- For agent changes, verify the agent.md reads cleanly as a standalone system prompt
-- For API changes, verify request/response against `XAI.md` constraints
+- `pnpm dev:agent` → http://localhost:3002
+- `AUTH_REQUIRED=false` in `apps/agent/.env.local` for open local dev
 </workflow>
 
 <capabilities>
-- Build and modify workspace panels, operators, reasoners, and API routes
-- Design and register agents with `agent.md` files backed by XAI Grok models
-- Query and migrate the Prisma database
-- Control a real Playwright browser through the visual browser operator
-- Coordinate multi-step workflows across workspaces
-- Reference `XAI.md` and `.agents/xaiapi.md` for API-native implementations
-- Use the Explore subagent for codebase research before making changes
+- Workspace panels (Team, Workflow, Browser, LangSmith, C-Suite)
+- Playwright browser operator with live screenshots
+- LangGraph compile at `POST /api/csuite/compile`
+- LangSmith tracing via `LANGCHAIN_*` env vars
+- Shared Postgres via `@prototype/db`
+- Session auth shared with admin in production
 </capabilities>
 
 <project_structure>
 ```
-app/               — Next.js pages and API routes
-  api/             — Server-side endpoints (browser control, secure store)
-components/        — Shared UI components (EventStream, LiveBrowserView)
-lib/
-  operators/       — External system drivers (BrowserOperator)
-  reasoners/       — XAI API reasoning calls (BrowserActionReasoner, LoginSpecialist)
-  prisma.ts        — Database client
-  secure-store.ts  — Server-side credential storage
-prisma/            — Schema and migrations
-.agents/           — Agent definitions, skills, and guides
-  agents.md        — This file: project context and agent registry
-  xaiapi.md        — XAI API skill: usage patterns and mandatory consultation rule
-  create_agent.md  — Template and guide for writing agent.md files
-  create_skills.md — Guide for building tools and skills
-XAI.md             — XAI API documentation (authoritative reference)
-AGENTS.md          — High-level working rules for the project
-README.md          — Project overview and panel/tool descriptions
+apps/agent/
+  app/
+    api/              auth, workflow, visual-browser, csuite, pure-browser
+    auth/             Login page
+  components/         Workspace UI, panels, EventStream, LiveBrowserView
+  lib/
+    operators/        BrowserOperator, types
+    reasoners/        XAI-backed reasoning
+    workflow/         LangGraph compiler, node catalog
+    auth/             Middleware wrapper (@prototype/auth)
+    workspaces.ts     Workspace definitions
+    panels.ts         Panel registry
+  skills/             Agent prompt files (*.agent.md, *.md)
+  middleware.ts       Auth gate
+  XAI.md              XAI API reference
+packages/db/          Shared Prisma
+packages/auth/        Shared sessions
 ```
 </project_structure>
 
 ---
 
-## Agent Registry
+### Environment and commands
 
-| Name | File | Model | Description |
-|------|------|-------|-------------|
-| BrowserActionReasoner | `lib/reasoners/BrowserActionReasoner.ts` | grok | Reasons over screenshots to select the next browser action |
-| LoginSpecialist | `lib/reasoners/LoginSpecialist.ts` | grok | Handles login flows requiring human-style interaction |
+| Variable / command | Notes |
+|--------------------|-------|
+| Port | **3002** |
+| `DATABASE_URL` | Same Postgres as admin |
+| `AUTH_*` | Match admin in production (`AUTH_COOKIE_DOMAIN=.yourdomain.com`) |
+| `NEXT_PUBLIC_APP_URL` | `http://localhost:3002` locally |
+| `XAI_API_KEY` | Grok models for reasoners |
+| `LANGCHAIN_TRACING_V2`, `LANGCHAIN_API_KEY`, `LANGCHAIN_PROJECT` | LangSmith (optional) |
+| `CSUITE_MODEL` | Default model for C-Suite compile (e.g. `grok-4.3`) |
+| `pnpm dev:agent` | Dev server |
+| Hostinger build | Root script `hostinger:agent` |
 
-_Register new agents here as they are added. Include the agent.md path, model, and a one-line description._
+Deploy: `docs/DEPLOYMENT.md`. Agent registry and XAI patterns: `.agents/xaiapi.md`, `.agents/create_agent.md`.
+
+### Agent registry
+
+| Name | Location | Model | Role |
+|------|----------|-------|------|
+| BrowserActionReasoner | `lib/reasoners/BrowserActionReasoner.ts` | grok | Screenshot → next browser action |
+| LoginSpecialist | `lib/reasoners/LoginSpecialist.ts` | grok | Human-style login flows |
