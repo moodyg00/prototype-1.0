@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "packageManager": "pnpm@11.9.0",
   "scripts": {
-    "build": "turbo run build",
+    "build": "node scripts/hostinger-build.mjs",
     "dev": "turbo run dev",
     "dev:admin": "pnpm --filter @prototype/admin dev",
     "dev:agent": "pnpm --filter @prototype/agent dev",
