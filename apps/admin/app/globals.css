@@ -1,0 +1,571 @@
+@import "tailwindcss";
+
+@source "../app/**/*.{js,ts,jsx,tsx}";
+@source "../components/**/*.{js,ts,jsx,tsx}";
+@source "../src/**/*.{js,ts,jsx,tsx}";
+
+/* Tailwind v4 theme extensions (migrated from tailwind.config.ts) */
+@theme inline {
+  --color-brand-50: #f5f3ff;
+  --color-brand-100: #ede9fe;
+  --color-brand-500: #8b5cf6;
+  --color-brand-600: #7c3aed;
+  --color-brand-700: #6d28d9;
+
+  /* COSS semantic tokens — required for bg-popover, bg-background, text-foreground, etc. */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
+/* =========================================================================
+ * Theming system
+ * -----------------------------------------------------------------------
+ * Two parallel knobs:
+ *   1. Main color scheme  -> exposed as --primary, --primary-foreground, --ring
+ *      Driven by a class on <html> via ThemeProvider (data-primary="violet"|...)
+ *   2. Secondary palette  -> exposed as --pill-* and --badge-* variables
+ *      Driven by data-palette="default|vivid|pastel|monochrome" on <html>
+ *
+ * COSS Tailwind v4 conventions are followed: tokens live as CSS variables in
+ * :root so downstream COSS primitives (when added via `npx shadcn add @coss/*`)
+ * inherit them automatically.
+ * ========================================================================= */
+
+:root {
+  --light-background: #ffffff;
+  --light-foreground: #0f172a;
+  --light-surface: #f8fafc;
+  --light-card-foreground: #0f172a;
+  --light-popover: #f8fafc;
+  --light-popover-foreground: #0f172a;
+  --light-border: #dbe1e9;
+  --light-input: #d1d8e2;
+  --light-muted: #fbfcfe;
+  --light-muted-foreground: #667185;
+  --light-accent: #e3e8f1;
+  --light-accent-foreground: #0f172a;
+  --dark-background: #000000;
+  --dark-foreground: #f8fafc;
+  --dark-surface: #0f172a;
+  --dark-card-foreground: #f8fafc;
+  --dark-popover: #0f172a;
+  --dark-popover-foreground: #f8fafc;
+  --dark-border: #3a4354;
+  --dark-input: #3f4859;
+  --dark-muted: #0b111d;
+  --dark-muted-foreground: #a0a7b2;
+  --dark-accent: #1d2638;
+  --dark-accent-foreground: #f8fafc;
+
+  --background: var(--light-background);
+  --foreground: var(--light-foreground);
+  --card: var(--light-surface);
+  --card-foreground: var(--light-card-foreground);
+  --popover: var(--light-popover);
+  --popover-foreground: var(--light-popover-foreground);
+  --border: var(--light-border);
+  --input: var(--light-input);
+  --muted: var(--light-muted);
+  --muted-foreground: var(--light-muted-foreground);
+  --accent: var(--light-accent);
+  --accent-foreground: var(--light-accent-foreground);
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+
+  /* Default main color (slate/black as requested for no purple flash). Overridden by [data-primary] below. */
+  --primary: #0f172a;
+  --primary-foreground: #ffffff;
+  --primary-soft: #e2e8f0;
+  --ring: #0f172a;
+
+  --secondary: #e2e8f0;
+  --secondary-foreground: #0f172a;
+  --overlay-bg: rgba(15, 23, 42, 0.08);
+  --overlay-border: rgba(15, 23, 42, 0.16);
+
+  /* Bank card: black in light mode */
+  --bank-card-bg: #000000;
+  --card-text: #ffffff;
+}
+
+html.dark {
+  --background: var(--dark-background);
+  --foreground: var(--dark-foreground);
+  --card: var(--dark-surface);
+  --card-foreground: var(--dark-card-foreground);
+  --popover: var(--dark-popover);
+  --popover-foreground: var(--dark-popover-foreground);
+  --border: var(--dark-border);
+  --input: var(--dark-input);
+  --muted: var(--dark-muted);
+  --muted-foreground: var(--dark-muted-foreground);
+  --accent: var(--dark-accent);
+  --accent-foreground: var(--dark-accent-foreground);
+  --primary-foreground: #ffffff;
+
+  /* Bank card: white in dark mode */
+  --bank-card-bg: #ffffff;
+  --card-text: #000000;
+}
+
+/* =========================================================================
+ * Main color presets (data-primary="<name>")
+ * Each preset sets --primary / --primary-foreground / --primary-soft / --ring
+ * Soft tone is for hover/active sidebar pill backgrounds.
+ * ========================================================================= */
+
+html[data-primary='violet'] {
+  --primary: #7c3aed;
+  --primary-foreground: #ffffff;
+  --primary-soft: #ede9fe;
+  --ring: #7c3aed;
+}
+html:not([data-primary]) {
+  --primary: #0f172a;
+  --primary-foreground: #ffffff;
+  --primary-soft: #e2e8f0;
+  --ring: #0f172a;
+}
+html[data-primary='indigo'] {
+  --primary: #4f46e5;
+  --primary-foreground: #ffffff;
+  --primary-soft: #e0e7ff;
+  --ring: #4f46e5;
+}
+html[data-primary='blue'] {
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+  --primary-soft: #dbeafe;
+  --ring: #2563eb;
+}
+html[data-primary='cyan'] {
+  --primary: #0891b2;
+  --primary-foreground: #ffffff;
+  --primary-soft: #cffafe;
+  --ring: #0891b2;
+}
+html[data-primary='emerald'] {
+  --primary: #059669;
+  --primary-foreground: #ffffff;
+  --primary-soft: #d1fae5;
+  --ring: #059669;
+}
+html[data-primary='amber'] {
+  --primary: #d97706;
+  --primary-foreground: #ffffff;
+  --primary-soft: #fef3c7;
+  --ring: #d97706;
+}
+html[data-primary='rose'] {
+  --primary: #e11d48;
+  --primary-foreground: #ffffff;
+  --primary-soft: #ffe4e6;
+  --ring: #e11d48;
+}
+html[data-primary='slate'] {
+  --primary: #0f172a;
+  --primary-foreground: #ffffff;
+  --primary-soft: #e2e8f0;
+  --ring: #0f172a;
+}
+
+/* When a user picks a custom hex, ThemeProvider sets the variables inline on
+   <html> so they override the named preset. No class needed. */
+
+/* =========================================================================
+ * Secondary palettes (data-palette="<name>")
+ * Each palette defines the six semantic chip styles used by Pill/Badge.
+ * Each style has bg, fg, and border so badges work on light + soft surfaces.
+ * ========================================================================= */
+
+html[data-palette='default'],
+html:not([data-palette]) {
+  /* neutral */
+  --pill-neutral-bg: #f1f5f9; --pill-neutral-fg: #334155; --pill-neutral-border: #e2e8f0;
+  /* info */
+  --pill-info-bg: #dbeafe;    --pill-info-fg: #1e40af;    --pill-info-border: #bfdbfe;
+  /* success */
+  --pill-success-bg: #d1fae5; --pill-success-fg: #065f46; --pill-success-border: #a7f3d0;
+  /* warning */
+  --pill-warning-bg: #fef3c7; --pill-warning-fg: #92400e; --pill-warning-border: #fde68a;
+  /* danger */
+  --pill-danger-bg: #fee2e2;  --pill-danger-fg: #991b1b;  --pill-danger-border: #fecaca;
+  /* accent */
+  --pill-accent-bg: #ede9fe;  --pill-accent-fg: #5b21b6;  --pill-accent-border: #ddd6fe;
+  --secondary: #e2e8f0;
+  --secondary-foreground: #0f172a;
+  --info: #2563eb;
+  --info-foreground: #1e40af;
+  --success: #10b981;
+  --success-foreground: #065f46;
+  --warning: #f59e0b;
+  --warning-foreground: #92400e;
+  --overlay-bg: rgba(37, 99, 235, 0.08);
+  --overlay-border: rgba(37, 99, 235, 0.2);
+}
+
+html[data-palette='vivid'] {
+  --pill-neutral-bg: #1e293b; --pill-neutral-fg: #f8fafc; --pill-neutral-border: #334155;
+  --pill-info-bg: #06b6d4;    --pill-info-fg: #ffffff;    --pill-info-border: #0891b2;
+  --pill-success-bg: #84cc16; --pill-success-fg: #1a2e05; --pill-success-border: #65a30d;
+  --pill-warning-bg: #f59e0b; --pill-warning-fg: #1c1917; --pill-warning-border: #d97706;
+  --pill-danger-bg: #ef4444;  --pill-danger-fg: #ffffff;  --pill-danger-border: #dc2626;
+  --pill-accent-bg: #d946ef;  --pill-accent-fg: #ffffff;  --pill-accent-border: #c026d3;
+  --secondary: #14b8a6;
+  --secondary-foreground: #042f2e;
+  --info: #06b6d4;
+  --info-foreground: #083344;
+  --success: #84cc16;
+  --success-foreground: #365314;
+  --warning: #f97316;
+  --warning-foreground: #7c2d12;
+  --overlay-bg: rgba(217, 70, 239, 0.12);
+  --overlay-border: rgba(217, 70, 239, 0.28);
+}
+
+html[data-palette='pastel'] {
+  --pill-neutral-bg: #f8fafc; --pill-neutral-fg: #475569; --pill-neutral-border: #e2e8f0;
+  --pill-info-bg: #e0f2fe;    --pill-info-fg: #0c4a6e;    --pill-info-border: #bae6fd;
+  --pill-success-bg: #dcfce7; --pill-success-fg: #166534; --pill-success-border: #bbf7d0;
+  --pill-warning-bg: #fef9c3; --pill-warning-fg: #854d0e; --pill-warning-border: #fef08a;
+  --pill-danger-bg: #ffe4e6;  --pill-danger-fg: #9f1239;  --pill-danger-border: #fecdd3;
+  --pill-accent-bg: #fae8ff;  --pill-accent-fg: #6b21a8;  --pill-accent-border: #f5d0fe;
+  --secondary: #dbeafe;
+  --secondary-foreground: #1e3a8a;
+  --info: #7dd3fc;
+  --info-foreground: #0c4a6e;
+  --success: #86efac;
+  --success-foreground: #166534;
+  --warning: #fcd34d;
+  --warning-foreground: #854d0e;
+  --overlay-bg: rgba(125, 211, 252, 0.18);
+  --overlay-border: rgba(125, 211, 252, 0.32);
+}
+
+html[data-palette='monochrome'] {
+  --pill-neutral-bg: #f1f5f9; --pill-neutral-fg: #0f172a; --pill-neutral-border: #cbd5e1;
+  --pill-info-bg: #e2e8f0;    --pill-info-fg: #0f172a;    --pill-info-border: #cbd5e1;
+  --pill-success-bg: #cbd5e1; --pill-success-fg: #0f172a; --pill-success-border: #94a3b8;
+  --pill-warning-bg: #94a3b8; --pill-warning-fg: #f8fafc; --pill-warning-border: #64748b;
+  --pill-danger-bg: #475569;  --pill-danger-fg: #f8fafc;  --pill-danger-border: #334155;
+  --pill-accent-bg: #1e293b;  --pill-accent-fg: #f8fafc;  --pill-accent-border: #0f172a;
+  --secondary: #cbd5e1;
+  --secondary-foreground: #0f172a;
+  --info: #64748b;
+  --info-foreground: #0f172a;
+  --success: #94a3b8;
+  --success-foreground: #0f172a;
+  --warning: #475569;
+  --warning-foreground: #f8fafc;
+  --overlay-bg: rgba(15, 23, 42, 0.14);
+  --overlay-border: rgba(15, 23, 42, 0.28);
+}
+
+html[data-palette='sunset'] {
+  --pill-neutral-bg: #fff7ed; --pill-neutral-fg: #9a3412; --pill-neutral-border: #fed7aa;
+  --pill-info-bg: #ffedd5;    --pill-info-fg: #9a3412;    --pill-info-border: #fdba74;
+  --pill-success-bg: #dcfce7; --pill-success-fg: #166534; --pill-success-border: #86efac;
+  --pill-warning-bg: #fef3c7; --pill-warning-fg: #92400e; --pill-warning-border: #fcd34d;
+  --pill-danger-bg: #ffe4e6;  --pill-danger-fg: #be123c;  --pill-danger-border: #fda4af;
+  --pill-accent-bg: #ffedd5;  --pill-accent-fg: #c2410c;  --pill-accent-border: #fb923c;
+  --secondary: #fed7aa;
+  --secondary-foreground: #9a3412;
+  --info: #fb923c;
+  --info-foreground: #9a3412;
+  --success: #22c55e;
+  --success-foreground: #14532d;
+  --warning: #f59e0b;
+  --warning-foreground: #78350f;
+  --overlay-bg: rgba(251, 146, 60, 0.12);
+  --overlay-border: rgba(251, 146, 60, 0.28);
+}
+
+body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--background);
+  color: var(--foreground);
+}
+
+/* Normalize default browser link styles for unclassed anchors only. */
+a:not([class]) {
+  color: inherit;
+  text-decoration: none;
+}
+
+a:not([class]):visited {
+  color: inherit;
+}
+
+a:not([class]):hover {
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+/* -------------------------------------------------------------------------
+ * Lightweight surface utilities used until COSS primitives land.
+ * These all consume CSS variables so they react to theme changes.
+ * ------------------------------------------------------------------------- */
+
+.card {
+  background: var(--card);
+  color: var(--card-foreground);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.04);
+}
+
+.card-table-shell {
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--card);
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.04);
+}
+
+.table {
+  width: 100%;
+  font-size: 0.875rem;
+}
+.table th {
+  text-align: left;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--muted);
+}
+.table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.625rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: background-color .15s, color .15s, border-color .15s;
+  border: 1px solid transparent;
+}
+.btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--ring);
+}
+.btn-primary {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+.btn-primary:hover { filter: brightness(0.95); }
+.btn-secondary {
+  background: var(--card);
+  color: var(--foreground);
+  border-color: var(--border);
+}
+.btn-secondary:hover { background: var(--muted); }
+.btn-danger {
+  background: var(--destructive);
+  color: var(--destructive-foreground);
+}
+.btn-success {
+  background: #059669;
+  color: #ffffff;
+}
+
+.input {
+  width: 100%;
+  border-radius: 0.5rem;
+  border: 1px solid var(--input);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  background: var(--background);
+  color: var(--foreground);
+  color-scheme: light;
+}
+.input::placeholder {
+  color: color-mix(in srgb, var(--muted-foreground) 72%, transparent 28%);
+}
+.input:focus {
+  border-color: var(--primary);
+  outline: none;
+  box-shadow: 0 0 0 1px var(--primary);
+}
+
+select,
+textarea {
+  color-scheme: light;
+}
+
+html.dark .input,
+html.dark select,
+html.dark textarea {
+  color-scheme: dark;
+}
+
+.stat-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.04);
+  padding: 1.25rem;
+}
+
+/* -------------------------------------------------------------------------
+ * Pill helper — driven entirely by palette CSS variables so it changes
+ * atomically when data-palette swaps on <html>.
+ * Usage:  <span class="pill" data-tone="success">Paid</span>
+ * ------------------------------------------------------------------------- */
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.125rem 0.625rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border: 1px solid var(--pill-neutral-border);
+  background: var(--pill-neutral-bg);
+  color: var(--pill-neutral-fg);
+  white-space: nowrap;
+}
+.pill[data-tone='neutral'] { background: var(--pill-neutral-bg); color: var(--pill-neutral-fg); border-color: var(--pill-neutral-border); }
+.pill[data-tone='info']    { background: var(--pill-info-bg); color: var(--pill-info-fg); border-color: var(--pill-info-border); }
+.pill[data-tone='success'] { background: var(--pill-success-bg); color: var(--pill-success-fg); border-color: var(--pill-success-border); }
+.pill[data-tone='warning'] { background: var(--pill-warning-bg); color: var(--pill-warning-fg); border-color: var(--pill-warning-border); }
+.pill[data-tone='danger']  { background: var(--pill-danger-bg);  color: var(--pill-danger-fg);  border-color: var(--pill-danger-border); }
+.pill[data-tone='accent']  { background: var(--pill-accent-bg);  color: var(--pill-accent-fg);  border-color: var(--pill-accent-border); }
+
+@layer base {
+  :root {
+    --destructive-foreground: var(--color-red-700);
+    --info: var(--color-blue-500);
+    --info-foreground: var(--color-blue-700);
+    --success: var(--color-emerald-500);
+    --success-foreground: var(--color-emerald-700);
+    --warning: var(--color-amber-500);
+    --warning-foreground: var(--color-amber-700);
+  }
+  .dark {
+    --destructive-foreground: var(--color-red-400);
+    --info: var(--color-blue-500);
+    --info-foreground: var(--color-blue-400);
+    --success: var(--color-emerald-500);
+    --success-foreground: var(--color-emerald-400);
+    --warning: var(--color-amber-500);
+    --warning-foreground: var(--color-amber-400);
+  }
+  .theme {
+    --animate-caret-blink: 1s ease-out infinite caret-blink;
+    --animate-toast-success-odd: toast-success-odd 0.32s cubic-bezier(0.5, 1, 0.89, 1);
+    --animate-toast-success-even: toast-success-even 0.32s cubic-bezier(0.5, 1, 0.89, 1);
+    --animate-toast-error-odd: toast-error-odd 0.28s cubic-bezier(0.5, 1, 0.89, 1);
+    --animate-toast-error-even: toast-error-even 0.28s cubic-bezier(0.5, 1, 0.89, 1);
+    --animate-skeleton: skeleton 2s -1s infinite linear;
+  }
+}
+
+@theme inline {
+  @keyframes caret-blink {
+  0%, 70%, to {
+    opacity: 1;
+    }
+  20%, 50% {
+    opacity: 0;
+    }
+  }
+  @keyframes toast-success-odd {
+  0% {
+    scale: 1;
+    }
+  30% {
+    scale: 1.025;
+    }
+  60% {
+    scale: 0.99;
+    }
+  100% {
+    scale: 1;
+    }
+  }
+  @keyframes toast-error-odd {
+  0% {
+    translate: 0 0;
+    }
+  25% {
+    translate: -3px 0;
+    }
+  50% {
+    translate: 3px 0;
+    }
+  75% {
+    translate: -3px 0;
+    }
+  100% {
+    translate: 0 0;
+    }
+  }
+  @keyframes toast-success-even {
+  0% {
+    scale: 1;
+    }
+  30% {
+    scale: 1.025;
+    }
+  60% {
+    scale: 0.99;
+    }
+  100% {
+    scale: 1;
+    }
+  }
+  @keyframes toast-error-even {
+  0% {
+    translate: 0 0;
+    }
+  25% {
+    translate: -3px 0;
+    }
+  50% {
+    translate: 3px 0;
+    }
+  75% {
+    translate: -3px 0;
+    }
+  100% {
+    translate: 0 0;
+    }
+  }
+  @keyframes skeleton {
+  to {
+    background-position: -200% 0;
+    }
+  }
+}

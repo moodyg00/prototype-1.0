@@ -1,0 +1,40 @@
+{
+    "leads": [
+        {
+            "id": "lead-rivera-deck",
+            "name": "Rivera Residence",
+            "status": "new",
+            "service_key": "deck-repair",
+            "phone": "(512) 555-0142",
+            "source": "text",
+            "location": "Lakeway",
+            "notes": "Loose railing and a few soft deck boards. Sent photos by text.",
+            "created_at": "2026-04-24 08:15:00",
+            "updated_at": "2026-04-24 08:15:00"
+        },
+        {
+            "id": "lead-murphy-tv",
+            "name": "Murphy Living Room",
+            "status": "quoted",
+            "service_key": "tv-mounting",
+            "phone": "(512) 555-0188",
+            "source": "website",
+            "location": "Austin",
+            "notes": "55-inch mount over fireplace. Waiting on scheduling reply.",
+            "created_at": "2026-04-23 16:40:00",
+            "updated_at": "2026-04-24 09:20:00"
+        },
+        {
+            "id": "lead-northloop-general",
+            "name": "North Loop Make-Ready",
+            "status": "contacted",
+            "service_key": "",
+            "phone": "(512) 555-0111",
+            "source": "referral",
+            "location": "North Loop",
+            "notes": "Small punch list across drywall, painting, and door adjustments.",
+            "created_at": "2026-04-22 12:05:00",
+            "updated_at": "2026-04-24 07:55:00"
+        }
+    ]
+}

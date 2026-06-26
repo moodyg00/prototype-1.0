@@ -1,0 +1,8 @@
+{
+  "model": {
+    "provider": "xai",
+    "id": "grok-4.3",
+    "baseURL": "https://api.x.ai/v1",
+    "displayName": "Grok (visual browser foundation)"
+  }
+}

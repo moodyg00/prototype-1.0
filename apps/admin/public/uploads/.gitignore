@@ -1,0 +1,4 @@
+# Uploaded attachments are stored here at runtime (local dev storage).
+# Keep the directory in git but ignore the uploaded files themselves.
+*
+!.gitignore

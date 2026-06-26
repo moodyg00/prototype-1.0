@@ -1,0 +1,38 @@
+{
+    "custom_services": [],
+    "integrations": [
+        {
+            "id": "int-1",
+            "name": "Lead capture webhook",
+            "service_key": "grok",
+            "service_label": "Grok",
+            "type_key": "webhook",
+            "type_label": "Webhook",
+            "summary": "lead.created, lead.updated",
+            "data_json": "{\n    \"endpoint\": \"https://example.com/webhooks/integration\",\n    \"event_types\": [\n        \"lead.created\",\n        \"lead.updated\"\n    ]\n}",
+            "updated_at": "2026-04-24 10:10:00"
+        },
+        {
+            "id": "int-2",
+            "name": "Analytics dashboard tag",
+            "service_key": "analytics",
+            "service_label": "Analytics",
+            "type_key": "snippet",
+            "type_label": "Snippet",
+            "summary": "head placement",
+            "data_json": "{\n    \"language\": \"html\",\n    \"placement\": \"head\",\n    \"content\": \"<script src=\\\"https://example.com/snippet.js\\\"></script>\"\n}",
+            "updated_at": "2026-04-24 09:35:00"
+        },
+        {
+            "id": "int-3",
+            "name": "Nextdoor access",
+            "service_key": "nextdoor",
+            "service_label": "Nextdoor",
+            "type_key": "credentials",
+            "type_label": "Credentials",
+            "summary": "Username and password",
+            "data_json": "{\n    \"username\": \"service-user\",\n    \"password\": \"replace-me\"\n}",
+            "updated_at": "2026-04-23 16:00:00"
+        }
+    ]
+}

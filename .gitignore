@@ -1,0 +1,32 @@
+# dependencies
+node_modules/
+**/node_modules/
+
+# build outputs
+.next/
+**/.next/
+dist/
+**/dist/
+.turbo/
+**/.turbo/
+coverage/
+apps/agent/logs/
+
+# env and local overrides
+.env
+.env.*
+!.env.example
+!**/.env.example
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# prisma / generated local artifacts
+**/generated/
+!packages/db/generated/
+
+# runtime files
+apps/admin/public/uploads/*
+!apps/admin/public/uploads/.gitignore
