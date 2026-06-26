@@ -1,4 +1,4 @@
-import { workerConfig } from '../config';
+import { workerConfig } from '../config.js';
 
 export type JobResult = {
   ok: boolean;

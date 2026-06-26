@@ -1,3 +1,3 @@
-import { startWorkerServer } from './server';
+import { startWorkerServer } from './server.js';
 
 startWorkerServer();

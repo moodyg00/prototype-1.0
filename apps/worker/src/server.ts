@@ -1,7 +1,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 
-import { assertWorkerReady, workerConfig } from './config';
-import { jobHandlers } from './jobs/index';
+import { assertWorkerReady, workerConfig } from './config.js';
+import { jobHandlers } from './jobs/index.js';
 
 function readBearerToken(request: IncomingMessage): string | null {
   const header = request.headers.authorization;
