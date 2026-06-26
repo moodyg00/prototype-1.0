@@ -1,15 +1,12 @@
 'use client';
 
 /**
- * ThemingPanel — compact settings UI for the two-layer theme system.
+ * ThemingPanel — compact settings UI for the theme system.
  *
- * - 4 base color pickers (light/dark background + surface)
  * - Primary color selector (presets + custom hex)
  * - 5 palette options (buttons/badges/warnings/overlays)
  *
- * Both write through ThemeProvider, which:
- *   - updates CSS variables on <html>
- *   - persists to localStorage.
+ * Surface / background colors are fixed in globals.css — not user-configurable.
  */
 
 import React, { useState } from 'react';
@@ -18,47 +15,24 @@ import {
   PALETTE_PRESETS,
   useTheme,
   type PrimaryName,
-  type SurfaceToken,
 } from '../../providers/theme-provider';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
 export function ThemingPanel() {
   const {
-    lightBackground,
-    lightSurface,
-    darkBackground,
-    darkSurface,
-    surfacePreset: _surfacePreset,
     primary,
     primaryHex,
     palette,
     setPrimary,
     setPrimaryHex,
     setPalette,
-    setSurfaceToken,
-    applySurfacePreset: _applySurfacePreset,
     reset,
   } = useTheme();
   const [hexDraft, setHexDraft] = useState(primaryHex ?? '');
 
-  const syncToken = (token: SurfaceToken, value: string) => setSurfaceToken(token, value);
-
   return (
     <div className="space-y-6">
-
-      {/* ── SURFACES ────────────────────────────────────────────── */}
-      <section className="space-y-2">
-        <div className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--muted-foreground)' }}>
-          Surfaces
-        </div>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <ColorSwatch label="Light background" value={lightBackground} onChange={(v) => syncToken('lightBackground', v)} />
-          <ColorSwatch label="Light surface" value={lightSurface} onChange={(v) => syncToken('lightSurface', v)} />
-          <ColorSwatch label="Dark background"  value={darkBackground}  onChange={(v) => syncToken('darkBackground', v)} />
-          <ColorSwatch label="Dark surface"  value={darkSurface}  onChange={(v) => syncToken('darkSurface', v)} />
-        </div>
-      </section>
 
       {/* ── PRIMARY COLOR ───────────────────────────────────────── */}
       <section className="space-y-2">
@@ -144,31 +118,6 @@ export function ThemingPanel() {
         </Button>
       </div>
     </div>
-  );
-}
-
-function ColorSwatch({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  return (
-    <label className="flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2" style={{ borderColor: 'var(--border)', background: 'var(--card)' }}>
-      <input
-        type="color"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="h-6 w-6 cursor-pointer rounded border-0 bg-transparent p-0"
-      />
-      <div>
-        <div className="text-xs font-medium leading-none">{label}</div>
-        <div className="mt-0.5 font-mono text-[10px]" style={{ color: 'var(--muted-foreground)' }}>{value.toUpperCase()}</div>
-      </div>
-    </label>
   );
 }
 

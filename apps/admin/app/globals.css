@@ -49,29 +49,30 @@
  * ========================================================================= */
 
 :root {
+  /* Fixed surface tokens — not user-configurable (see theme-provider.tsx). */
   --light-background: #ffffff;
   --light-foreground: #0f172a;
-  --light-surface: #f8fafc;
+  --light-surface: #fafafa;
   --light-card-foreground: #0f172a;
-  --light-popover: #f8fafc;
+  --light-popover: #fafafa;
   --light-popover-foreground: #0f172a;
-  --light-border: #dbe1e9;
-  --light-input: #d1d8e2;
-  --light-muted: #fbfcfe;
-  --light-muted-foreground: #667185;
-  --light-accent: #e3e8f1;
+  --light-border: #d9dadd;
+  --light-input: #d4d6d9;
+  --light-muted: #fcfcfc;
+  --light-muted-foreground: #646975;
+  --light-accent: #dedfe1;
   --light-accent-foreground: #0f172a;
   --dark-background: #000000;
   --dark-foreground: #f8fafc;
-  --dark-surface: #0f172a;
+  --dark-surface: #222325;
   --dark-card-foreground: #f8fafc;
-  --dark-popover: #0f172a;
+  --dark-popover: #222325;
   --dark-popover-foreground: #f8fafc;
-  --dark-border: #3a4354;
-  --dark-input: #3f4859;
-  --dark-muted: #0b111d;
-  --dark-muted-foreground: #a0a7b2;
-  --dark-accent: #1d2638;
+  --dark-border: #494a4c;
+  --dark-input: #4d4e50;
+  --dark-muted: #18191b;
+  --dark-muted-foreground: #9ea0a2;
+  --dark-accent: #1f2126;
   --dark-accent-foreground: #f8fafc;
 
   --background: var(--light-background);
@@ -89,16 +90,16 @@
   --destructive: #dc2626;
   --destructive-foreground: #ffffff;
 
-  /* Default main color (slate/black as requested for no purple flash). Overridden by [data-primary] below. */
-  --primary: #0f172a;
+  /* Default main color (orange). Overridden by [data-primary] below. */
+  --primary: #ff8f33;
   --primary-foreground: #ffffff;
-  --primary-soft: #e2e8f0;
-  --ring: #0f172a;
+  --primary-soft: #ffe8d4;
+  --ring: #ff8f33;
 
   --secondary: #e2e8f0;
   --secondary-foreground: #0f172a;
-  --overlay-bg: rgba(15, 23, 42, 0.08);
-  --overlay-border: rgba(15, 23, 42, 0.16);
+  --overlay-bg: rgba(255, 143, 51, 0.08);
+  --overlay-border: rgba(255, 143, 51, 0.2);
 
   /* Bank card: black in light mode */
   --bank-card-bg: #000000;
@@ -138,10 +139,10 @@ html[data-primary='violet'] {
   --ring: #7c3aed;
 }
 html:not([data-primary]) {
-  --primary: #0f172a;
+  --primary: #ff8f33;
   --primary-foreground: #ffffff;
-  --primary-soft: #e2e8f0;
-  --ring: #0f172a;
+  --primary-soft: #ffe8d4;
+  --ring: #ff8f33;
 }
 html[data-primary='indigo'] {
   --primary: #4f46e5;
@@ -168,10 +169,10 @@ html[data-primary='emerald'] {
   --ring: #059669;
 }
 html[data-primary='amber'] {
-  --primary: #d97706;
+  --primary: #ff8f33;
   --primary-foreground: #ffffff;
-  --primary-soft: #fef3c7;
-  --ring: #d97706;
+  --primary-soft: #ffe8d4;
+  --ring: #ff8f33;
 }
 html[data-primary='rose'] {
   --primary: #e11d48;
