@@ -2,6 +2,7 @@ import 'server-only';
 
 import { Prisma } from '@prototype/db';
 import { isDebitNatural } from '@/src/lib/accounting/journal-entries';
+import { loadCoaHierarchy, rollupNumericTotals } from '@/src/lib/accounting/chart-of-accounts';
 import { toAmountString, toDecimal } from '@/src/lib/accounting/money';
 import { excludeIgnoredBankJournalEntriesFilter } from '@/src/lib/banking/ignored-journal-entry-ids';
 import { prisma } from '@/src/lib/prisma';
@@ -62,10 +63,7 @@ export async function aggregateAccountsThroughDate(to: string): Promise<AccountA
   const toDate = parseEndDate(to);
 
   const [accounts, grouped] = await Promise.all([
-    prisma.chartOfAccount.findMany({
-      select: { id: true, code: true, name: true, type: true, subType: true },
-      orderBy: [{ code: 'asc' }],
-    }),
+    loadCoaHierarchy(),
     prisma.journalEntryLine.groupBy({
       by: ['accountId'],
       where: {
@@ -81,7 +79,7 @@ export async function aggregateAccountsThroughDate(to: string): Promise<AccountA
     }),
   ]);
 
-  const totalsByAccount = new Map(
+  const directByAccount = new Map<string, { debit: Prisma.Decimal; credit: Prisma.Decimal }>(
     grouped.map((row) => [
       row.accountId,
       {
@@ -91,12 +89,24 @@ export async function aggregateAccountsThroughDate(to: string): Promise<AccountA
     ]),
   );
 
+  const rolledTotals = rollupNumericTotals(directByAccount, accounts);
+  const childrenByParent = new Map<string, string[]>();
+  for (const account of accounts) {
+    if (!account.parentId) continue;
+    const siblings = childrenByParent.get(account.parentId) ?? [];
+    siblings.push(account.id);
+    childrenByParent.set(account.parentId, siblings);
+  }
+
   return accounts
     .map((account) => {
-      const totals = totalsByAccount.get(account.id) ?? {
-        debit: new Prisma.Decimal(0),
-        credit: new Prisma.Decimal(0),
-      };
+      const hasChildren = (childrenByParent.get(account.id)?.length ?? 0) > 0;
+      const totals = hasChildren
+        ? rolledTotals.get(account.id)!
+        : directByAccount.get(account.id) ?? {
+            debit: new Prisma.Decimal(0),
+            credit: new Prisma.Decimal(0),
+          };
       return toAggregateRow(account, totals.debit, totals.credit);
     })
     .filter((row) => !toDecimal(row.balance).isZero() || !toDecimal(row.debitTotal).isZero() || !toDecimal(row.creditTotal).isZero());
@@ -108,10 +118,7 @@ export async function aggregateAccountsForPeriod(from: string, to: string): Prom
   const toDate = parseEndDate(to);
 
   const [accounts, grouped] = await Promise.all([
-    prisma.chartOfAccount.findMany({
-      select: { id: true, code: true, name: true, type: true, subType: true },
-      orderBy: [{ code: 'asc' }],
-    }),
+    loadCoaHierarchy(),
     prisma.journalEntryLine.groupBy({
       by: ['accountId'],
       where: {
@@ -127,7 +134,7 @@ export async function aggregateAccountsForPeriod(from: string, to: string): Prom
     }),
   ]);
 
-  const totalsByAccount = new Map(
+  const directByAccount = new Map<string, { debit: Prisma.Decimal; credit: Prisma.Decimal }>(
     grouped.map((row) => [
       row.accountId,
       {
@@ -137,12 +144,24 @@ export async function aggregateAccountsForPeriod(from: string, to: string): Prom
     ]),
   );
 
+  const rolledTotals = rollupNumericTotals(directByAccount, accounts);
+  const childrenByParent = new Map<string, string[]>();
+  for (const account of accounts) {
+    if (!account.parentId) continue;
+    const siblings = childrenByParent.get(account.parentId) ?? [];
+    siblings.push(account.id);
+    childrenByParent.set(account.parentId, siblings);
+  }
+
   return accounts
     .map((account) => {
-      const totals = totalsByAccount.get(account.id) ?? {
-        debit: new Prisma.Decimal(0),
-        credit: new Prisma.Decimal(0),
-      };
+      const hasChildren = (childrenByParent.get(account.id)?.length ?? 0) > 0;
+      const totals = hasChildren
+        ? rolledTotals.get(account.id)!
+        : directByAccount.get(account.id) ?? {
+            debit: new Prisma.Decimal(0),
+            credit: new Prisma.Decimal(0),
+          };
       return toAggregateRow(account, totals.debit, totals.credit);
     })
     .filter((row) => !toDecimal(row.balance).isZero());

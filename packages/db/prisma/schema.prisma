@@ -1301,11 +1301,14 @@ model ChartOfAccount {
   type              String /// CHECK type IN ('asset', 'liability', 'equity', 'income', 'expense')
   subType           String?            @map("sub_type") /// CHECK sub_type IN ('current_asset', 'bank', 'accounts_receivable', 'inventory', 'fixed_asset', 'contra_asset', 'other_asset', 'current_liability', 'accounts_payable', 'credit_card', 'other_current_liability', 'long_term_liability', 'equity', 'contra_equity', 'operating_revenue', 'other_income', 'contra_revenue', 'cogs', 'operating_expense', 'other_expense') -- refinement of `type`; must stay consistent with it
   description       String?
+  parentId          String?            @map("parent_id") @db.Uuid
   isActive          Boolean            @default(true) @map("is_active")
   createdAt         DateTime?          @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt         DateTime?          @default(now()) @map("updated_at") @db.Timestamptz(6)
   createdBy         String?            @map("created_by") @db.Uuid
   updatedBy         String?            @map("updated_by") @db.Uuid
+  parent            ChartOfAccount?    @relation("chart_of_account_hierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  childAccounts     ChartOfAccount[]   @relation("chart_of_account_hierarchy")
   createdByRef      User?              @relation("chart_of_accounts_created_by_users", fields: [createdBy], references: [id], onDelete: SetNull)
   updatedByRef      User?              @relation("chart_of_accounts_updated_by_users", fields: [updatedBy], references: [id], onDelete: SetNull)
   journalEntryLines JournalEntryLine[]
@@ -1314,6 +1317,7 @@ model ChartOfAccount {
   @@index([type])
   @@index([subType])
   @@index([isActive])
+  @@index([parentId])
   @@map("chart_of_accounts")
 }
 

@@ -2,7 +2,7 @@ import 'server-only';
 
 import { Prisma } from '@prototype/db';
 
-import { allocateNumber } from '@/src/lib/accounting/numbering';
+import { allocateOpaqueDocumentNumber } from '@/src/lib/accounting/numbering';
 import { prisma } from '@/src/lib/prisma';
 import {
   buildSnapshotRowsFromManifest,
@@ -105,7 +105,7 @@ export async function acceptEstimateAndCreateWorkOrder(
   const now = new Date();
 
   const result = await prisma.$transaction(async (tx) => {
-    const workOrderNumber = await allocateNumber('work-order', tx);
+    const workOrderNumber = allocateOpaqueDocumentNumber();
     const workOrder = await tx.workOrder.create({
       data: {
         workOrderNumber,

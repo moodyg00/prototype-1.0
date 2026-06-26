@@ -1,34 +1,25 @@
 /**
- * Shared document-number allocation.
+ * Document identifier allocation.
  *
- * Every numbered document type in the admin (journal entries, invoices,
- * estimates today; bills, credits, payments later) draws its canonical
- * number from a Postgres sequence. The sequence is the source of truth —
- * it gives us atomic, gap-free-on-success allocation without a SELECT MAX
- * race window.
+ * Customer-facing documents (invoices, estimates) use Postgres sequences for
+ * short sequential numbers (`INV-0042`, `EST-003`). Internal documents (journal
+ * entries, work orders) use opaque UUIDs assigned at create time.
  *
- * Two operations matter:
+ * For sequenced kinds:
  *   - allocateNumber(kind, tx): MUST run inside the same transaction as the
- *     row insert. Calls nextval(...) which is atomic in Postgres and survives
- *     concurrent writers.
- *   - previewNextNumber(kind): a cheap, read-only peek used by the editor so
- *     the user can see "INV-0042" while drafting. It MUST NOT advance the
- *     sequence, so we read pg_sequences (or the sequence relation directly)
- *     to compute next without calling nextval. If the sequence has never
- *     been called we return its starting value (typically 1).
- *
- * The corresponding migration (prisma/migrations/<ts>_shared_sequences/
- * migration.sql) creates the sequences with `IF NOT EXISTS` and seeds each
- * sequence to the highest numeric suffix in the existing table so that
- * legacy data and freshly-allocated numbers never overlap.
+ *     row insert. Calls nextval(...) which is atomic in Postgres.
+ *   - previewNextNumber(kind): read-only peek for editors; does not advance
+ *     the sequence.
  */
 import 'server-only';
+
+import { randomUUID } from 'node:crypto';
 
 import type { Prisma, PrismaClient } from '@prototype/db';
 
 import { prisma } from '@/src/lib/prisma';
 
-export type NumberedKind = 'journal-entry' | 'invoice' | 'estimate' | 'work-order';
+export type NumberedKind = 'invoice' | 'estimate';
 
 export interface NumberFormat {
   /** Human-readable prefix, e.g. `JE`, `INV`, `EST`. */
@@ -40,11 +31,14 @@ export interface NumberFormat {
 }
 
 export const FORMATS: Record<NumberedKind, NumberFormat> = {
-  'journal-entry': { prefix: 'JE', pad: 6, sequenceName: 'document_number_journal_entry_seq' },
   invoice: { prefix: 'INV', pad: 4, sequenceName: 'document_number_invoice_seq' },
   estimate: { prefix: 'EST', pad: 3, sequenceName: 'document_number_estimate_seq' },
-  'work-order': { prefix: 'WO', pad: 4, sequenceName: 'document_number_work_order_seq' },
 };
+
+/** Opaque identifier for internal documents (journal entries, work orders). */
+export function allocateOpaqueDocumentNumber(): string {
+  return randomUUID();
+}
 
 type RawClient = PrismaClient | Prisma.TransactionClient;
 

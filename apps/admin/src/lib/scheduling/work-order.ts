@@ -9,7 +9,7 @@
  */
 import type { Prisma } from '@prototype/db';
 
-import { allocateNumber } from '@/src/lib/accounting/numbering';
+import { allocateOpaqueDocumentNumber } from '@/src/lib/accounting/numbering';
 import {
   summarizeServices,
   workOrderLineItemFromEstimateItem,
@@ -92,7 +92,7 @@ export async function createWorkOrderFromLatestEstimate(
   const summary = summarizeServices(lineItems, serviceNames);
   const firstServiceId = summary.serviceId ?? args.serviceId ?? null;
 
-  const workOrderNumber = await allocateNumber('work-order', tx);
+  const workOrderNumber = allocateOpaqueDocumentNumber();
   const workOrder = await tx.workOrder.create({
     data: {
       workOrderNumber,

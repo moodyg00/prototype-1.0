@@ -5,9 +5,8 @@
  * deletes, and ledger queries (global + per-account). All numeric arithmetic
  * uses Prisma.Decimal via the helpers in `./money`.
  *
- * Number allocation is delegated to the shared `numbering` module, which
- * draws from a Postgres sequence (`document_number_journal_entry_seq`)
- * inside the create transaction. See `src/lib/accounting/numbering.ts`.
+ * Entry numbers are opaque UUIDs assigned at create time. See
+ * `src/lib/accounting/numbering.ts`.
  */
 import 'server-only';
 
@@ -15,23 +14,16 @@ import { Prisma } from '@prototype/db';
 import type { JournalEntryStatus } from '@prototype/db';
 import { prisma } from '@/src/lib/prisma';
 import { round2, sum, toDecimal, toAmountString } from '@/src/lib/accounting/money';
-import { allocateNumber, previewNextNumber } from '@/src/lib/accounting/numbering';
+import { allocateOpaqueDocumentNumber } from '@/src/lib/accounting/numbering';
+import { collectDescendantIds, loadCoaHierarchy, buildChildrenByParent } from '@/src/lib/accounting/chart-of-accounts';
 import { excludeIgnoredBankJournalEntriesFilter } from '@/src/lib/banking/ignored-journal-entry-ids';
 import type {
   AccountLedgerQuery,
   JournalEntryCreateInput,
   JournalEntryListQuery,
+  JournalEntryUpdateInput,
   LedgerQuery,
 } from '@/src/lib/validation/journal-entry';
-
-/**
- * Cheap, non-mutating preview of the next entry number. Used by the UI so the
- * user sees `JE-000042` while drafting before the create call actually
- * allocates the canonical value.
- */
-export async function previewNextEntryNumber(): Promise<string> {
-  return previewNextNumber('journal-entry');
-}
 
 /* --------------------------------------------------------------------------
  * List + detail
@@ -225,7 +217,7 @@ export async function createJournalEntry(
   const entryDate = parseEntryDate(input.entryDate);
 
   const created = await prisma.$transaction(async (tx) => {
-    const entryNumber = await allocateNumber('journal-entry', tx);
+    const entryNumber = allocateOpaqueDocumentNumber();
     return tx.journalEntry.create({
       data: {
         entryNumber,
@@ -293,6 +285,86 @@ export async function deleteJournalEntry(id: string): Promise<void> {
     );
   }
   await prisma.journalEntry.delete({ where: { id } });
+}
+
+export async function updateJournalEntry(
+  id: string,
+  input: JournalEntryUpdateInput,
+): Promise<JournalEntryDetail> {
+  const existing = await prisma.journalEntry.findUnique({
+    where: { id },
+    select: { id: true, status: true },
+  });
+  if (!existing) {
+    throw new JournalEntryServiceError('not_found', 'Journal entry not found.');
+  }
+  if (existing.status !== 'Draft') {
+    throw new JournalEntryServiceError(
+      'invalid_state',
+      'Only Draft journal entries can be edited.',
+    );
+  }
+
+  const entryDate = input.entryDate ? parseEntryDate(input.entryDate) : undefined;
+  const lines = input.lines?.map((line, index) => ({
+    accountId: line.accountId,
+    position: index,
+    debit: toAmountString(line.debit ?? '0'),
+    credit: toAmountString(line.credit ?? '0'),
+    description: line.description ?? null,
+  }));
+
+  if (lines) {
+    const totalDebits = toAmountString(sum(lines.map((line) => line.debit)));
+    const totalCredits = toAmountString(sum(lines.map((line) => line.credit)));
+    if (round2(totalDebits).cmp(round2(totalCredits)) !== 0) {
+      throw new JournalEntryServiceError(
+        'unbalanced',
+        `Journal entry not balanced: debits ${totalDebits} vs credits ${totalCredits}.`,
+      );
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.journalEntryLine.deleteMany({ where: { journalEntryId: id } });
+      await tx.journalEntry.update({
+        where: { id },
+        data: {
+          ...(entryDate ? { entryDate } : {}),
+          ...(input.description !== undefined ? { description: input.description } : {}),
+          ...(input.reference !== undefined ? { reference: input.reference } : {}),
+          ...(input.sourceModule !== undefined ? { sourceModule: input.sourceModule } : {}),
+          totalDebits,
+          totalCredits,
+        },
+      });
+      await tx.journalEntryLine.createMany({
+        data: lines.map((line) => ({
+          journalEntryId: id,
+          accountId: line.accountId,
+          position: line.position,
+          debit: line.debit,
+          credit: line.credit,
+          description: line.description,
+        })),
+      });
+    });
+  } else {
+    await prisma.journalEntry.update({
+      where: { id },
+      data: {
+        ...(entryDate ? { entryDate } : {}),
+        ...(input.description !== undefined ? { description: input.description } : {}),
+        ...(input.reference !== undefined ? { reference: input.reference } : {}),
+        ...(input.sourceModule !== undefined ? { sourceModule: input.sourceModule } : {}),
+      },
+    });
+  }
+
+  const detail = await getJournalEntryDetail(id);
+  if (!detail) {
+    throw new JournalEntryServiceError('not_found', 'Journal entry disappeared after update.');
+  }
+  return detail;
 }
 
 export async function postJournalEntry(
@@ -560,6 +632,8 @@ export type AccountSummary = {
   subType: string | null;
   description: string | null;
   isActive: boolean;
+  parentId: string | null;
+  hasChildren: boolean;
 };
 
 export type AccountLedgerPayload = {
@@ -581,7 +655,17 @@ export function isDebitNatural(type: string): boolean {
 export async function getAccountSummary(accountId: string): Promise<AccountSummary | null> {
   const account = await prisma.chartOfAccount.findUnique({
     where: { id: accountId },
-    select: { id: true, code: true, name: true, type: true, subType: true, description: true, isActive: true },
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      type: true,
+      subType: true,
+      description: true,
+      isActive: true,
+      parentId: true,
+      _count: { select: { childAccounts: true } },
+    },
   });
   if (!account) return null;
   return {
@@ -592,6 +676,8 @@ export async function getAccountSummary(accountId: string): Promise<AccountSumma
     subType: account.subType,
     description: account.description,
     isActive: account.isActive,
+    parentId: account.parentId,
+    hasChildren: account._count.childAccounts > 0,
   };
 }
 
@@ -602,16 +688,20 @@ export async function getAccountLedger(
   const account = await getAccountSummary(accountId);
   if (!account) return null;
 
+  const hierarchy = await loadCoaHierarchy();
+  const childrenByParent = buildChildrenByParent(hierarchy);
+  const descendantIds = collectDescendantIds(accountId, childrenByParent);
+  const accountScope = [accountId, ...descendantIds];
+
   const debitNatural = isDebitNatural(account.type);
   const fromDate = query.from ? new Date(`${query.from}T00:00:00.000Z`) : null;
   const toDate = query.to ? new Date(`${query.to}T23:59:59.999Z`) : null;
   const ignoredJournalFilter = await excludeIgnoredBankJournalEntriesFilter();
 
-  // Opening balance: sum of (debit - credit) for posted lines strictly before `from`.
   const openingRaw = fromDate
     ? await prisma.journalEntryLine.aggregate({
         where: {
-          accountId,
+          accountId: { in: accountScope },
           journalEntry: {
             is: {
               status: { in: ['Posted', 'Reversed'] },
@@ -631,7 +721,7 @@ export async function getAccountLedger(
     : toDecimal(openingCredits).sub(toDecimal(openingDebits));
 
   const where: Prisma.JournalEntryLineWhereInput = {
-    accountId,
+    accountId: { in: accountScope },
     journalEntry: {
       is: {
         status: { in: ['Posted', 'Reversed'] },

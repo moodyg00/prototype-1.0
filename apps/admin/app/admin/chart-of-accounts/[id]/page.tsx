@@ -3,12 +3,18 @@ import { notFound } from 'next/navigation';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { RecordView } from '@/src/components/admin/RecordView';
-import { formatAmount } from '@/src/lib/accounting/money';
 import {
-  getAccountLedger,
-  getAccountSummary,
-} from '@/src/lib/accounting/journal-entries';
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { RecordView } from '@/src/components/admin/RecordView';
+import { listChildAccountBalances } from '@/src/lib/accounting/chart-of-accounts';
+import { formatAmount } from '@/src/lib/accounting/money';
+import { getAccountLedger, getAccountSummary } from '@/src/lib/accounting/journal-entries';
 import { cn } from '@/src/lib/utils';
 
 export const dynamic = 'force-dynamic';
@@ -25,9 +31,10 @@ const TYPE_VARIANT: Record<string, React.ComponentProps<typeof Badge>['variant']
 
 export default async function Page({ params }: { params: Promise<PageParams> }) {
   const { id } = await params;
-  const [account, ledger] = await Promise.all([
+  const [account, ledger, childBalances] = await Promise.all([
     getAccountSummary(id),
     getAccountLedger(id, { limit: 5, from: null, to: null, cursor: null }),
+    listChildAccountBalances(id),
   ]);
   if (!account) notFound();
 
@@ -48,6 +55,11 @@ export default async function Page({ params }: { params: Promise<PageParams> }) 
           <Badge variant={account.isActive ? 'success' : 'outline'}>
             {account.isActive ? 'Active' : 'Inactive'}
           </Badge>
+          {account.hasChildren ? (
+            <Badge variant="outline">Parent account</Badge>
+          ) : account.parentId ? (
+            <Badge variant="outline">Sub-account</Badge>
+          ) : null}
         </div>
       }
       backHref="/admin/chart-of-accounts"
@@ -57,7 +69,7 @@ export default async function Page({ params }: { params: Promise<PageParams> }) 
           <MetricCard label="Account code" value={account.code} mono />
           <MetricCard label="Type" value={account.type} />
           <MetricCard
-            label="Lifetime balance"
+            label={account.hasChildren ? 'Combined balance' : 'Lifetime balance'}
             value={ledger ? `$${formatAmount(ledger.closingBalance)}` : '—'}
             mono
           />
@@ -68,11 +80,48 @@ export default async function Page({ params }: { params: Promise<PageParams> }) 
           />
         </div>
 
+        {childBalances.length > 0 ? (
+          <div className="overflow-hidden rounded-xl border bg-card">
+            <div className="border-b px-6 py-4">
+              <div className="text-sm font-semibold">Sub-accounts</div>
+              <div className="text-xs text-[var(--muted-foreground)]">
+                Parent balance above includes all sub-account activity.
+              </div>
+            </div>
+            <Table variant="card">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Code</TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead className="text-right">Balance</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {childBalances.map((child) => (
+                  <TableRow key={child.id}>
+                    <TableCell className="font-mono text-sm">
+                      <Link href={`/admin/chart-of-accounts/${child.id}`} className="underline-offset-4 hover:underline">
+                        {child.code}
+                      </Link>
+                    </TableCell>
+                    <TableCell>{child.name}</TableCell>
+                    <TableCell className="text-right font-medium tabular-nums">
+                      ${formatAmount(child.balance)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        ) : null}
+
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card px-5 py-4">
           <div className="space-y-1">
             <div className="text-sm font-semibold">Account ledger</div>
             <div className="text-xs text-[var(--muted-foreground)]">
-              Per-account transactions with running balance, opening and closing totals.
+              {account.hasChildren
+                ? 'Combined ledger across this account and its sub-accounts.'
+                : 'Per-account transactions with running balance, opening and closing totals.'}
             </div>
           </div>
           <Button

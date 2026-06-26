@@ -1,7 +1,7 @@
 'use client';
 
 import { format } from 'date-fns';
-import { ChevronLeft, ChevronRight, Plus, RefreshCw, Search, Trash2, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Search, Trash2, X } from 'lucide-react';
 import Link from 'next/link';
 import * as React from 'react';
 import { toast } from 'sonner';
@@ -25,6 +25,7 @@ import {
   AccountCombobox,
   type AccountOption,
 } from '@/src/components/admin/journal-entries/AccountCombobox';
+import { ReferenceCombobox } from '@/src/components/admin/journal-entries/ReferenceCombobox';
 import { JournalEntryStatusBadge } from '@/src/components/admin/journal-entries/JournalEntryStatusBadge';
 import { add, formatAmount, isBalanced, sub, sum, toDecimal } from '@/src/lib/accounting/money';
 
@@ -55,7 +56,6 @@ type EntrySummary = {
 type WorkspaceProps = {
   accounts: ReadonlyArray<AccountOption>;
   initialEntries: ReadonlyArray<EntrySummary>;
-  initialNextNumber: string;
 };
 
 function makeKey() {
@@ -90,14 +90,11 @@ const STATUS_FILTERS = [
 export function JournalEntryWorkspace({
   accounts,
   initialEntries,
-  initialNextNumber,
 }: WorkspaceProps): React.ReactElement {
   const [entryDate, setEntryDate] = React.useState(() => todayISO());
   const [reference, setReference] = React.useState('');
   const [description, setDescription] = React.useState('');
   const [lines, setLines] = React.useState<LineDraft[]>(() => blankLines());
-  const [nextNumber, setNextNumber] = React.useState(initialNextNumber);
-  const [refreshingNumber, setRefreshingNumber] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
   const [errors, setErrors] = React.useState<Record<string, string>>({});
 
@@ -164,31 +161,14 @@ export function JournalEntryWorkspace({
     setLines((current) => (current.length <= 2 ? current : current.filter((_, i) => i !== index)));
   }, []);
 
-  const refreshNextNumber = React.useCallback(async () => {
-    setRefreshingNumber(true);
-    try {
-      const response = await fetch('/api/admin/journal-entries/next-number', { cache: 'no-store' });
-      const body = (await response.json()) as { entryNumber?: string; error?: string };
-      if (!response.ok || !body.entryNumber) {
-        throw new Error(body.error ?? 'Could not preview the next entry number.');
-      }
-      setNextNumber(body.entryNumber);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not refresh entry number.');
-    } finally {
-      setRefreshingNumber(false);
-    }
-  }, []);
-
   const resetForm = React.useCallback(() => {
     setEntryDate(todayISO());
     setReference('');
     setDescription('');
     setLines(blankLines());
     setErrors({});
-    void refreshNextNumber();
     window.setTimeout(focusFirstAccount, 50);
-  }, [focusFirstAccount, refreshNextNumber]);
+  }, [focusFirstAccount]);
 
   /* ---------------- list bookkeeping ---------------- */
 
@@ -426,7 +406,7 @@ export function JournalEntryWorkspace({
           aria-busy={submitting || undefined}
         >
           {/* Header fields */}
-          <div className="grid gap-4 md:grid-cols-[1fr_1fr_1fr_2fr]">
+          <div className="grid gap-4 md:grid-cols-[1fr_1fr_2fr]">
             <FieldShell label="Entry date" htmlFor="je-date">
               <Input
                 id="je-date"
@@ -436,38 +416,11 @@ export function JournalEntryWorkspace({
                 required
               />
             </FieldShell>
-            <FieldShell label="Entry number" htmlFor="je-number">
-              <div className="flex items-center gap-2">
-                <Input
-                  id="je-number"
-                  value={nextNumber}
-                  readOnly
-                  className="font-mono"
-                  aria-describedby="je-number-help"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon-sm"
-                  onClick={refreshNextNumber}
-                  disabled={refreshingNumber}
-                  aria-label="Refresh next entry number preview"
-                  title="Refresh preview"
-                >
-                  <RefreshCw className={refreshingNumber ? 'animate-spin' : undefined} />
-                </Button>
-              </div>
-              <p id="je-number-help" className="text-xs text-[var(--muted-foreground)]">
-                Allocated on save (server-side).
-              </p>
-            </FieldShell>
             <FieldShell label="Reference" htmlFor="je-reference">
-              <Input
+              <ReferenceCombobox
                 id="je-reference"
                 value={reference}
-                onChange={(event) => setReference(event.target.value)}
-                placeholder="e.g. INV-4401, deposit-2026-05"
-                maxLength={120}
+                onValueChange={setReference}
               />
             </FieldShell>
             <FieldShell label="Description" htmlFor="je-description">

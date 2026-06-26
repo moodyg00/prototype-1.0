@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { filterTopLevelRows, loadCoaHierarchy } from '@/src/lib/accounting/chart-of-accounts';
 import { sum, toAmountString, toDecimal } from '@/src/lib/accounting/money';
 import { aggregateAccountsThroughDate } from '@/src/lib/accounting/reports/aggregates';
 import type { TrialBalanceReport } from '@/src/lib/accounting/reports/types';
@@ -16,8 +17,12 @@ function trialBalanceColumns(balance: string): { debit: string; credit: string }
 }
 
 export async function buildTrialBalanceReport(from: string, to: string): Promise<TrialBalanceReport> {
-  const aggregates = await aggregateAccountsThroughDate(to);
-  const rows = aggregates.map((row) => {
+  const [aggregates, hierarchy] = await Promise.all([
+    aggregateAccountsThroughDate(to),
+    loadCoaHierarchy(),
+  ]);
+  const topLevelAggregates = filterTopLevelRows(aggregates, hierarchy);
+  const rows = topLevelAggregates.map((row) => {
     const columns = trialBalanceColumns(row.balance);
     return {
       code: row.code,
