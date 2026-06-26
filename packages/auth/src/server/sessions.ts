@@ -1,11 +1,10 @@
 import {
-  generateSessionToken,
   getAuthConfig,
   getSessionClearCookieOptions,
   getSessionCookieOptions,
-  hashSessionToken,
   type AuthConfig,
-} from '../index';
+} from '../config';
+import { generateSessionToken, hashSessionToken } from '../session-token';
 import { getAuthPrisma } from './db';
 
 export type SessionRequestMeta = {

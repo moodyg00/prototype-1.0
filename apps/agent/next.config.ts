@@ -5,6 +5,8 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  transpilePackages: ['@prototype/auth', '@prototype/db'],
+  serverExternalPackages: ['@prisma/client', 'pg'],
 };
 
 export default nextConfig;
