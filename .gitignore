@@ -25,7 +25,7 @@ pnpm-debug.log*
 
 # prisma / generated local artifacts
 **/generated/
-!packages/db/generated/
+packages/db/generated/
 
 # runtime files
 apps/admin/public/uploads/*

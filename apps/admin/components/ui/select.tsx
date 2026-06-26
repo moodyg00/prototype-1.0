@@ -13,12 +13,10 @@ import type * as React from "react";
 import { cn } from "@/src/lib/utils";
 
 export function Select({
-  className,
   ...props
-}: SelectPrimitive.Root.Props): React.ReactElement {
+}: SelectPrimitive.Root.Props<string, false>): React.ReactElement {
   return (
     <SelectPrimitive.Root
-      className={cn("w-full", className)}
       data-slot="select"
       {...props}
     />

@@ -45,6 +45,9 @@ import {
   UsersRound,
   Palette,
   ImageUp,
+  ExternalLink,
+  Bot,
+  Globe,
 } from 'lucide-react';
 
 export interface NavItem {
@@ -144,6 +147,9 @@ export const NAV_GROUPS: NavGroup[] = [
     sort: 8,
     items: [
       { href: '/admin/design', label: 'Design', icon: Palette, sort: 1 },
+      { href: 'http://localhost:3001', label: 'Admin (3001)', icon: ExternalLink, sort: 2 },
+      { href: 'http://localhost:3002', label: 'Agent GUI (3002)', icon: Bot, sort: 3 },
+      { href: 'http://localhost:8080', label: 'Public Site (8080)', icon: Globe, sort: 4 },
     ],
   },
 ];

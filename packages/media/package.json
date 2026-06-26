@@ -15,6 +15,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.57.2",
     "@prototype/db": "workspace:*",
     "zod": "^4.0.0"
   },

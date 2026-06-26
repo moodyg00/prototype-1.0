@@ -1,4 +1,8 @@
-import { createMediaService, LocalStorageAdapter } from '@prototype/media';
+import {
+  createMediaService,
+  createStorageAdapter,
+  parseLibraryFromStoragePath,
+} from '@prototype/media';
 
 import { prisma } from '@/src/lib/prisma';
 import { isImageMimeType, type AttachmentListQuery, type AttachmentUploadInput } from '@/src/lib/validation/attachment';
@@ -44,30 +48,47 @@ export type AttachmentSummary = {
 
 const GLOBAL_UPLOAD_OWNER_ID = '00000000-0000-4000-8000-000000000000';
 
+const storageAdapter = createStorageAdapter();
+
 const mediaService = createMediaService({
   prisma,
-  storage: new LocalStorageAdapter(),
+  storage: storageAdapter,
 });
 
-function toSummary(row: {
+async function resolveAttachmentUrl(row: { fileUrl: string; storagePath: string | null }): Promise<string> {
+  if (!row.storagePath) return row.fileUrl;
+  const library = parseLibraryFromStoragePath(row.storagePath);
+  if (!library) return row.fileUrl;
+  if (library === 'content') {
+    return storageAdapter.getPublicUrl(row.storagePath);
+  }
+  return storageAdapter.getSignedUrl(row.storagePath, 300);
+}
+
+async function toSummary(row: {
   id: string;
   filename: string;
   originalFilename: string | null;
   fileUrl: string;
+  storagePath: string | null;
   mimeType: string;
   sizeBytes: number | null;
   mediaKind: string;
   createdAt: Date | null;
   mediaLinks: Array<{ ownerType: string; ownerId: string }>;
-}, inherited = false): AttachmentSummary {
+}, inherited = false): Promise<AttachmentSummary> {
   const leadLink = row.mediaLinks.find((link) => link.ownerType === 'lead');
   const workOrderLink = row.mediaLinks.find((link) => link.ownerType === 'work_order');
   const scope = workOrderLink ? 'work_order' : leadLink ? 'lead' : 'global';
+  const resolvedUrl = await resolveAttachmentUrl({
+    fileUrl: row.fileUrl,
+    storagePath: row.storagePath,
+  });
   return {
     id: row.id,
     filename: row.filename,
     originalName: row.originalFilename,
-    url: row.fileUrl,
+    url: resolvedUrl,
     mimeType: row.mimeType,
     sizeBytes: row.sizeBytes ?? 0,
     kind: row.mediaKind === 'image' ? 'photo' : 'file',
@@ -150,6 +171,7 @@ export async function listAttachments(query: AttachmentListQuery): Promise<Attac
       filename: true,
       originalFilename: true,
       fileUrl: true,
+      storagePath: true,
       mimeType: true,
       sizeBytes: true,
       mediaKind: true,
@@ -159,7 +181,7 @@ export async function listAttachments(query: AttachmentListQuery): Promise<Attac
       },
     },
   });
-  return rows.map((row) => toSummary(row));
+  return Promise.all(rows.map((row) => toSummary(row)));
 }
 
 /** Attachments uploaded directly against a lead. */
@@ -176,6 +198,7 @@ export async function listLeadAttachments(leadId: string): Promise<AttachmentSum
       filename: true,
       originalFilename: true,
       fileUrl: true,
+      storagePath: true,
       mimeType: true,
       sizeBytes: true,
       mediaKind: true,
@@ -185,7 +208,7 @@ export async function listLeadAttachments(leadId: string): Promise<AttachmentSum
       },
     },
   });
-  return rows.map((row) => toSummary(row));
+  return Promise.all(rows.map((row) => toSummary(row)));
 }
 
 /**
@@ -218,6 +241,7 @@ export async function listWorkOrderAttachments(workOrderId: string): Promise<Att
       filename: true,
       originalFilename: true,
       fileUrl: true,
+      storagePath: true,
       mimeType: true,
       sizeBytes: true,
       mediaKind: true,
@@ -242,6 +266,7 @@ export async function listWorkOrderAttachments(workOrderId: string): Promise<Att
           filename: true,
           originalFilename: true,
           fileUrl: true,
+          storagePath: true,
           mimeType: true,
           sizeBytes: true,
           mediaKind: true,
@@ -255,10 +280,11 @@ export async function listWorkOrderAttachments(workOrderId: string): Promise<Att
 
   const [ownRows, leadRows] = await Promise.all([ownRowsPromise, leadRowsPromise]);
 
-  return [
-    ...ownRows.map((row) => toSummary(row)),
-    ...leadRows.map((row) => toSummary(row, true)),
-  ];
+  const [ownSummaries, leadSummaries] = await Promise.all([
+    Promise.all(ownRows.map((row) => toSummary(row))),
+    Promise.all(leadRows.map((row) => toSummary(row, true))),
+  ]);
+  return [...ownSummaries, ...leadSummaries];
 }
 
 /** Delete an attachment and remove its file from disk. */
@@ -271,6 +297,6 @@ export async function deleteAttachment(id: string): Promise<void> {
   await prisma.mediaLink.deleteMany({ where: { mediaFileId: id } });
   await prisma.mediaFile.delete({ where: { id } });
   if (row.storagePath) {
-    await new LocalStorageAdapter().deleteObject(row.storagePath);
+    await storageAdapter.deleteObject(row.storagePath);
   }
 }
