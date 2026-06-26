@@ -26,11 +26,13 @@ Four deploy targets, one git repo. **Not** one merged Next app.
 
 ## Why a worker app?
 
-| Run on | Good for | Bad for |
-|--------|----------|---------|
-| **admin Next** | HTTP requests, UI | Mercury sync, long agent jobs, cron bursts |
-| **agent Next** | Workspaces, IDE, browser tools | Same — blocks event loop |
-| **worker Node** | Cron hits, batch jobs, future vector/memory | UI |
+
+| Run on          | Good for                                    | Bad for                                    |
+| --------------- | ------------------------------------------- | ------------------------------------------ |
+| **admin Next**  | HTTP requests, UI                           | Mercury sync, long agent jobs, cron bursts |
+| **agent Next**  | Workspaces, IDE, browser tools              | Same — blocks event loop                   |
+| **worker Node** | Cron hits, batch jobs, future vector/memory | UI                                         |
+
 
 Worker is a tiny HTTP server. Hostinger hPanel cron calls:
 
@@ -42,13 +44,15 @@ Today jobs delegate to admin `/api/cron/*`. Later move heavy logic into `package
 
 ## Local dev ports
 
-| Command | Port | URL |
-|---------|------|-----|
-| `pnpm dev:admin` | 3001 | http://localhost:3001 |
-| `pnpm dev:agent` | 3002 | http://localhost:3002 |
-| `pnpm dev:worker` | 3003 | http://localhost:3003 |
-| `pnpm dev:public` | 8080 | http://localhost:8080 (dev static) |
-| `pnpm dev:public:live` | 8081 | http://localhost:8081 (live preview) |
+
+| Command                | Port | URL                                                           |
+| ---------------------- | ---- | ------------------------------------------------------------- |
+| `pnpm dev:admin`       | 3001 | [http://localhost:3001](http://localhost:3001)                |
+| `pnpm dev:agent`       | 3002 | [http://localhost:3002](http://localhost:3002)                |
+| `pnpm dev:worker`      | 3003 | [http://localhost:3003](http://localhost:3003)                |
+| `pnpm dev:public`      | 8080 | [http://localhost:8080](http://localhost:8080) (dev static)   |
+| `pnpm dev:public:live` | 8081 | [http://localhost:8081](http://localhost:8081) (live preview) |
+
 
 ```bash
 cp apps/admin/.env.example apps/admin/.env.local
@@ -66,22 +70,26 @@ pnpm dev:public
 
 ## Data & auth
 
-| Layer | Choice |
-|-------|--------|
-| Database | Postgres via Prisma — **same `DATABASE_URL` on admin, agent, worker** |
-| Dev DB | Local Postgres |
-| Prod DB (phase 1) | Supabase Postgres host only — **no Supabase Auth** |
-| Prod DB (phase 2) | Postgres on KVM — change `DATABASE_URL` only |
-| Auth | `user_sessions` table + cookie `proto_session` via `@prototype/auth` |
-| Cross-subdomain | `AUTH_COOKIE_DOMAIN=.yourdomain.com` on admin + agent |
+
+| Layer             | Choice                                                                |
+| ----------------- | --------------------------------------------------------------------- |
+| Database          | Postgres via Prisma — **same `DATABASE_URL` on admin, agent, worker** |
+| Dev DB            | Local Postgres                                                        |
+| Prod DB (phase 1) | Supabase Postgres host only — **no Supabase Auth**                    |
+| Prod DB (phase 2) | Postgres on KVM — change `DATABASE_URL` only                          |
+| Auth              | `user_sessions` table + cookie `proto_session` via `@prototype/auth`  |
+| Cross-subdomain   | `AUTH_COOKIE_DOMAIN=.yourdomain.com` on admin + agent                 |
+
 
 ## Auth routes (admin + agent — identical)
 
-| Route | Method | Purpose |
-|-------|--------|---------|
-| `/api/auth/login` | POST | Sign in |
-| `/api/auth/session` | GET / DELETE | Current user / sign out |
-| `/api/auth/invite/[token]` | GET/POST | Admin invite only |
+
+| Route                      | Method       | Purpose                 |
+| -------------------------- | ------------ | ----------------------- |
+| `/api/auth/login`          | POST         | Sign in                 |
+| `/api/auth/session`        | GET / DELETE | Current user / sign out |
+| `/api/auth/invite/[token]` | GET/POST     | Admin invite only       |
+
 
 Sign in on either app → same cookie in production → open the other app without re-login.
 
@@ -101,26 +109,30 @@ On Hostinger: upload/rsync `dev/` and `live/` folders to subdomain docroots. No 
 
 Use **five separate hPanel websites** (Add website per hostname). Do **not** use Domains → Subdomains under one site — that only creates a subfolder, not separate apps.
 
-| Host | hPanel website type |
-|------|---------------------|
-| `yourdomain.com` | Custom PHP/HTML → upload `public-site/live/` |
-| `dev.yourdomain.com` | Custom PHP/HTML → upload `public-site/dev/` |
-| `admin.yourdomain.com` | Node.js Web App |
-| `agent.yourdomain.com` | Node.js Web App |
-| `worker.yourdomain.com` | Node.js Web App (optional) |
+
+| Host                    | hPanel website type                          |
+| ----------------------- | -------------------------------------------- |
+| `yourdomain.com`        | Custom PHP/HTML → upload `public-site/live/` |
+| `dev.yourdomain.com`    | Custom PHP/HTML → upload `public-site/dev/`  |
+| `admin.yourdomain.com`  | Node.js Web App                              |
+| `agent.yourdomain.com`  | Node.js Web App                              |
+| `worker.yourdomain.com` | Node.js Web App (optional)                   |
+
 
 **DNS at Hostinger (nameservers on Hostinger):** records are usually auto-created when you add each website. Wait a few minutes for propagation.
 
 **DNS at external registrar:** one **A record** per hostname → your Hostinger hosting IP (hPanel → Plan Details):
 
-| Type | Name | Value |
-|------|------|-------|
-| A | `@` | hosting IP |
-| A | `www` | hosting IP (or CNAME `www` → `@`) |
-| A | `dev` | hosting IP |
-| A | `admin` | hosting IP |
-| A | `agent` | hosting IP |
-| A | `worker` | hosting IP (if exposed) |
+
+| Type | Name     | Value                             |
+| ---- | -------- | --------------------------------- |
+| A    | `@`      | hosting IP                        |
+| A    | `www`    | hosting IP (or CNAME `www` → `@`) |
+| A    | `dev`    | hosting IP                        |
+| A    | `admin`  | hosting IP                        |
+| A    | `agent`  | hosting IP                        |
+| A    | `worker` | hosting IP (if exposed)           |
+
 
 Remove conflicting old A/CNAME for `@` and `www` before switching. Keep MX/SPF if email stays external.
 
@@ -133,40 +145,47 @@ Connect **same repo** three times as separate Node websites (uses 3 of 5 Busines
 ### Shared settings (all Node apps)
 
 - **Install command** (from repo root):  
-  `pnpm install --frozen-lockfile`
+`pnpm install --frozen-lockfile`
 - **Node version**: 22
+- **pnpm**: Hostinger runs pnpm via Corepack (currently **11.9.0**). Root `package.json` `packageManager` must match that version — do not pin an older pnpm (e.g. 9.x) or install fails before dependencies resolve. `pnpm-workspace.yaml` sets `minimumReleaseAge: 0` and `allowBuilds` for pnpm 11 CI defaults (Prisma, sharp, etc.). Build commands stay the same (`hostinger:admin`, etc.).
 
 ### Admin (`admin.yourdomain.com`)
 
 Hostinger’s build wizard is **dropdown-only** (reads root `package.json` scripts). Webroot stays `./` (repo root) — that’s OK.
 
-| Setting | Value |
-|---------|-------|
-| Build command (dropdown) | **`hostinger:admin`** |
-| Output directory | `apps/admin/.next` |
-| Framework | Next.js |
-| Node | 22 |
+
+| Setting                  | Value                 |
+| ------------------------ | --------------------- |
+| Build command (dropdown) | `**hostinger:admin`** |
+| Output directory         | `apps/admin/.next`    |
+| Framework                | Next.js               |
+| Node                     | 22                    |
+
 
 **Env vars:** see `apps/admin/.env.example` + `AUTH_REQUIRED=true`, Supabase `DATABASE_URL`, etc.
 
 ### Agent (`agent.yourdomain.com`)
 
-| Setting | Value |
-|---------|-------|
-| Build command (dropdown) | **`hostinger:agent`** |
-| Output directory | `apps/agent/.next` |
-| Framework | Next.js |
 
-**Env vars:** same `DATABASE_URL`, `AUTH_*` as admin.  
+| Setting                  | Value                 |
+| ------------------------ | --------------------- |
+| Build command (dropdown) | `**hostinger:agent`** |
+| Output directory         | `apps/agent/.next`    |
+| Framework                | Next.js               |
+
+
+**Env vars:** same `DATABASE_URL`, `AUTH_`* as admin.  
 `NEXT_PUBLIC_APP_URL=https://agent.yourdomain.com`
 
 ### Worker (`worker.yourdomain.com` or internal subdomain)
 
-| Setting | Value |
-|---------|-------|
-| Build command (dropdown) | **`hostinger:worker`** (install only) |
-| Start command | `pnpm --filter @prototype/worker start` |
-| Framework | Other → entry `apps/worker/src/index.ts` |
+
+| Setting                  | Value                                    |
+| ------------------------ | ---------------------------------------- |
+| Build command (dropdown) | `**hostinger:worker`** (install only)    |
+| Start command            | `pnpm --filter @prototype/worker start`  |
+| Framework                | Other → entry `apps/worker/src/index.ts` |
+
 
 **Env vars:**
 
@@ -184,10 +203,12 @@ curl -sS -X POST -H "Authorization: Bearer YOUR_CRON_SECRET" https://worker.your
 
 ### Public site (not GitHub Node — static upload)
 
-| Host | Source folder in repo |
-|------|----------------------|
-| `dev.yourdomain.com` | `apps/public-site/dev/` |
-| `yourdomain.com` | `apps/public-site/live/` |
+
+| Host                 | Source folder in repo    |
+| -------------------- | ------------------------ |
+| `dev.yourdomain.com` | `apps/public-site/dev/`  |
+| `yourdomain.com`     | `apps/public-site/live/` |
+
 
 Deploy via FTP, File Manager, or git pull + copy on server. No build step.
 
@@ -201,29 +222,31 @@ Deploy via FTP, File Manager, or git pull + copy on server. No build step.
 
 Same code. Swap hPanel Node → nginx + systemd. Worker becomes a real background service. Postgres moves on-box.
 
-| Unit | Role |
-|------|------|
-| `proto-admin.service` | Next admin |
-| `proto-agent.service` | Next App Lab |
-| `proto-worker.service` | Job runner |
-| nginx | Static + reverse proxy |
+
+| Unit                   | Role                   |
+| ---------------------- | ---------------------- |
+| `proto-admin.service`  | Next admin             |
+| `proto-agent.service`  | Next App Lab           |
+| `proto-worker.service` | Job runner             |
+| nginx                  | Static + reverse proxy |
+
 
 ## Checklists
 
 **Local → Hostinger**
 
-- [ ] Supabase + migrations
-- [ ] Deploy admin, agent, worker Node apps
-- [ ] Upload `public-site/dev` + `live`
-- [ ] `AUTH_REQUIRED=true` on admin + agent
-- [ ] Cron → worker `/jobs/bank-sync`
-- [ ] Invite first user
+- Supabase + migrations
+- Deploy admin, agent, worker Node apps
+- Upload `public-site/dev` + `live`
+- `AUTH_REQUIRED=true` on admin + agent
+- Cron → worker `/jobs/bank-sync`
+- Invite first user
 
 **Hostinger → KVM**
 
-- [ ] Postgres on VPS, update `DATABASE_URL`
-- [ ] nginx + systemd
-- [ ] Same env vars, same repo
+- Postgres on VPS, update `DATABASE_URL`
+- nginx + systemd
+- Same env vars, same repo
 
 ## Commands
 
@@ -233,3 +256,6 @@ pnpm prisma:generate
 pnpm promote:public
 pnpm --filter @prototype/admin integrations:bootstrap
 ```
+
+
+
