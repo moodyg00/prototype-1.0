@@ -12,12 +12,12 @@
     "dev:public": "npx --yes serve apps/public-site/dev -p 8080",
     "dev:public:live": "npx --yes serve apps/public-site/live -p 8081",
     "promote:public": "node scripts/promote-public-site.mjs",
-    "hostinger:admin": "pnpm install --frozen-lockfile && pnpm --filter @prototype/admin build",
-    "hostinger:agent": "pnpm install --frozen-lockfile && pnpm --filter @prototype/agent build",
+    "hostinger:admin": "pnpm install --frozen-lockfile && npm run prisma:generate && pnpm --filter @prototype/admin build",
+    "hostinger:agent": "pnpm install --frozen-lockfile && npm run prisma:generate && pnpm --filter @prototype/agent build",
     "hostinger:worker": "pnpm install --frozen-lockfile",
-    "postinstall": "pnpm --filter @prototype/db prisma:generate",
+    "postinstall": "cd packages/db && node node_modules/prisma/build/index.js generate",
     "typecheck": "turbo run typecheck",
-    "prisma:generate": "pnpm --filter @prototype/db prisma generate"
+    "prisma:generate": "cd packages/db && node node_modules/prisma/build/index.js generate"
   },
   "devDependencies": {
     "turbo": "^2.5.6",

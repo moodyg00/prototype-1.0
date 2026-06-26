@@ -11,7 +11,7 @@
     "./*": "./generated/*"
   },
   "scripts": {
-    "build": "pnpm prisma generate",
+    "build": "prisma generate",
     "typecheck": "tsc --noEmit",
     "prisma": "prisma",
     "prisma:generate": "prisma generate",
