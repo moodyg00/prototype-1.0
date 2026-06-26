@@ -7,6 +7,7 @@ const PUBLIC_PATH_PREFIXES = [
   '/api/auth/',
   '/api/health/',
   '/api/book/',
+  '/api/public/',
   '/api/webhooks/',
   '/api/cron/',
 ] as const;

@@ -2,30 +2,46 @@
 
 Static marketing site — plain HTML/CSS/JS in `dev/` and `live/`.
 
-| Path | Purpose | Dev | Production host |
-|------|---------|-----|-----------------|
-| `dev/` | Edit + preview | `pnpm dev:public` → :8080 | `dev.yourdomain.com` |
-| `live/` | Promoted copy | `pnpm dev:public:live` → :8081 | `yourdomain.com` |
+| Path | Purpose | Local preview |
+|------|---------|---------------|
+| `dev/` | Edit + preview | `pnpm dev:public` → :8080 |
+| `live/` | Promoted production copy | `pnpm dev:public:live` → :8081 |
 
-Legacy PHP files at the repo root of `apps/public-site/` (outside `dev/` and `live/`) are **not deployed** — retire over time.
+## Pages
 
-## Workflow
+- `index.html` — Home (SMS-first quote funnel)
+- `pressure-washing.html`, `gutter-cleaning.html`, `tv-mounting.html`, `boat-detailing.html`
+- `about.html`, `area.html`, `reviews.html`, `blog.html`
+- `contact.html` — Contact form (posts to admin API)
 
-```bash
-pnpm dev:public          # preview dev/ on :8080
-pnpm promote:public      # copy dev/ → live/
-pnpm dev:public:live     # preview live/ on :8081
-git add apps/public-site && git commit && git push   # optional
+## Contact form
+
+The static site has no server-side code. Form submissions go to the admin app:
+
+```
+POST {adminApiBase}/api/public/contact
 ```
 
-## Hostinger
+Local default: `http://localhost:3001` (see `dev/js/public/config.js`).
 
-Static only — **not** a Node app.
+Creates a `Contact` + `Lead` in shared Prisma schema (`packages/db`) and attaches uploaded photos to the lead.
 
-1. `dev.yourdomain.com` → docroot = uploaded `dev/` files
-2. `yourdomain.com` → docroot = uploaded `live/` files
-3. Promote locally, then re-upload/rsync `live/` or deploy via git + copy on server
+Admin env for production CORS:
 
-No env vars. No build step.
+```
+PUBLIC_SITE_ORIGINS=https://yourdomain.com,https://dev.yourdomain.com
+```
 
-Agent context: `.agents/agents.md` · Deploy: `docs/DEPLOYMENT.md`
+## Local preview
+
+```bash
+pnpm dev:public
+```
+
+Run `pnpm dev:admin` as well if testing the contact form locally.
+
+## Regenerate from legacy (one-time)
+
+If you still have PHP sources elsewhere, `scripts/migrate-public-site-static.mjs` was used for the initial port. Legacy PHP has been removed from this app.
+
+Agent context: `.agents/agents.md`
