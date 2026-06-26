@@ -209,7 +209,7 @@ Same `DATABASE_URL` and `AUTH_*` as admin. `NEXT_PUBLIC_APP_URL=https://agent.yo
 | Setting | Value |
 |---------|-------|
 | Build command | `hostinger:worker` (install only) |
-| Start command | `pnpm --filter @prototype/worker start` |
+| Start command | `npm --prefix apps/worker run start` |
 | Framework | Other → entry `apps/worker/src/index.ts` |
 
 ```env
