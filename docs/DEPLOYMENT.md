@@ -198,6 +198,7 @@ Env: see `apps/admin/.env.example` — `DATABASE_URL`, `DIRECT_DATABASE_URL`, `A
 | Setting | Value |
 |---------|-------|
 | Build command | `hostinger:agent` |
+| Start command | `hostinger:agent:start` |
 | Output directory | `apps/agent/.next` |
 | Framework | Next.js |
 
@@ -208,7 +209,7 @@ Same `DATABASE_URL` and `AUTH_*` as admin. `NEXT_PUBLIC_APP_URL=https://agent.yo
 | Setting | Value |
 |---------|-------|
 | Build command | `hostinger:worker` (install only) |
-| Start command | `npm --prefix apps/worker run start` |
+| Start command | `hostinger:worker:start` |
 | Framework | Other → entry `apps/worker/src/index.ts` |
 
 ```env
