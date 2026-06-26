@@ -122,7 +122,12 @@ export function CreateBookingFromSlotDialog({
               <FieldLabel>Contact</FieldLabel>
               <Select value={contactId} onValueChange={(v) => setContactId(v as string)}>
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue>
+                    {(value) => {
+                      if (!value || value === NONE) return 'No contact';
+                      return contacts.find((c) => c.id === value)?.name ?? 'No contact';
+                    }}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectPopup>
                   <SelectItem value={NONE}>No contact</SelectItem>
@@ -138,7 +143,12 @@ export function CreateBookingFromSlotDialog({
               <FieldLabel>Service</FieldLabel>
               <Select value={serviceId} onValueChange={(v) => setServiceId(v as string)}>
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue>
+                    {(value) => {
+                      if (!value || value === NONE) return 'No service';
+                      return services.find((s) => s.id === value)?.name ?? 'No service';
+                    }}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectPopup>
                   <SelectItem value={NONE}>No service</SelectItem>

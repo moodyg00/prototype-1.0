@@ -41,6 +41,7 @@ import {
   Terminal,
   Server,
   Settings as SettingsIcon,
+  Activity,
   ClipboardList,
   UsersRound,
   Palette,
@@ -138,8 +139,9 @@ export const NAV_GROUPS: NavGroup[] = [
     sort: 7,
     items: [
       { href: '/admin/settings', label: 'Settings', icon: SettingsIcon,    sort: 1 },
-      { href: '/admin/log',      label: 'Log',      icon: ClipboardList,   sort: 2 },
-      { href: '/admin/users',    label: 'Users',    icon: UsersRound,      sort: 3 },
+      { href: '/admin/log',             label: 'Log',            icon: ClipboardList, sort: 2 },
+      { href: '/admin/observability',   label: 'Observability',  icon: Activity,      sort: 3 },
+      { href: '/admin/users',           label: 'Users',          icon: UsersRound,    sort: 4 },
     ],
   },
   {

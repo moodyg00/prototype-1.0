@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 
 import { SingleRecordViewPage } from '@/src/components/admin/SingleRecordViewPage';
 import { getBankTransactionDetail } from '@/src/lib/banking/list-transactions';
+import { maskSecret } from '@/src/lib/integrations/credentials';
 import { isAdminDbSection } from '@/src/lib/admin-record-form-config';
 import { prisma } from '@/src/lib/prisma';
 import {
@@ -78,26 +79,39 @@ export default async function Page({ params }: { params: Promise<PageParams> }) 
         fullName: true,
         avatarUrl: true,
         userType: true,
-        roleId: true,
-        roleRef: { select: { id: true, name: true } },
+        roleRef: { select: { name: true } },
         aiModel: true,
         description: true,
+        apiKey: true,
+        passwordHash: true,
         isActive: true,
         lastLoginAt: true,
         createdAt: true,
         updatedAt: true,
-        createdBy: true,
-        updatedBy: true,
+        createdByRef: { select: { fullName: true, email: true } },
+        updatedByRef: { select: { fullName: true, email: true } },
       },
     });
     if (!user) notFound();
 
     const userRecord = {
-      ...user,
-      role: user.roleRef?.name ?? null,
+      id: user.id,
+      email: user.email,
+      username: user.username,
+      fullName: user.fullName,
+      avatarUrl: user.avatarUrl,
+      userType: user.userType,
+      role: user.roleRef?.name ?? 'Unassigned',
+      aiModel: user.aiModel,
+      description: user.description,
+      apiKey: user.apiKey ? maskSecret(user.apiKey) : null,
+      isActive: user.isActive,
+      invitePending: user.userType === 'human' && !user.passwordHash,
       lastLoginAt: user.lastLoginAt?.toISOString() ?? null,
       createdAt: user.createdAt?.toISOString() ?? null,
       updatedAt: user.updatedAt?.toISOString() ?? null,
+      createdBy: user.createdByRef?.fullName ?? user.createdByRef?.email ?? null,
+      updatedBy: user.updatedByRef?.fullName ?? user.updatedByRef?.email ?? null,
     };
 
     return (

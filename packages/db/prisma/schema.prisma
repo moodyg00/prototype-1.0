@@ -59,6 +59,7 @@ model User {
   passwordResetsAsUser               PasswordReset[]          @relation("password_resets_user_id_users")
   passwordResetsAsCreatedBy          PasswordReset[]          @relation("password_resets_created_by_users")
   passwordResetsAsUpdatedBy          PasswordReset[]          @relation("password_resets_updated_by_users")
+  userSessions                       UserSession[]
   changeLogsAsUser                   ChangeLog[]              @relation("change_log_user_id_users")
   changeLogsAsCreatedBy              ChangeLog[]              @relation("change_log_created_by_users")
   changeLogsAsUpdatedBy              ChangeLog[]              @relation("change_log_updated_by_users")
@@ -301,6 +302,22 @@ model PasswordReset {
   @@index([tokenHash])
   @@index([expiresAt])
   @@map("password_resets")
+}
+
+model UserSession {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  tokenHash  String    @unique @map("token_hash")
+  expiresAt  DateTime  @map("expires_at") @db.Timestamptz(6)
+  lastSeenAt DateTime? @default(now()) @map("last_seen_at") @db.Timestamptz(6)
+  createdAt  DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  ipAddress  String?   @map("ip_address") @db.VarChar(45)
+  userAgent  String?   @map("user_agent") @db.VarChar(512)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("user_sessions")
 }
 
 model ChangeLog {

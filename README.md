@@ -40,7 +40,3 @@ Supabase behavior:
 - `admin_record/` and `submitted/` paths resolve to short-lived signed URLs.
 - Optional `SUPABASE_STORAGE_BUCKET` overrides the default bucket name (`media`).
 
-## Current blockers / follow-up
-
-- `@prototype/admin` strict TypeScript checks still fail on a Base UI API mismatch in `components/ui/select.tsx` (`SelectPrimitive.Root.Props` generic signature changed). Build is currently configured to skip lint/type validation while this API update is completed.
-- Next.js warns about workspace root due an external lockfile at `/Users/grant/package-lock.json`; functionality is unaffected.

@@ -1,5 +1,8 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 
+import { getAuthConfig } from '@prototype/auth';
+
+import { getSessionUserIdFromCookies } from '@/src/lib/auth/get-session';
 import { prismaBase } from '@/src/lib/prisma-base';
 
 export type ChangeLogAction = 'create' | 'update' | 'delete' | 'automation';
@@ -45,9 +48,9 @@ const ACTING_USER_CACHE_MS = 30_000;
 /**
  * Resolves the user id to attribute an admin action to.
  *
- * Tries the Supabase session first (matched by email against the `users`
- * table). When auth is not configured or no session exists, falls back to the
- * first active admin user so demo actions still carry attribution.
+ * Uses the session cookie when present. When auth is disabled in development
+ * or no session exists, falls back to the first active admin user so demo
+ * actions still carry attribution.
  */
 export async function resolveActingUserId(): Promise<string | null> {
   if (cachedActingUser && Date.now() - cachedActingUser.at < ACTING_USER_CACHE_MS) {
@@ -57,19 +60,12 @@ export async function resolveActingUserId(): Promise<string | null> {
   let userId: string | null = null;
 
   try {
-    const { createClient } = await import('@/src/lib/supabase/server');
-    const supabase = await createClient();
-    const { data } = await supabase.auth.getUser();
-    const email = data.user?.email;
-    if (email) {
-      const user = await prismaBase.user.findUnique({ where: { email }, select: { id: true } });
-      if (user) userId = user.id;
-    }
+    userId = await getSessionUserIdFromCookies();
   } catch {
-    // Supabase auth is optional in this environment; fall through to default.
+    // Session lookup optional in dev.
   }
 
-  if (!userId) {
+  if (!userId && !getAuthConfig().required) {
     const fallback = await prismaBase.user.findFirst({
       where: { isActive: true, roleRef: { name: 'Admin' } },
       orderBy: { createdAt: 'asc' },

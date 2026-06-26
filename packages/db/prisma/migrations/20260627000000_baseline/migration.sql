@@ -1,4 +1,3 @@
-◇ injected env (10) from ../../apps/admin/.env.local // tip: ⌁ auth for agents [www.vestauth.com]
 -- CreateSchema
 CREATE SCHEMA IF NOT EXISTS "public";
 
@@ -53,6 +52,20 @@ CREATE TABLE "password_resets" (
     "updated_by" UUID,
 
     CONSTRAINT "password_resets_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "user_sessions" (
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "user_id" UUID NOT NULL,
+    "token_hash" TEXT NOT NULL,
+    "expires_at" TIMESTAMPTZ(6) NOT NULL,
+    "last_seen_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
+    "ip_address" VARCHAR(45),
+    "user_agent" VARCHAR(512),
+
+    CONSTRAINT "user_sessions_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -2574,6 +2587,15 @@ CREATE INDEX "password_resets_token_hash_idx" ON "password_resets"("token_hash")
 CREATE INDEX "password_resets_expires_at_idx" ON "password_resets"("expires_at");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "user_sessions_token_hash_key" ON "user_sessions"("token_hash");
+
+-- CreateIndex
+CREATE INDEX "user_sessions_user_id_idx" ON "user_sessions"("user_id");
+
+-- CreateIndex
+CREATE INDEX "user_sessions_expires_at_idx" ON "user_sessions"("expires_at");
+
+-- CreateIndex
 CREATE INDEX "change_log_table_name_record_id_idx" ON "change_log"("table_name", "record_id");
 
 -- CreateIndex
@@ -3721,6 +3743,9 @@ ALTER TABLE "password_resets" ADD CONSTRAINT "password_resets_created_by_fkey" F
 
 -- AddForeignKey
 ALTER TABLE "password_resets" ADD CONSTRAINT "password_resets_updated_by_fkey" FOREIGN KEY ("updated_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "user_sessions" ADD CONSTRAINT "user_sessions_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "change_log" ADD CONSTRAINT "change_log_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -4885,4 +4910,3 @@ ALTER TABLE "WorkflowVersion" ADD CONSTRAINT "WorkflowVersion_workflowId_fkey" F
 
 -- AddForeignKey
 ALTER TABLE "WorkflowExport" ADD CONSTRAINT "WorkflowExport_workflowId_fkey" FOREIGN KEY ("workflowId") REFERENCES "Workflow"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-

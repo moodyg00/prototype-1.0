@@ -38,6 +38,7 @@ import {
   reprocessUnprocessedBankTransactions,
 } from '@/src/lib/banking/apply-bank-rules';
 import { generateJournalEntriesFromBankTransactions } from '@/src/lib/banking/journal-from-transaction';
+import { logIntegrationEvent } from '@/src/lib/integrations/log-integration-event';
 import { prisma } from '@/src/lib/prisma';
 
 export type MercurySyncResult = {
@@ -77,6 +78,27 @@ async function logSyncAttempt(args: {
       errorMessage: args.errorMessage ?? null,
     },
   });
+
+  if (!args.succeeded) {
+    try {
+      await logIntegrationEvent({
+        provider: MERCURY_PROVIDER,
+        logType: 'sync',
+        status: 'failed',
+        endpoint: args.operation,
+        errorMessage: args.errorMessage ?? null,
+        durationMs: args.durationMs ?? null,
+        requestPayload: {
+          operation: args.operation,
+          targetResourceId: args.targetResourceId ?? null,
+          responseStatus: args.responseStatus ?? null,
+          requestId: args.requestId ?? null,
+        },
+      });
+    } catch {
+      // Integration logging must not block bank sync.
+    }
+  }
 }
 
 async function resolveCoaId(code: string): Promise<string | null> {

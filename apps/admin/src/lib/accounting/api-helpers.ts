@@ -22,6 +22,7 @@ import {
 import { AttachmentValidationError } from '@/src/lib/validation/attachment';
 import { AvailabilityScheduleError } from '@/src/lib/scheduling/availability-schedules';
 import { UserRoleServiceError } from '@/src/lib/user-roles/user-roles';
+import { UserServiceError } from '@/src/lib/users/users';
 import { SettingsServiceError } from '@/src/lib/settings/errors';
 
 export function jsonError(status: number, message: string, details?: unknown) {
@@ -54,6 +55,9 @@ export function handleRouteError(error: unknown): NextResponse {
     return jsonError(422, error.message);
   }
   if (error instanceof UserRoleServiceError) {
+    return jsonError(error.status, error.message);
+  }
+  if (error instanceof UserServiceError) {
     return jsonError(error.status, error.message);
   }
   if (error instanceof SettingsServiceError) {

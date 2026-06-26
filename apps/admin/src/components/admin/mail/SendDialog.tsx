@@ -290,7 +290,9 @@ export function SendDialog({ open, onOpenChange, template }: SendDialogProps): R
               <FieldLabel>Organization</FieldLabel>
               <Select value={organizationId} onValueChange={(value) => setOrganizationId(value as string)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select an organization" />
+                  <SelectValue placeholder="Select an organization">
+                    {(value) => organizations.find((org) => org.id === value)?.name ?? 'Select an organization'}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectPopup>
                   {organizations.map((org) => (
@@ -308,7 +310,9 @@ export function SendDialog({ open, onOpenChange, template }: SendDialogProps): R
               <FieldLabel>Saved audience</FieldLabel>
               <Select value={audienceId} onValueChange={(value) => setAudienceId(value as string)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a saved audience" />
+                  <SelectValue placeholder="Select a saved audience">
+                    {(value) => audiences.find((audience) => audience.id === value)?.name ?? 'Select a saved audience'}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectPopup>
                   {audiences.length === 0 ? (

@@ -7,45 +7,29 @@ function pickFirstDefined(...values: Array<string | undefined>): string | undefi
   return undefined;
 }
 
-export function getSupabaseUrl(): string {
+/** Postgres connection string for Prisma runtime + CLI. */
+export function getDatabaseUrl(): string {
   const value = pickFirstDefined(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.SUPABASE_URL
-  );
-
-  if (!value) {
-    throw new Error('Missing Supabase URL. Set NEXT_PUBLIC_SUPABASE_URL (or SUPABASE_URL).');
-  }
-
-  return value;
-}
-
-export function getSupabasePublishableKey(): string {
-  const value = pickFirstDefined(
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
-    process.env.SUPABASE_PUBLISHABLE_KEY,
-    process.env.SUPABASE_ANON_KEY
+    process.env.DATABASE_URL,
+    process.env.SUPABASE_DB_URL,
+    process.env.SUPABASE_POOLER_URL,
   );
 
   if (!value) {
     throw new Error(
-      'Missing Supabase publishable key. Set NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (or SUPABASE_PUBLISHABLE_KEY / SUPABASE_ANON_KEY).'
+      'Missing database URL. Set DATABASE_URL (local dev) or Supabase pooled URL in production.',
     );
   }
 
   return value;
 }
 
-export function getDatabaseUrl(): string {
-  const value = pickFirstDefined(
-    process.env.DATABASE_URL,
-    process.env.SUPABASE_DB_URL,
-    process.env.SUPABASE_POOLER_URL
-  );
+/** Direct Postgres URL for migrations (Supabase port 5432). Falls back to DATABASE_URL. */
+export function getDirectDatabaseUrl(): string {
+  return pickFirstDefined(process.env.DIRECT_DATABASE_URL, process.env.DATABASE_URL) ?? getDatabaseUrl();
+}
 
-  if (!value) {
-    throw new Error('Missing database URL. Set DATABASE_URL (or SUPABASE_DB_URL / SUPABASE_POOLER_URL).');
-  }
-
-  return value;
+/** True when DATABASE_URL points at Supabase pooler/host. */
+export function isSupabaseDatabaseUrl(url: string = getDatabaseUrl()): boolean {
+  return url.includes('supabase');
 }

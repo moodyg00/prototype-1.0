@@ -29,6 +29,11 @@ export default defineConfig({
     seed: 'node prisma/seed.mjs',
   },
   datasource: {
-    url: process.env.DATABASE_URL ?? process.env.SUPABASE_DB_URL ?? process.env.SUPABASE_POOLER_URL ?? '',
+    url:
+      process.env.DIRECT_DATABASE_URL ??
+      process.env.DATABASE_URL ??
+      process.env.SUPABASE_DB_URL ??
+      process.env.SUPABASE_POOLER_URL ??
+      '',
   },
 });

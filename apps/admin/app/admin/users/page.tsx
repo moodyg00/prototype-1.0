@@ -1,9 +1,11 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Search, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
+import Link from 'next/link';
+import { Search, ChevronLeft, ChevronRight, RefreshCw, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { StatusBadge } from '../../../src/components/admin/StatusBadge';
+import { UserCreateDialog } from '../../../src/components/admin/users/UserCreateDialog';
 import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
 import { Card } from '../../../components/ui/card';
@@ -13,15 +15,19 @@ import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from '../
 import { Spinner } from '../../../components/ui/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
 
-type UserStatus = 'active' | 'blocked';
+type UserStatus = 'active' | 'blocked' | 'pending';
 type UserRoleOption = { id: string; name: string };
 type UsersApiRow = {
   id: string;
   fullName: string;
   email: string | null;
+  username: string | null;
+  userType: string;
   roleId: string | null;
   role: string;
   isActive: boolean;
+  invitePending: boolean;
+  maskedApiKey: string | null;
   lastLoginAt: string | null;
   createdAt: string | null;
 };
@@ -30,9 +36,12 @@ interface UserRecord {
   id: string;
   name: string;
   email: string;
+  username: string | null;
+  userType: string;
   roleId: string | null;
   role: string;
   status: UserStatus;
+  maskedApiKey: string | null;
   lastSeenLabel: string;
   createdAtLabel: string;
 }
@@ -60,6 +69,17 @@ function formatCreatedDate(value: string | null) {
   });
 }
 
+function userTypeLabel(userType: string) {
+  if (userType === 'ai_agent') return 'AI agent';
+  if (userType === 'automation') return 'Automation';
+  return 'Human';
+}
+
+function deriveStatus(user: UsersApiRow): UserStatus {
+  if (user.invitePending) return 'pending';
+  return user.isActive ? 'active' : 'blocked';
+}
+
 export default function UsersPage() {
   const [rows, setRows] = useState<UserRecord[]>([]);
   const [roles, setRoles] = useState<UserRoleOption[]>([]);
@@ -69,6 +89,7 @@ export default function UsersPage() {
   const [roleFilter, setRoleFilter] = useState<'all' | string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [assigningId, setAssigningId] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
   const pageSize = 50;
 
   const loadRoles = useCallback(async () => {
@@ -92,11 +113,14 @@ export default function UsersPage() {
       }
       const normalized = (payload.users ?? []).map((user) => ({
         id: user.id,
-        name: user.fullName || user.email || user.id,
+        name: user.fullName || user.email || user.username || user.id,
         email: user.email ?? 'No email',
+        username: user.username,
+        userType: user.userType,
         roleId: user.roleId,
         role: user.role,
-        status: user.isActive ? ('active' as const) : ('blocked' as const),
+        status: deriveStatus(user),
+        maskedApiKey: user.maskedApiKey,
         lastSeenLabel: formatRelativeOrNever(user.lastLoginAt),
         createdAtLabel: formatCreatedDate(user.createdAt),
       }));
@@ -129,7 +153,12 @@ export default function UsersPage() {
         setRows((prev) =>
           prev.map((row) =>
             row.id === userId
-              ? { ...row, roleId: updated.roleId, role: updated.role }
+              ? {
+                  ...row,
+                  roleId: updated.roleId,
+                  role: updated.role,
+                  status: deriveStatus(updated),
+                }
               : row,
           ),
         );
@@ -143,10 +172,10 @@ export default function UsersPage() {
   };
 
   const roleOptions = useMemo(() => {
-    const roles = Array.from(new Set(rows.map((row) => row.role).filter(Boolean))).sort((a, b) =>
+    const roleNames = Array.from(new Set(rows.map((row) => row.role).filter(Boolean))).sort((a, b) =>
       a.localeCompare(b),
     );
-    return ['all', ...roles];
+    return ['all', ...roleNames];
   }, [rows]);
 
   const filtered = rows
@@ -156,6 +185,7 @@ export default function UsersPage() {
       return (
         row.name.toLowerCase().includes(q) ||
         row.email.toLowerCase().includes(q) ||
+        row.username?.toLowerCase().includes(q) ||
         row.id.toLowerCase().includes(q)
       );
     });
@@ -176,7 +206,11 @@ export default function UsersPage() {
         </div>
         <div className="flex gap-3">
           <Button variant="secondary" onClick={() => toast('Export users list (coming soon)')}>Export</Button>
-          <Button onClick={() => void loadUsers()}>
+          <Button onClick={() => setCreateOpen(true)}>
+            <UserPlus className="w-4 h-4" />
+            Invite / create
+          </Button>
+          <Button variant="secondary" onClick={() => void loadUsers()}>
             <RefreshCw className="w-4 h-4" />
             Refresh
           </Button>
@@ -218,7 +252,8 @@ export default function UsersPage() {
           <TableHeader>
             <TableRow>
               <TableHead>User</TableHead>
-              <TableHead className="w-28">Role</TableHead>
+              <TableHead className="w-28">Type</TableHead>
+              <TableHead className="w-36">Role</TableHead>
               <TableHead className="w-28">Status</TableHead>
               <TableHead className="w-28">Last Seen</TableHead>
               <TableHead className="w-32">Created</TableHead>
@@ -227,7 +262,7 @@ export default function UsersPage() {
           <TableBody>
             {loading && (
               <TableRow>
-                <TableCell colSpan={5} className="p-0">
+                <TableCell colSpan={6} className="p-0">
                   <div className="flex items-center justify-center gap-2 py-12 text-sm text-[var(--muted-foreground)]">
                     <Spinner className="size-4" />
                     Loading users...
@@ -237,7 +272,7 @@ export default function UsersPage() {
             )}
             {!loading && error && (
               <TableRow>
-                <TableCell colSpan={5} className="p-0">
+                <TableCell colSpan={6} className="p-0">
                   <Empty className="py-12 md:py-14">
                     <EmptyHeader>
                       <EmptyTitle>Unable to Load Users</EmptyTitle>
@@ -249,7 +284,7 @@ export default function UsersPage() {
             )}
             {!loading && !error && paginated.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="p-0">
+                <TableCell colSpan={6} className="p-0">
                   <Empty className="py-12 md:py-14">
                     <EmptyHeader>
                       <EmptyTitle>No Users Found</EmptyTitle>
@@ -262,10 +297,18 @@ export default function UsersPage() {
             {paginated.map((user) => (
               <TableRow key={user.id} className="hover:bg-[var(--muted)]/50 group">
                 <TableCell>
-                  <div className="font-medium">{user.name}</div>
-                  <div className="text-xs text-[var(--muted-foreground)]">{user.email}</div>
-                  <div className="text-[10px] font-mono text-[var(--muted-foreground)]">{user.id}</div>
+                  <Link href={`/admin/users/${user.id}`} className="block">
+                    <div className="font-medium underline-offset-4 group-hover:underline">{user.name}</div>
+                    <div className="text-xs text-[var(--muted-foreground)]">
+                      {user.email}
+                      {user.username ? ` · @${user.username}` : ''}
+                    </div>
+                    {user.maskedApiKey ? (
+                      <div className="text-[10px] font-mono text-[var(--muted-foreground)]">API key {user.maskedApiKey}</div>
+                    ) : null}
+                  </Link>
                 </TableCell>
+                <TableCell className="text-sm capitalize">{userTypeLabel(user.userType)}</TableCell>
                 <TableCell>
                   {roles.length > 0 ? (
                     <Select
@@ -276,7 +319,9 @@ export default function UsersPage() {
                       }}
                     >
                       <SelectTrigger className="h-8 w-36">
-                        <SelectValue placeholder="Assign role" />
+                        <SelectValue placeholder="Assign role">
+                          {(value) => roles.find((role) => role.id === value)?.name ?? user.role}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectPopup>
                         {roles.map((role) => (
@@ -290,7 +335,9 @@ export default function UsersPage() {
                     <span className="capitalize">{user.role}</span>
                   )}
                 </TableCell>
-                <TableCell><StatusBadge status={user.status} /></TableCell>
+                <TableCell>
+                  <StatusBadge status={user.status === 'pending' ? 'pending' : user.status} />
+                </TableCell>
                 <TableCell className="text-sm text-[var(--muted-foreground)]">{user.lastSeenLabel}</TableCell>
                 <TableCell className="text-xs text-[var(--muted-foreground)]">{user.createdAtLabel}</TableCell>
               </TableRow>
@@ -310,7 +357,12 @@ export default function UsersPage() {
         </div>
       </Card>
 
-      <div className="text-xs text-[var(--muted-foreground)]">COSS UI CardFrame • role sync + invite controls ready</div>
+      <UserCreateDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        roles={roles}
+        onSaved={() => void loadUsers()}
+      />
     </div>
   );
 }

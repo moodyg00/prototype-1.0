@@ -205,7 +205,12 @@ export function BookingLinkFormDialog({
                 <FieldLabel>Service</FieldLabel>
                 <Select value={form.serviceId} onValueChange={(v) => update('serviceId', v as string)}>
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue>
+                      {(value) => {
+                        if (!value || value === NONE) return 'No service';
+                        return services.find((s) => s.id === value)?.name ?? 'No service';
+                      }}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectPopup>
                     <SelectItem value={NONE}>No service</SelectItem>
@@ -221,7 +226,12 @@ export function BookingLinkFormDialog({
                 <FieldLabel>Contact</FieldLabel>
                 <Select value={form.contactId} onValueChange={(v) => update('contactId', v as string)}>
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue>
+                      {(value) => {
+                        if (!value || value === NONE) return 'No contact';
+                        return contacts.find((c) => c.id === value)?.name ?? 'No contact';
+                      }}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectPopup>
                     <SelectItem value={NONE}>No contact</SelectItem>
