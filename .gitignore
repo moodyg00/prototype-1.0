@@ -1,3 +1,7 @@
+# OS / local scratch
+.DS_Store
+.tmp/
+
 # dependencies
 node_modules/
 **/node_modules/

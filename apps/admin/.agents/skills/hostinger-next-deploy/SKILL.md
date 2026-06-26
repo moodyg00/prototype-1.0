@@ -14,27 +14,24 @@ Follow this exact setup:
 2. Configure the project for a clean Hostinger-friendly build:
    - Set `output: 'standalone'` in `next.config.mjs`
    - Remove any `--turbo` flags from the `dev` script
-   - Pre-compile CSS using the Tailwind CLI before Next runs its build
+   - Compile Tailwind v4 via PostCSS (`postcss.config.mjs` with `@tailwindcss/postcss` + `autoprefixer`)
 
-3. Recommended scripts in package.json:
+3. Recommended scripts in `apps/admin/package.json`:
    ```json
    "scripts": {
-     "dev": "npm run build:css && next dev",
-     "build:css": "npx @tailwindcss/cli -i ./app/globals.css -o ./app/globals.built.css --minify",
-     "build": "npm run build:css && next build",
+     "dev": "next dev -p 3001",
+     "build": "next build",
      "start": "next start"
    }
    ```
 
-4. Update `app/layout.tsx` (or equivalent) to import the pre-built CSS file:
+4. Import source CSS in `app/layout.tsx`:
    ```tsx
-   import './globals.built.css';
+   import './globals.css';
    ```
 
-5. Make sure `autoprefixer` is present in devDependencies if Next complains about missing PostCSS plugins during build.
+5. Keep `postcss.config.mjs`, `autoprefixer`, and `@tailwindcss/postcss` in devDependencies. Do **not** use a separate `build:css` / `globals.built.css` step — that legacy pattern was removed when the monorepo moved to PostCSS-in-Next.
 
-6. After running `npm run build`, the production output will be in `.next/standalone`. This folder (plus the `public` folder) is what should be deployed to Hostinger.
+6. From the repo root, production build for Hostinger uses `pnpm hostinger:admin` (install + `next build`). Output is in `apps/admin/.next/standalone`.
 
-When the user asks about deploying to Hostinger, preparing a build, or fixing Hostinger deployment issues, always propose or verify this exact pattern instead of suggesting Turbopack, Next 16, or running the PostCSS plugin directly during the webpack build step.
-
-If the user wants to switch strategies later (e.g., full monorepo or separate services via MCP), you can discuss alternatives, but default to this reliable Hostinger shared hosting pattern unless told otherwise.
+When the user asks about deploying to Hostinger, preparing a build, or fixing Hostinger deployment issues, verify this PostCSS + standalone pattern. Do not suggest Tailwind CLI pre-compilation or `globals.built.css` unless debugging a specific regression.

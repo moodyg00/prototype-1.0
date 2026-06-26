@@ -17,7 +17,6 @@
     "hooks": "@/src/hooks"
   },
   "registries": {
-    "@coss": "https://coss.com/ui/r/{name}.json",
-    "@supabase": "https://supabase.com/ui/r/{name}.json"
+    "@coss": "https://coss.com/ui/r/{name}.json"
   }
 }

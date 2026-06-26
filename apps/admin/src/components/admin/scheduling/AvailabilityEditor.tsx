@@ -100,7 +100,7 @@ function patternWeekIndexes(patternWeeks: 1 | 2): number[] {
   return patternWeeks === 2 ? [0, 1] : [0];
 }
 
-const DAY_ORDER_MON_SUN = new Map(WEEK_DAYS_MON_SUN.map((day, index) => [day, index]));
+const DAY_ORDER_MON_SUN = new Map<number, number>(WEEK_DAYS_MON_SUN.map((day, index) => [day, index]));
 
 function linesForWeek(lines: PatternLine[], weekIndex: number): PatternLine[] {
   return lines

@@ -318,8 +318,6 @@ importers:
 
   packages/tsconfig: {}
 
-  packages/ui: {}
-
 packages:
 
   '@ai-sdk/gateway@3.0.136':
