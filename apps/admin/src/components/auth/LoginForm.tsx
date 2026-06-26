@@ -71,7 +71,7 @@ export function LoginForm() {
             onChange={(event) => setPassword(event.target.value)}
             required
           />
-          <FieldDescription>Session is shared with App Lab on the same domain in production.</FieldDescription>
+          <FieldDescription>Session is shared with agent on the same domain in production.</FieldDescription>
         </Field>
 
         <Button className="w-full" disabled={submitting} type="submit">

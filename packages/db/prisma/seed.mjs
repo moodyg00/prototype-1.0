@@ -31,7 +31,7 @@ const client = new Client({
 });
 
 const DEFAULT_USER_ID = '11111111-1111-4111-8111-111111111111';
-const DEFAULT_USER_EMAIL = 'dev@moodyhomeservice.com';
+const DEFAULT_USER_EMAIL = 'dev@example.com';
 const DEFAULT_USER_NAME = 'Default User';
 
 function rfc4122SeedUuid(uuid) {

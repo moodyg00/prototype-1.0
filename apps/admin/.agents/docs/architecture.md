@@ -4,7 +4,7 @@
 
 **`@prototype/admin`** is a Next.js 15 App Router app in the `prototype-1.0` monorepo — business operations where humans and AI agents share one Postgres database via `@prototype/db`. `/` redirects to `/admin`.
 
-Sibling apps: `@prototype/agent` (App Lab, port 3002), `@prototype/worker` (cron runner, port 3003), static `apps/public-site`.
+Sibling apps: `@prototype/agent` (agent workspace, port 3002), `@prototype/worker` (cron runner, port 3003), static `apps/public-site`.
 
 **Stack:** Next.js 15 · React 19 · TypeScript · Tailwind CSS v4 · Prisma 7 · PostgreSQL · pnpm · Node 22
 

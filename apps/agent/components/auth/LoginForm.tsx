@@ -40,7 +40,7 @@ export function LoginForm() {
     <div className="mx-auto w-full max-w-md rounded-xl border border-white/10 bg-zinc-900 p-6 shadow-xl">
       <form className="space-y-4" onSubmit={submit}>
         <div>
-          <h1 className="text-xl font-semibold text-zinc-100">App Lab sign in</h1>
+          <h1 className="text-xl font-semibold text-zinc-100">Agent sign in</h1>
           <p className="text-sm text-zinc-400">Same account as admin. Session shared in production.</p>
         </div>
 

@@ -31,4 +31,4 @@
 - Advanced orchestration for multiple agents
 - Production deployment refinement
 
-**Current Milestone**: Complete Phase 1 + basic Task Interface in admin-agent-GUI.
+**Current Milestone**: Complete Phase 1 + basic Task Interface in `@prototype/agent`.

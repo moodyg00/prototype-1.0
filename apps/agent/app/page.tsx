@@ -4,7 +4,7 @@ import React, { useState, useCallback } from 'react';
 import { WorkspaceCanvas } from '../components/WorkspaceCanvas';
 import { WORKSPACES, type WorkspaceId } from '../lib/workspaces';
 
-export default function AdminAgentShell() {
+export default function AgentShell() {
   const [toggleTarget, setToggleTarget] = useState<WorkspaceId | null>(null);
 
   const handleNavClick = useCallback((id: WorkspaceId) => {
@@ -19,9 +19,9 @@ export default function AdminAgentShell() {
     <div className="app-shell">
       <header className="header flex items-center px-4 gap-3 flex-shrink-0">
         <div className="flex items-center gap-2.5 pr-3 border-r border-white/10">
-          <div className="w-7 h-7 rounded bg-white text-zinc-950 flex items-center justify-center font-bold text-sm tracking-tighter">AA</div>
+          <div className="w-7 h-7 rounded bg-white text-zinc-950 flex items-center justify-center font-bold text-sm tracking-tighter">Ag</div>
           <div>
-            <div className="font-semibold text-sm tracking-tight">admin-agent</div>
+            <div className="font-semibold text-sm tracking-tight">Agent</div>
             <div className="text-[10px] text-zinc-500 -mt-0.5">control plane</div>
           </div>
         </div>

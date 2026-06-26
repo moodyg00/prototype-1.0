@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "admin-agent control plane",
-  description: "Backend control plane for proto-2 business workflows, agents, and the visual browser operator.",
+  title: "Agent control plane",
+  description: "Agent workspace for Proto business workflows, AI operators, and the visual browser operator.",
   icons: { icon: "/next.svg" },
 };
 

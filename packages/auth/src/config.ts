@@ -1,7 +1,7 @@
 export type AuthConfig = {
   /** When true, unauthenticated browser/API requests to protected routes are rejected. */
   required: boolean;
-  /** Cookie name shared by admin + App Lab on `.yourdomain.com`. */
+  /** Cookie name shared by admin + agent on `.yourdomain.com`. */
   cookieName: string;
   /** Parent domain in production, e.g. `.example.com`. Omit on localhost. */
   cookieDomain: string | undefined;

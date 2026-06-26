@@ -1,6 +1,6 @@
 # Creating Agent Definitions
 
-This guide helps you write effective `agent.md` files for agents that work within the admin-agent application.
+This guide helps you write effective `agent.md` files for agents that work within the `@prototype/agent` app.
 
 ## Agent File Structure
 

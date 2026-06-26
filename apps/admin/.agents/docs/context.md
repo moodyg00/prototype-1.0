@@ -15,7 +15,7 @@ A complete business suite where founders (human + AI agent team) start, operate,
 | App | Role |
 |-----|------|
 | **Admin** | CRUD, accounting, billing, banking, scheduling, settings |
-| **Agent** | App Lab — workspaces, browser automation, workflows |
+| **Agent** | Agent workspace — browser automation, workflows, AI operators |
 | **Worker** | Scheduled jobs (cron → admin API) |
 | **Public site** | Static marketing (`dev/` → `live/`) |
 
