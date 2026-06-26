@@ -1,8 +1,21 @@
+◇ injected env (10) from ../../apps/admin/.env.local // tip: ⌁ auth for agents [www.vestauth.com]
 -- CreateSchema
 CREATE SCHEMA IF NOT EXISTS "public";
 
 -- CreateEnum
 CREATE TYPE "JournalEntryStatus" AS ENUM ('Draft', 'Posted', 'Reversed');
+
+-- CreateTable
+CREATE TABLE "user_roles" (
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "name" VARCHAR(80) NOT NULL,
+    "permissions" JSONB NOT NULL DEFAULT '{}',
+    "is_system" BOOLEAN NOT NULL DEFAULT false,
+    "created_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "user_roles_pkey" PRIMARY KEY ("id")
+);
 
 -- CreateTable
 CREATE TABLE "users" (
@@ -14,7 +27,7 @@ CREATE TABLE "users" (
     "password_hash" TEXT,
     "api_key" VARCHAR(255),
     "user_type" TEXT NOT NULL DEFAULT 'human',
-    "role" TEXT NOT NULL DEFAULT 'user',
+    "role_id" UUID,
     "ai_model" VARCHAR(120),
     "description" TEXT,
     "is_active" BOOLEAN NOT NULL DEFAULT true,
@@ -662,29 +675,49 @@ CREATE TABLE "booking_links" (
 );
 
 -- CreateTable
-CREATE TABLE "availability_rules" (
+CREATE TABLE "availability_schedules" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "subject_kind" TEXT NOT NULL,
-    "business_id" UUID,
-    "contact_id" UUID,
     "user_id" UUID,
     "service_id" UUID,
-    "layer_key" TEXT NOT NULL,
-    "availability_type" TEXT NOT NULL,
-    "day_of_week" INTEGER,
-    "specific_date" DATE,
-    "start_time" TIME(6),
-    "end_time" TIME(6),
-    "is_available" BOOLEAN NOT NULL DEFAULT true,
-    "is_published" BOOLEAN NOT NULL DEFAULT true,
+    "business_id" UUID,
+    "pattern_weeks" INTEGER NOT NULL DEFAULT 1,
+    "valid_from" DATE NOT NULL,
+    "valid_to" DATE NOT NULL,
+    "slot_duration_minutes" INTEGER NOT NULL DEFAULT 60,
+    "slot_gap_minutes" INTEGER NOT NULL DEFAULT 15,
     "timezone" VARCHAR(64) NOT NULL DEFAULT 'America/Chicago',
+    "is_published" BOOLEAN NOT NULL DEFAULT true,
     "notes" TEXT,
     "created_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
     "created_by" UUID,
-    "updated_by" UUID,
 
-    CONSTRAINT "availability_rules_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "availability_schedules_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "availability_pattern_days" (
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "schedule_id" UUID NOT NULL,
+    "week_index" INTEGER NOT NULL DEFAULT 0,
+    "day_of_week" INTEGER NOT NULL,
+    "start_time" TIME(6) NOT NULL,
+    "end_time" TIME(6) NOT NULL,
+
+    CONSTRAINT "availability_pattern_days_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "availability_exceptions" (
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "schedule_id" UUID NOT NULL,
+    "exception_type" TEXT NOT NULL,
+    "specific_date" DATE NOT NULL,
+    "start_time" TIME(6) NOT NULL,
+    "end_time" TIME(6) NOT NULL,
+
+    CONSTRAINT "availability_exceptions_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -758,6 +791,7 @@ CREATE TABLE "chart_of_accounts" (
     "type" TEXT NOT NULL,
     "sub_type" TEXT,
     "description" TEXT,
+    "parent_id" UUID,
     "is_active" BOOLEAN NOT NULL DEFAULT true,
     "created_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
@@ -2498,6 +2532,9 @@ CREATE TABLE "WorkflowExport" (
 );
 
 -- CreateIndex
+CREATE UNIQUE INDEX "user_roles_name_key" ON "user_roles"("name");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 
 -- CreateIndex
@@ -2519,7 +2556,7 @@ CREATE INDEX "users_api_key_idx" ON "users"("api_key");
 CREATE INDEX "users_user_type_idx" ON "users"("user_type");
 
 -- CreateIndex
-CREATE INDEX "users_role_idx" ON "users"("role");
+CREATE INDEX "users_role_id_idx" ON "users"("role_id");
 
 -- CreateIndex
 CREATE INDEX "users_is_active_idx" ON "users"("is_active");
@@ -2822,10 +2859,25 @@ CREATE INDEX "booking_links_contact_id_idx" ON "booking_links"("contact_id");
 CREATE INDEX "booking_links_work_order_id_idx" ON "booking_links"("work_order_id");
 
 -- CreateIndex
-CREATE INDEX "availability_rules_subject_kind_contact_id_idx" ON "availability_rules"("subject_kind", "contact_id");
+CREATE INDEX "availability_schedules_subject_kind_user_id_idx" ON "availability_schedules"("subject_kind", "user_id");
 
 -- CreateIndex
-CREATE INDEX "availability_rules_layer_key_is_published_idx" ON "availability_rules"("layer_key", "is_published");
+CREATE INDEX "availability_schedules_subject_kind_service_id_idx" ON "availability_schedules"("subject_kind", "service_id");
+
+-- CreateIndex
+CREATE INDEX "availability_schedules_subject_kind_business_id_idx" ON "availability_schedules"("subject_kind", "business_id");
+
+-- CreateIndex
+CREATE INDEX "availability_schedules_valid_from_valid_to_idx" ON "availability_schedules"("valid_from", "valid_to");
+
+-- CreateIndex
+CREATE INDEX "availability_schedules_is_published_idx" ON "availability_schedules"("is_published");
+
+-- CreateIndex
+CREATE INDEX "availability_pattern_days_schedule_id_idx" ON "availability_pattern_days"("schedule_id");
+
+-- CreateIndex
+CREATE INDEX "availability_exceptions_schedule_id_specific_date_idx" ON "availability_exceptions"("schedule_id", "specific_date");
 
 -- CreateIndex
 CREATE INDEX "sops_title_idx" ON "sops"("title");
@@ -2865,6 +2917,9 @@ CREATE INDEX "chart_of_accounts_sub_type_idx" ON "chart_of_accounts"("sub_type")
 
 -- CreateIndex
 CREATE INDEX "chart_of_accounts_is_active_idx" ON "chart_of_accounts"("is_active");
+
+-- CreateIndex
+CREATE INDEX "chart_of_accounts_parent_id_idx" ON "chart_of_accounts"("parent_id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "journal_entries_entry_number_key" ON "journal_entries"("entry_number");
@@ -3650,6 +3705,9 @@ CREATE UNIQUE INDEX "WorkflowVersion_workflowId_version_key" ON "WorkflowVersion
 CREATE INDEX "WorkflowExport_workflowId_idx" ON "WorkflowExport"("workflowId");
 
 -- AddForeignKey
+ALTER TABLE "users" ADD CONSTRAINT "users_role_id_fkey" FOREIGN KEY ("role_id") REFERENCES "user_roles"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "users" ADD CONSTRAINT "users_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -4001,22 +4059,22 @@ ALTER TABLE "booking_links" ADD CONSTRAINT "booking_links_created_by_fkey" FOREI
 ALTER TABLE "booking_links" ADD CONSTRAINT "booking_links_updated_by_fkey" FOREIGN KEY ("updated_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "availability_rules" ADD CONSTRAINT "availability_rules_business_id_fkey" FOREIGN KEY ("business_id") REFERENCES "businesses"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "availability_schedules" ADD CONSTRAINT "availability_schedules_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "availability_rules" ADD CONSTRAINT "availability_rules_contact_id_fkey" FOREIGN KEY ("contact_id") REFERENCES "contacts"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "availability_schedules" ADD CONSTRAINT "availability_schedules_service_id_fkey" FOREIGN KEY ("service_id") REFERENCES "services"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "availability_rules" ADD CONSTRAINT "availability_rules_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "availability_schedules" ADD CONSTRAINT "availability_schedules_business_id_fkey" FOREIGN KEY ("business_id") REFERENCES "businesses"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "availability_rules" ADD CONSTRAINT "availability_rules_service_id_fkey" FOREIGN KEY ("service_id") REFERENCES "services"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "availability_schedules" ADD CONSTRAINT "availability_schedules_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "availability_rules" ADD CONSTRAINT "availability_rules_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "availability_pattern_days" ADD CONSTRAINT "availability_pattern_days_schedule_id_fkey" FOREIGN KEY ("schedule_id") REFERENCES "availability_schedules"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "availability_rules" ADD CONSTRAINT "availability_rules_updated_by_fkey" FOREIGN KEY ("updated_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "availability_exceptions" ADD CONSTRAINT "availability_exceptions_schedule_id_fkey" FOREIGN KEY ("schedule_id") REFERENCES "availability_schedules"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "sops" ADD CONSTRAINT "sops_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -4056,6 +4114,9 @@ ALTER TABLE "customer_signoffs" ADD CONSTRAINT "customer_signoffs_created_by_fke
 
 -- AddForeignKey
 ALTER TABLE "customer_signoffs" ADD CONSTRAINT "customer_signoffs_updated_by_fkey" FOREIGN KEY ("updated_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "chart_of_accounts" ADD CONSTRAINT "chart_of_accounts_parent_id_fkey" FOREIGN KEY ("parent_id") REFERENCES "chart_of_accounts"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "chart_of_accounts" ADD CONSTRAINT "chart_of_accounts_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -4824,3 +4885,4 @@ ALTER TABLE "WorkflowVersion" ADD CONSTRAINT "WorkflowVersion_workflowId_fkey" F
 
 -- AddForeignKey
 ALTER TABLE "WorkflowExport" ADD CONSTRAINT "WorkflowExport_workflowId_fkey" FOREIGN KEY ("workflowId") REFERENCES "Workflow"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+

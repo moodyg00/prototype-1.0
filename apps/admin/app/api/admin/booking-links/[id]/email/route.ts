@@ -9,7 +9,8 @@ import {
   renderBookingPageEmailHtml,
   renderBookingPageEmailText,
 } from '@/src/lib/scheduling/booking-page';
-import type { CollectField, ProposedSlot } from '@/src/lib/validation/scheduling';
+import { proposeSlotsForBookingLink } from '@/src/lib/scheduling/slots-server';
+import type { CollectField } from '@/src/lib/validation/scheduling';
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -35,6 +36,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         publicToken: true,
         linkKind: true,
         isActive: true,
+        serviceId: true,
         durationMinutes: true,
         channel: true,
         fieldsToCollect: true,
@@ -50,6 +52,12 @@ export async function POST(request: Request, { params }: RouteParams) {
     const origin = await getAppBaseUrl(new URL(request.url).origin);
     const publicUrl = `${origin}/book/${link.publicToken}`;
 
+    const proposedSlots = await proposeSlotsForBookingLink({
+      serviceId: link.serviceId,
+      durationMinutes: link.durationMinutes,
+      proposedSlots: link.proposedSlots,
+    });
+
     const pageData = {
       name: link.name,
       linkKind: link.linkKind as 'standard' | 'personalized' | 'confirmation',
@@ -58,7 +66,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       durationMinutes: link.durationMinutes,
       channel: link.channel,
       fieldsToCollect: (link.fieldsToCollect ?? []) as unknown as CollectField[],
-      proposedSlots: (link.proposedSlots ?? []) as unknown as ProposedSlot[],
+      proposedSlots,
       expiresAt: link.expiresAt ? link.expiresAt.toISOString() : null,
     };
 

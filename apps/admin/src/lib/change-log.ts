@@ -71,7 +71,7 @@ export async function resolveActingUserId(): Promise<string | null> {
 
   if (!userId) {
     const fallback = await prismaBase.user.findFirst({
-      where: { isActive: true, role: 'admin' },
+      where: { isActive: true, roleRef: { name: 'Admin' } },
       orderBy: { createdAt: 'asc' },
       select: { id: true },
     });

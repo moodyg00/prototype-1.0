@@ -6,6 +6,10 @@ import type { CalendarEvent } from '@/src/lib/scheduling/events';
 import { cn } from '@/src/lib/utils';
 
 import {
+  AvailabilityOverlayTint,
+  useAvailabilityEditGestures,
+} from './availability-overlay-gestures';
+import {
   TIME_SLOTS,
   availabilityCovers,
   eventsInCell,
@@ -14,6 +18,70 @@ import {
   timeLabel,
   weekDates,
 } from './calendar-utils';
+
+function WeekCalendarCell({
+  day,
+  hour,
+  events,
+  selected,
+  onMouseDown,
+  onMouseEnter,
+  onAvailabilityClick,
+}: {
+  day: Date;
+  hour: number;
+  events: CalendarEvent[];
+  selected: boolean;
+  onMouseDown: () => void;
+  onMouseEnter: () => void;
+  onAvailabilityClick?: (event: CalendarEvent) => void;
+}): React.ReactElement {
+  const cellEvents = eventsInCell(events, day, hour);
+  const bookings = cellEvents.filter((ev) => ev.kind === 'booking');
+  const availability = events.filter((ev) => availabilityCovers(ev, day, hour));
+  const open = availability.find((ev) => ev.isAvailable);
+  const blocked = availability.find((ev) => ev.isAvailable === false);
+  const editTarget = blocked ?? open;
+  const editGestures = useAvailabilityEditGestures(editTarget, onAvailabilityClick);
+
+  return (
+    <div
+      role="button"
+      tabIndex={-1}
+      aria-label={`${day.toLocaleDateString()} ${hourLabel(hour)}`}
+      onMouseDown={onMouseDown}
+      onMouseEnter={onMouseEnter}
+      {...editGestures}
+      className={cn(
+        'relative min-h-14 border-l px-1 py-1 transition-colors',
+        selected ? 'bg-primary/15' : 'hover:bg-accent/40',
+      )}
+      style={{ borderColor: 'color-mix(in srgb, var(--border) 80%, transparent 20%)' }}
+    >
+      <AvailabilityOverlayTint open={open} blocked={blocked} />
+      <div className="relative flex flex-col gap-1">
+        {bookings.map((ev) => (
+          <span
+            key={ev.id}
+            title={`${ev.title} · ${timeLabel(new Date(ev.startsAt))}`}
+            className={cn(
+              'truncate rounded-md px-2 py-1 text-xs font-medium',
+              ev.tentative ? 'text-foreground' : 'text-white',
+            )}
+            style={{
+              background: ev.tentative
+                ? `color-mix(in srgb, ${ev.color} 28%, var(--card))`
+                : ev.color,
+              border: ev.tentative ? `1px dashed ${ev.color}` : undefined,
+            }}
+          >
+            {ev.title}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 interface DragState {
   dayIndex: number;
@@ -25,10 +93,12 @@ export function WeekCalendarGrid({
   anchor,
   events,
   onCreateSlot,
+  onAvailabilityClick,
 }: {
   anchor: Date;
   events: CalendarEvent[];
   onCreateSlot?: (start: Date, end: Date) => void;
+  onAvailabilityClick?: (event: CalendarEvent) => void;
 }): React.ReactElement {
   const days = React.useMemo(() => weekDates(anchor), [anchor]);
   const today = new Date();
@@ -110,78 +180,30 @@ export function WeekCalendarGrid({
           style={{ borderColor: 'color-mix(in srgb, var(--border) 80%, transparent 20%)' }}
         >
           <div className="px-2 py-2 text-xs font-medium text-muted-foreground">{hourLabel(hour)}</div>
-          {days.map((day, dayIndex) => {
-            const cellEvents = eventsInCell(events, day, hour);
-            const bookings = cellEvents.filter((ev) => ev.kind === 'booking');
-            const availability = events.filter((ev) => availabilityCovers(ev, day, hour));
-            const open = availability.find((ev) => ev.isAvailable);
-            const blocked = availability.find((ev) => ev.isAvailable === false);
-            const selected = inSelection(dayIndex, hour);
-
-            return (
-              <div
-                key={`${day.toISOString()}-${hour}`}
-                role="button"
-                tabIndex={-1}
-                aria-label={`${day.toLocaleDateString()} ${hourLabel(hour)}`}
-                onMouseDown={() => {
-                  const nextDrag = { dayIndex, startHour: hour, endHour: hour };
-                  dragging.current = true;
+          {days.map((day, dayIndex) => (
+            <WeekCalendarCell
+              key={`${day.toISOString()}-${hour}`}
+              day={day}
+              hour={hour}
+              events={events}
+              selected={inSelection(dayIndex, hour)}
+              onAvailabilityClick={onAvailabilityClick}
+              onMouseDown={() => {
+                const nextDrag = { dayIndex, startHour: hour, endHour: hour };
+                dragging.current = true;
+                dragRef.current = nextDrag;
+                setDrag(nextDrag);
+              }}
+              onMouseEnter={() => {
+                const currentDrag = dragRef.current;
+                if (dragging.current && currentDrag && currentDrag.dayIndex === dayIndex) {
+                  const nextDrag = { ...currentDrag, endHour: hour };
                   dragRef.current = nextDrag;
                   setDrag(nextDrag);
-                }}
-                onMouseEnter={() => {
-                  const currentDrag = dragRef.current;
-                  if (dragging.current && currentDrag && currentDrag.dayIndex === dayIndex) {
-                    const nextDrag = { ...currentDrag, endHour: hour };
-                    dragRef.current = nextDrag;
-                    setDrag(nextDrag);
-                  }
-                }}
-                className={cn(
-                  'relative min-h-14 border-l px-1 py-1 transition-colors',
-                  selected ? 'bg-primary/15' : 'hover:bg-accent/40',
-                )}
-                style={{ borderColor: 'color-mix(in srgb, var(--border) 80%, transparent 20%)' }}
-              >
-                {/* Availability tint behind events */}
-                {open && !blocked && (
-                  <span
-                    aria-hidden
-                    className="pointer-events-none absolute inset-1 rounded-md"
-                    style={{ background: `color-mix(in srgb, ${open.color} 12%, transparent)` }}
-                  />
-                )}
-                {blocked && (
-                  <span
-                    aria-hidden
-                    className="pointer-events-none absolute inset-1 rounded-md bg-[repeating-linear-gradient(45deg,color-mix(in_srgb,var(--muted-foreground)_18%,transparent)_0,color-mix(in_srgb,var(--muted-foreground)_18%,transparent)_4px,transparent_4px,transparent_8px)]"
-                  />
-                )}
-
-                <div className="relative flex flex-col gap-1">
-                  {bookings.map((ev) => (
-                    <span
-                      key={ev.id}
-                      title={`${ev.title} · ${timeLabel(new Date(ev.startsAt))}`}
-                      className={cn(
-                        'truncate rounded-md px-2 py-1 text-xs font-medium',
-                        ev.tentative ? 'text-foreground' : 'text-white',
-                      )}
-                      style={{
-                        background: ev.tentative
-                          ? `color-mix(in srgb, ${ev.color} 28%, var(--card))`
-                          : ev.color,
-                        border: ev.tentative ? `1px dashed ${ev.color}` : undefined,
-                      }}
-                    >
-                      {ev.title}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
+                }
+              }}
+            />
+          ))}
         </div>
       ))}
     </div>

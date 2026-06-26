@@ -40,21 +40,18 @@ export const TENTATIVE_BOOKING_STATUSES: BookingStatus[] = [
 export const BOOKING_SOURCES = ['admin', 'booking_link', 'import'] as const;
 export type BookingSource = (typeof BOOKING_SOURCES)[number];
 
-export const AVAILABILITY_SUBJECT_KINDS = ['business', 'contact', 'user', 'service'] as const;
+export const AVAILABILITY_SUBJECT_KINDS = ['owner', 'contractor', 'business', 'service'] as const;
 export type AvailabilitySubjectKind = (typeof AVAILABILITY_SUBJECT_KINDS)[number];
 
-/** Drives the overlay-dropdown layers on the calendar. */
-export const AVAILABILITY_LAYER_KEYS = [
-  'contractor',
-  'contact',
-  'owner',
-  'business',
-  'service',
-] as const;
-export type AvailabilityLayerKey = (typeof AVAILABILITY_LAYER_KEYS)[number];
+/** Drives calendar overlay layers (contact removed). */
+export const AVAILABILITY_LAYER_KEYS = AVAILABILITY_SUBJECT_KINDS;
+export type AvailabilityLayerKey = AvailabilitySubjectKind;
 
-export const AVAILABILITY_TYPES = ['recurring', 'specific_date', 'blocked'] as const;
-export type AvailabilityType = (typeof AVAILABILITY_TYPES)[number];
+export const AVAILABILITY_EXCEPTION_TYPES = ['exclude', 'add'] as const;
+export type AvailabilityExceptionType = (typeof AVAILABILITY_EXCEPTION_TYPES)[number];
+
+export const PATTERN_WEEKS = [1, 2] as const;
+export type PatternWeeks = (typeof PATTERN_WEEKS)[number];
 
 export const FIELD_TYPES = ['text', 'email', 'tel', 'textarea', 'date', 'select'] as const;
 export type FieldType = (typeof FIELD_TYPES)[number];
@@ -112,46 +109,77 @@ export const bookingLinkUpdateSchema = bookingLinkCreateSchema.partial();
 export type BookingLinkUpdateInput = z.infer<typeof bookingLinkUpdateSchema>;
 
 // -----------------------------------------------------------------------------
-// Availability rules — replace-the-set PUT payload
+// Availability schedules — publish payload
 // -----------------------------------------------------------------------------
-export const availabilityRuleSchema = z
+const timeString = z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/, 'Must be HH:MM or HH:MM:SS.');
+
+export const availabilityPatternDaySchema = z.object({
+  weekIndex: z.coerce.number().int().min(0).max(1).default(0),
+  dayOfWeek: z.coerce.number().int().min(0).max(6),
+  startTime: timeString,
+  endTime: timeString,
+});
+
+export const availabilityExceptionSchema = z.object({
+  exceptionType: z.enum(AVAILABILITY_EXCEPTION_TYPES),
+  specificDate: z.string().date(),
+  startTime: timeString,
+  endTime: timeString,
+});
+
+export const availabilitySchedulePublishSchema = z
   .object({
     subjectKind: z.enum(AVAILABILITY_SUBJECT_KINDS),
-    businessId: optionalUuid,
-    contactId: optionalUuid,
     userId: optionalUuid,
     serviceId: optionalUuid,
-    layerKey: z.enum(AVAILABILITY_LAYER_KEYS),
-    availabilityType: z.enum(AVAILABILITY_TYPES),
-    dayOfWeek: z.coerce.number().int().min(0).max(6).optional(),
-    specificDate: z.string().date().optional(),
-    startTime: z
-      .string()
-      .regex(/^\d{2}:\d{2}(:\d{2})?$/, 'Must be HH:MM or HH:MM:SS.')
-      .optional(),
-    endTime: z
-      .string()
-      .regex(/^\d{2}:\d{2}(:\d{2})?$/, 'Must be HH:MM or HH:MM:SS.')
-      .optional(),
-    isAvailable: z.boolean().default(true),
-    isPublished: z.boolean().default(true),
+    businessId: optionalUuid,
+    patternWeeks: z.coerce.number().int().refine((v) => v === 1 || v === 2),
+    validFrom: z.string().date(),
+    validTo: z.string().date(),
+    slotDurationMinutes: z.coerce.number().int().min(5).max(480).default(60),
+    slotGapMinutes: z.coerce.number().int().min(0).max(120).default(15),
     timezone: z.string().trim().max(64).default('America/Chicago'),
     notes: z.string().trim().max(2000).optional(),
+    patternDays: z.array(availabilityPatternDaySchema).min(1).max(14),
+    exceptions: z.array(availabilityExceptionSchema).default([]),
+    confirmOverwrite: z.boolean().default(false),
   })
   .refine(
-    (r) => r.availabilityType !== 'recurring' || r.dayOfWeek !== undefined,
-    { message: 'Recurring rules require a day of week.', path: ['dayOfWeek'] },
+    (v) => new Date(v.validTo) >= new Date(v.validFrom),
+    { message: 'End date must be on or after start date.', path: ['validTo'] },
   )
   .refine(
-    (r) => r.availabilityType === 'recurring' || r.specificDate !== undefined,
-    { message: 'Specific-date / blocked rules require a date.', path: ['specificDate'] },
+    (v) => {
+      if (v.subjectKind === 'owner' || v.subjectKind === 'contractor') return Boolean(v.userId);
+      if (v.subjectKind === 'service') return Boolean(v.serviceId);
+      if (v.subjectKind === 'business') return Boolean(v.businessId);
+      return false;
+    },
+    { message: 'Subject entity is required for this availability type.', path: ['subjectKind'] },
   );
-export type AvailabilityRuleInput = z.infer<typeof availabilityRuleSchema>;
 
-export const availabilityRulesReplaceSchema = z.object({
-  rules: z.array(availabilityRuleSchema).max(500),
+export type AvailabilitySchedulePublishInput = z.infer<typeof availabilitySchedulePublishSchema>;
+
+export const availabilityConflictQuerySchema = z.object({
+  subjectKind: z.enum(AVAILABILITY_SUBJECT_KINDS),
+  userId: optionalUuid,
+  serviceId: optionalUuid,
+  businessId: optionalUuid,
+  validFrom: z.string().date(),
+  validTo: z.string().date(),
 });
-export type AvailabilityRulesReplaceInput = z.infer<typeof availabilityRulesReplaceSchema>;
+
+export const availabilityScheduleExceptionsPatchSchema = z.object({
+  addExceptions: z.array(availabilityExceptionSchema).default([]),
+  removeExceptionIds: z.array(uuid).default([]),
+});
+export type AvailabilityScheduleExceptionsPatchInput = z.infer<
+  typeof availabilityScheduleExceptionsPatchSchema
+>;
+
+// Legacy types kept for calendar event rendering during transition
+export const AVAILABILITY_TYPES = ['recurring', 'specific_date', 'blocked'] as const;
+export type AvailabilityType = (typeof AVAILABILITY_TYPES)[number];
 
 // -----------------------------------------------------------------------------
 // Admin booking create (drag-create + manual)

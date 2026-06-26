@@ -78,7 +78,8 @@ export default async function Page({ params }: { params: Promise<PageParams> }) 
         fullName: true,
         avatarUrl: true,
         userType: true,
-        role: true,
+        roleId: true,
+        roleRef: { select: { id: true, name: true } },
         aiModel: true,
         description: true,
         isActive: true,
@@ -93,6 +94,7 @@ export default async function Page({ params }: { params: Promise<PageParams> }) 
 
     const userRecord = {
       ...user,
+      role: user.roleRef?.name ?? null,
       lastLoginAt: user.lastLoginAt?.toISOString() ?? null,
       createdAt: user.createdAt?.toISOString() ?? null,
       updatedAt: user.updatedAt?.toISOString() ?? null,

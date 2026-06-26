@@ -20,6 +20,9 @@ import {
   attachmentServiceErrorStatus,
 } from '@/src/lib/attachments/attachment-service';
 import { AttachmentValidationError } from '@/src/lib/validation/attachment';
+import { AvailabilityScheduleError } from '@/src/lib/scheduling/availability-schedules';
+import { UserRoleServiceError } from '@/src/lib/user-roles/user-roles';
+import { SettingsServiceError } from '@/src/lib/settings/errors';
 
 export function jsonError(status: number, message: string, details?: unknown) {
   return NextResponse.json({ error: message, ...(details ? { details } : {}) }, { status });
@@ -49,6 +52,22 @@ export function handleRouteError(error: unknown): NextResponse {
   }
   if (error instanceof AttachmentValidationError) {
     return jsonError(422, error.message);
+  }
+  if (error instanceof UserRoleServiceError) {
+    return jsonError(error.status, error.message);
+  }
+  if (error instanceof SettingsServiceError) {
+    return jsonError(error.status, error.message);
+  }
+  if (error instanceof AvailabilityScheduleError) {
+    return NextResponse.json(
+      {
+        error: error.message,
+        code: error.code,
+        conflicts: error.conflicts,
+      },
+      { status: error.status },
+    );
   }
   if (error instanceof SyntaxError) {
     return jsonError(400, 'Invalid JSON body.');

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Filter, Search, SlidersHorizontal } from 'lucide-react';
+import { Filter, Plus, Search, SlidersHorizontal } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { buttonVariants } from '@/components/ui/button';
@@ -48,6 +48,7 @@ export type RecordIndexConfig = {
   }>;
   gridClassName: string;
   records: RecordItem[];
+  createLabel?: string;
 };
 
 function matchSearch(record: RecordItem, query: string) {
@@ -67,6 +68,15 @@ function matchSearch(record: RecordItem, query: string) {
   return haystack.includes(query.toLowerCase());
 }
 
+function CreateRecordLink({ href, label }: { href: string; label: string }) {
+  return (
+    <Link href={href} className={cn(buttonVariants({ size: 'sm' }))}>
+      <Plus aria-hidden />
+      {label}
+    </Link>
+  );
+}
+
 export function RecordIndexPage({
   config,
   renderRecords,
@@ -82,6 +92,7 @@ export function RecordIndexPage({
   const [loadError, setLoadError] = useState<string | null>(null);
   const section = pathname.split('/').filter(Boolean)[1] ?? '';
   const createHref = getAdminCreateHref(section);
+  const createLabel = config.createLabel ?? 'New';
   const useDbRecords = isAdminDbSection(section);
 
   useEffect(() => {
@@ -161,13 +172,7 @@ export function RecordIndexPage({
             {filtered.length} visible
           </span>
           {createHref && config.hideToolbar ? (
-            <Link
-              aria-label="Add record"
-              href={createHref}
-              className={cn(buttonVariants({ variant: 'outline', size: 'icon-sm' }), 'rounded-full text-lg font-semibold')}
-            >
-              +
-            </Link>
+            <CreateRecordLink href={createHref} label={createLabel} />
           ) : null}
         </div>
       </header>
@@ -216,13 +221,7 @@ export function RecordIndexPage({
               </label>
               {createHref ? (
                 <div className="flex items-end">
-                  <Link
-                    aria-label="Add record"
-                    href={createHref}
-                    className={cn(buttonVariants({ variant: 'outline', size: 'icon-sm' }), 'rounded-full text-lg font-semibold')}
-                  >
-                    +
-                  </Link>
+                  <CreateRecordLink href={createHref} label={createLabel} />
                 </div>
               ) : null}
             </div>

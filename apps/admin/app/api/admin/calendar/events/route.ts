@@ -1,8 +1,13 @@
 import { NextResponse } from 'next/server';
 
-import { handleRouteError, jsonError } from '@/src/lib/accounting/api-helpers';
-import { prisma } from '@/src/lib/prisma';
+import { resolveActingUser } from '@/src/lib/acting-user';
+import { handleRouteError } from '@/src/lib/accounting/api-helpers';
+import {
+  expandAvailabilitySchedules,
+  listPublishedSchedules,
+} from '@/src/lib/scheduling/availability-schedules';
 import { buildCalendarEvents } from '@/src/lib/scheduling/events';
+import { prisma } from '@/src/lib/prisma';
 
 const BOOKING_SELECT = {
   id: true,
@@ -20,19 +25,6 @@ const BOOKING_SELECT = {
   service: { select: { name: true } },
 } as const;
 
-const RULE_SELECT = {
-  id: true,
-  layerKey: true,
-  availabilityType: true,
-  dayOfWeek: true,
-  specificDate: true,
-  startTime: true,
-  endTime: true,
-  isAvailable: true,
-  notes: true,
-  timezone: true,
-} as const;
-
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
@@ -41,10 +33,12 @@ export async function GET(request: Request) {
     const from = fromParam ? new Date(fromParam) : new Date();
     const to = toParam ? new Date(toParam) : new Date(from.getTime() + 31 * 24 * 60 * 60 * 1000);
     if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) {
-      return jsonError(400, 'Invalid from/to date.');
+      return NextResponse.json({ error: 'Invalid from/to date.' }, { status: 400 });
     }
 
-    const [bookings, rules] = await Promise.all([
+    const actingUser = await resolveActingUser();
+
+    const [bookings, schedules] = await Promise.all([
       prisma.booking.findMany({
         where: {
           status: { notIn: ['cancelled', 'expired'] },
@@ -56,11 +50,10 @@ export async function GET(request: Request) {
         select: BOOKING_SELECT,
         orderBy: [{ startsAt: 'asc' }],
       }),
-      prisma.availabilityRule.findMany({
-        where: { isPublished: true },
-        select: RULE_SELECT,
-      }),
+      listPublishedSchedules(actingUser),
     ]);
+
+    const availability = expandAvailabilitySchedules(schedules, from, to);
 
     const events = buildCalendarEvents({
       bookings: bookings.map((b) => ({
@@ -78,20 +71,7 @@ export async function GET(request: Request) {
         serviceName: b.service?.name ?? null,
         notes: b.notes,
       })),
-      rules: rules.map((r) => ({
-        id: r.id,
-        layerKey: r.layerKey as never,
-        availabilityType: r.availabilityType as never,
-        dayOfWeek: r.dayOfWeek,
-        specificDate: r.specificDate,
-        startTime: r.startTime,
-        endTime: r.endTime,
-        isAvailable: r.isAvailable,
-        notes: r.notes,
-        timezone: r.timezone,
-      })),
-      from,
-      to,
+      availability,
     });
 
     return NextResponse.json({ events, range: { from: from.toISOString(), to: to.toISOString() } });

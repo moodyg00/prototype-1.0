@@ -1,18 +1,7 @@
 /**
  * Calendar domain helpers shared by the API and the grid UI.
- *
- *   - `expandAvailabilityRules()` turns stored AvailabilityRule rows into
- *     concrete dated instances within a [from, to] window.
- *   - `buildCalendarEvents()` produces a single unified DTO array (bookings +
- *     availability) that the Month / Week / Day grids all render from, carrying
- *     color + tentative (gray) styling info.
- *
- * Timezone note (prototype): times are treated as server/browser-local
- * wall-clock. Bookings store real timestamptz values; availability times are
- * combined with the iterated calendar date in local time. On the target local
- * dev machine (America/Chicago) these line up; a production build would swap in
- * proper tz-aware expansion.
  */
+import type { ExpandedScheduleInstance } from '@/src/lib/scheduling/availability-schedules';
 import {
   type AvailabilityLayerKey,
   type AvailabilityType,
@@ -22,7 +11,6 @@ import {
 
 export const LAYER_META: Record<AvailabilityLayerKey, { label: string; color: string }> = {
   contractor: { label: 'Contractor', color: '#0f766e' },
-  contact: { label: 'Contact', color: '#4338ca' },
   owner: { label: 'Owner', color: '#b45309' },
   business: { label: 'Business', color: '#475569' },
   service: { label: 'Service', color: '#be185d' },
@@ -56,67 +44,68 @@ export interface BookingEventInput {
   notes?: string | null;
 }
 
-export interface AvailabilityRuleInputRow {
-  id: string;
-  layerKey: AvailabilityLayerKey;
-  availabilityType: AvailabilityType;
-  dayOfWeek?: number | null;
-  specificDate?: Date | string | null;
-  startTime?: Date | string | null;
-  endTime?: Date | string | null;
-  isAvailable: boolean;
-  notes?: string | null;
-  timezone?: string | null;
-}
-
 export interface CalendarEvent {
   id: string;
   kind: 'booking' | 'availability';
   title: string;
   startsAt: string;
   endsAt: string;
-  /** booking only */
   status?: BookingStatus;
-  /** availability only */
   layerKey?: AvailabilityLayerKey;
   availabilityType?: AvailabilityType;
   isAvailable?: boolean;
-  /** True when this should render gray/tentative (pending/draft/unconfirmed). */
   tentative: boolean;
   color: string;
   contactId?: string | null;
   serviceId?: string | null;
+  userId?: string | null;
+  businessId?: string | null;
+  subjectLabel?: string | null;
+  scheduleId?: string | null;
+  exceptionId?: string | null;
+  exceptionType?: 'exclude' | 'add' | null;
+  slotDurationMinutes?: number;
+  slotGapMinutes?: number;
   bookingLinkId?: string | null;
   notes?: string | null;
 }
 
-export interface AvailabilityInstance {
-  ruleId: string;
-  layerKey: AvailabilityLayerKey;
-  availabilityType: AvailabilityType;
-  isAvailable: boolean;
-  startsAt: string;
-  endsAt: string;
-  notes?: string | null;
+function parseScheduleInstanceId(scheduleId: string): {
+  scheduleId: string;
+  exceptionId: string | null;
+  exceptionType: 'exclude' | 'add' | null;
+} {
+  const parts = scheduleId.split(':');
+  if (parts.length >= 4 && (parts[1] === 'add' || parts[1] === 'exclude')) {
+    return {
+      scheduleId: parts[0]!,
+      exceptionType: parts[1] as 'exclude' | 'add',
+      exceptionId: parts[3] ?? null,
+    };
+  }
+  return { scheduleId, exceptionId: null, exceptionType: null };
 }
 
-function toTimeParts(value: Date | string | null | undefined): { h: number; m: number } | null {
-  if (value == null) return null;
-  if (value instanceof Date) {
-    // Prisma TIME values arrive as a Date anchored at the epoch in UTC.
-    return { h: value.getUTCHours(), m: value.getUTCMinutes() };
+function bookingTitle(booking: BookingEventInput): string {
+  if (booking.contactName && booking.serviceName) {
+    return `${booking.contactName} · ${booking.serviceName}`;
   }
-  const match = /^(\d{1,2}):(\d{2})/.exec(value);
-  if (!match) return null;
-  return { h: Number(match[1]), m: Number(match[2]) };
+  return booking.contactName || booking.serviceName || 'Booking';
 }
 
 function toDateOnly(value: Date | string | null | undefined): Date | null {
   if (value == null) return null;
   const d = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(d.getTime())) return null;
-  // Anchor to the calendar date (UTC components) at local midnight.
   return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+}
+
+function toTimeParts(value: Date | string | null | undefined): { h: number; m: number } | null {
+  if (value == null) return null;
+  if (value instanceof Date) return { h: value.getUTCHours(), m: value.getUTCMinutes() };
+  const match = /^(\d{1,2}):(\d{2})/.exec(value);
+  if (!match) return null;
+  return { h: Number(match[1]), m: Number(match[2]) };
 }
 
 function combine(date: Date, time: { h: number; m: number }): Date {
@@ -127,68 +116,6 @@ function asIso(value: Date | string): string {
   return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
 }
 
-/**
- * Expand availability rules into concrete dated instances within [from, to].
- * Recurring rules emit one instance per matching weekday; specific_date /
- * blocked rules emit a single instance on their date.
- */
-export function expandAvailabilityRules(
-  rules: AvailabilityRuleInputRow[],
-  from: Date,
-  to: Date,
-): AvailabilityInstance[] {
-  const out: AvailabilityInstance[] = [];
-  const rangeStart = new Date(from.getFullYear(), from.getMonth(), from.getDate());
-  const rangeEnd = new Date(to.getFullYear(), to.getMonth(), to.getDate());
-
-  for (const rule of rules) {
-    const start = toTimeParts(rule.startTime) ?? { h: 0, m: 0 };
-    const end = toTimeParts(rule.endTime) ?? { h: 23, m: 59 };
-
-    if (rule.availabilityType === 'recurring' && rule.dayOfWeek != null) {
-      const cursor = new Date(rangeStart);
-      while (cursor <= rangeEnd) {
-        if (cursor.getDay() === rule.dayOfWeek) {
-          out.push({
-            ruleId: rule.id,
-            layerKey: rule.layerKey,
-            availabilityType: rule.availabilityType,
-            isAvailable: rule.isAvailable,
-            startsAt: combine(cursor, start).toISOString(),
-            endsAt: combine(cursor, end).toISOString(),
-            notes: rule.notes ?? null,
-          });
-        }
-        cursor.setDate(cursor.getDate() + 1);
-      }
-      continue;
-    }
-
-    const specific = toDateOnly(rule.specificDate);
-    if (specific && specific >= rangeStart && specific <= rangeEnd) {
-      const blocked = rule.availabilityType === 'blocked';
-      out.push({
-        ruleId: rule.id,
-        layerKey: rule.layerKey,
-        availabilityType: rule.availabilityType,
-        isAvailable: blocked ? false : rule.isAvailable,
-        startsAt: combine(specific, blocked ? { h: 0, m: 0 } : start).toISOString(),
-        endsAt: combine(specific, blocked ? { h: 23, m: 59 } : end).toISOString(),
-        notes: rule.notes ?? null,
-      });
-    }
-  }
-  return out;
-}
-
-function bookingTitle(booking: BookingEventInput): string {
-  if (booking.contactName && booking.serviceName) {
-    return `${booking.contactName} · ${booking.serviceName}`;
-  }
-  return booking.contactName || booking.serviceName || 'Booking';
-}
-
-/** Resolve a booking's start/end into ISO, preferring startsAt/endsAt. */
 function resolveBookingRange(booking: BookingEventInput): { startsAt: string; endsAt: string } | null {
   if (booking.startsAt && booking.endsAt) {
     return { startsAt: asIso(booking.startsAt), endsAt: asIso(booking.endsAt) };
@@ -204,16 +131,9 @@ function resolveBookingRange(booking: BookingEventInput): { startsAt: string; en
   return null;
 }
 
-/**
- * Build the unified calendar DTO from bookings + availability rules over a
- * [from, to] window. Bookings carry status-driven color + tentative flag;
- * availability instances carry their layer color.
- */
 export function buildCalendarEvents(args: {
   bookings: BookingEventInput[];
-  rules: AvailabilityRuleInputRow[];
-  from: Date;
-  to: Date;
+  availability: ExpandedScheduleInstance[];
 }): CalendarEvent[] {
   const events: CalendarEvent[] = [];
 
@@ -238,21 +158,31 @@ export function buildCalendarEvents(args: {
     });
   }
 
-  for (const instance of expandAvailabilityRules(args.rules, args.from, args.to)) {
+  for (const instance of args.availability) {
+    const layerKey = instance.subjectKind;
+    const parsed = parseScheduleInstanceId(instance.scheduleId);
     events.push({
-      id: `availability:${instance.ruleId}:${instance.startsAt}`,
+      id: `availability:${instance.scheduleId}:${instance.startsAt}`,
       kind: 'availability',
       title: instance.isAvailable
-        ? `${LAYER_META[instance.layerKey].label} available`
-        : `${LAYER_META[instance.layerKey].label} blocked`,
+        ? `${instance.subjectLabel} · ${LAYER_META[layerKey].label}`
+        : `${instance.subjectLabel} blocked`,
       startsAt: instance.startsAt,
       endsAt: instance.endsAt,
-      layerKey: instance.layerKey,
-      availabilityType: instance.availabilityType,
+      layerKey,
+      availabilityType: instance.isAvailable ? 'specific_date' : 'blocked',
       isAvailable: instance.isAvailable,
       tentative: false,
-      color: LAYER_META[instance.layerKey].color,
-      notes: instance.notes ?? null,
+      color: LAYER_META[layerKey].color,
+      userId: instance.userId,
+      serviceId: instance.serviceId,
+      businessId: instance.businessId,
+      subjectLabel: instance.subjectLabel,
+      scheduleId: parsed.scheduleId,
+      exceptionId: parsed.exceptionId,
+      exceptionType: parsed.exceptionType,
+      slotDurationMinutes: instance.slotDurationMinutes,
+      slotGapMinutes: instance.slotGapMinutes,
     });
   }
 

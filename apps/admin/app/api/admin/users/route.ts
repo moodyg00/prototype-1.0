@@ -6,6 +6,7 @@ type AdminUserRow = {
   id: string;
   fullName: string;
   email: string | null;
+  roleId: string | null;
   role: string;
   isActive: boolean;
   lastLoginAt: string | null;
@@ -22,7 +23,8 @@ export async function GET() {
         id: true,
         fullName: true,
         email: true,
-        role: true,
+        roleId: true,
+        roleRef: { select: { name: true } },
         isActive: true,
         lastLoginAt: true,
         createdAt: true,
@@ -33,7 +35,8 @@ export async function GET() {
       id: user.id,
       fullName: user.fullName,
       email: user.email,
-      role: user.role,
+      roleId: user.roleId,
+      role: user.roleRef?.name ?? 'Unassigned',
       isActive: user.isActive,
       lastLoginAt: user.lastLoginAt ? user.lastLoginAt.toISOString() : null,
       createdAt: user.createdAt ? user.createdAt.toISOString() : null,

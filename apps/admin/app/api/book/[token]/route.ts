@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 
 import { handleRouteError, jsonError } from '@/src/lib/accounting/api-helpers';
 import { prisma } from '@/src/lib/prisma';
-import type { CollectField, ProposedSlot } from '@/src/lib/validation/scheduling';
+import { proposeSlotsForBookingLink } from '@/src/lib/scheduling/slots-server';
+import type { CollectField } from '@/src/lib/validation/scheduling';
 
 type RouteParams = { params: Promise<{ token: string }> };
 
@@ -19,6 +20,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
         name: true,
         linkKind: true,
         isActive: true,
+        serviceId: true,
         durationMinutes: true,
         channel: true,
         knownData: true,
@@ -37,6 +39,12 @@ export async function GET(_request: Request, { params }: RouteParams) {
       return jsonError(410, 'This booking link has expired.');
     }
 
+    const proposedSlots = await proposeSlotsForBookingLink({
+      serviceId: link.serviceId,
+      durationMinutes: link.durationMinutes,
+      proposedSlots: link.proposedSlots,
+    });
+
     return NextResponse.json({
       link: {
         name: link.name,
@@ -47,7 +55,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
         channel: link.channel,
         knownData: (link.knownData ?? {}) as Record<string, unknown>,
         fieldsToCollect: (link.fieldsToCollect ?? []) as unknown as CollectField[],
-        proposedSlots: (link.proposedSlots ?? []) as unknown as ProposedSlot[],
+        proposedSlots,
         expiresAt: link.expiresAt ? link.expiresAt.toISOString() : null,
       },
     });

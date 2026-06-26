@@ -135,3 +135,17 @@ export function availabilityCovers(ev: CalendarEvent, day: Date, hour: number): 
   if (!isSameDate(start, day)) return false;
   return hour >= start.getHours() && hour < Math.max(end.getHours(), start.getHours() + 1);
 }
+
+function isoDate(value: Date): string {
+  return value.toISOString().slice(0, 10);
+}
+
+/** Inclusive date range from today through the end of the current month. */
+export function remainderOfMonthRange(now = new Date()): { from: string; to: string } {
+  const from = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const to = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  return {
+    from: isoDate(from),
+    to: isoDate(to),
+  };
+}

@@ -6,13 +6,17 @@
 
 import React, { useState } from 'react';
 import { ThemingPanel } from '../../../src/components/settings/ThemingPanel';
+import { UserRolesPanel } from '../../../src/components/settings/UserRolesPanel';
 import { SettingsCategoryPanel } from '../../../src/components/settings/SettingsCategoryPanel';
 import { EmailProviderPanel } from '../../../src/components/settings/EmailProviderPanel';
+import { BusinessPanel } from '../../../src/components/settings/BusinessPanel';
+import { OperationsPanel } from '../../../src/components/settings/OperationsPanel';
+import { AdvancedSettingsPanel } from '../../../src/components/settings/AdvancedSettingsPanel';
 import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
 import { Card } from '../../../components/ui/card';
 
-type TabId = 'theming' | 'business' | 'operations' | 'customer_relations' | 'user_preferences' | 'email' | 'advanced';
+type TabId = 'theming' | 'business' | 'operations' | 'customer_relations' | 'user_preferences' | 'permissions' | 'email' | 'advanced';
 
 interface Tab {
   id: TabId;
@@ -50,6 +54,11 @@ const TABS: Tab[] = [
     label: 'User Preferences',
     description: 'Per-user UI preferences (rows per page, default filters, etc).',
     modules: ['ui_preferences', 'user_preferences'],
+  },
+  {
+    id: 'permissions',
+    label: 'Permissions',
+    description: 'User roles and access rules used across admin features.',
   },
   {
     id: 'email',
@@ -107,19 +116,25 @@ export default function SettingsPage() {
               {isOpen && (
                 <div className="p-6 border-t" style={{ borderColor: 'var(--border)' }}>
                   {tab.id === 'theming' && <ThemingPanel />}
+                  {tab.id === 'permissions' && <UserRolesPanel />}
                   {tab.id === 'email' && <EmailProviderPanel />}
-                  {tab.id !== 'theming' && tab.id !== 'email' && tab.id !== 'advanced' && (
+                  {tab.id === 'business' && <BusinessPanel />}
+                  {tab.id === 'operations' && <OperationsPanel />}
+                  {tab.id === 'advanced' && (
+                    <AdvancedSettingsPanel
+                      modules={['business', 'accounting', 'operations', 'crm', 'customer_relations', 'ui_preferences', 'user_preferences', 'email', 'system']}
+                    />
+                  )}
+                  {tab.id !== 'theming' &&
+                    tab.id !== 'permissions' &&
+                    tab.id !== 'email' &&
+                    tab.id !== 'business' &&
+                    tab.id !== 'operations' &&
+                    tab.id !== 'advanced' && (
                     <SettingsCategoryPanel
                       title={tab.label}
                       description={tab.description}
                       modules={tab.modules ?? []}
-                    />
-                  )}
-                  {tab.id === 'advanced' && (
-                    <SettingsCategoryPanel
-                      title="Advanced (all settings)"
-                      description="Raw module/key/value editor. Equivalent to Proto-1's SettingResource list view."
-                      modules={['business', 'accounting', 'operations', 'crm', 'customer_relations', 'ui_preferences', 'user_preferences', 'email', 'system']}
                     />
                   )}
                 </div>

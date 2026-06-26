@@ -9,14 +9,17 @@ import { Button } from '../../../components/ui/button';
 import { Card } from '../../../components/ui/card';
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '../../../components/ui/empty';
 import { Input } from '../../../components/ui/input';
+import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from '../../../components/ui/select';
 import { Spinner } from '../../../components/ui/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
 
 type UserStatus = 'active' | 'blocked';
+type UserRoleOption = { id: string; name: string };
 type UsersApiRow = {
   id: string;
   fullName: string;
   email: string | null;
+  roleId: string | null;
   role: string;
   isActive: boolean;
   lastLoginAt: string | null;
@@ -27,6 +30,7 @@ interface UserRecord {
   id: string;
   name: string;
   email: string;
+  roleId: string | null;
   role: string;
   status: UserStatus;
   lastSeenLabel: string;
@@ -58,12 +62,24 @@ function formatCreatedDate(value: string | null) {
 
 export default function UsersPage() {
   const [rows, setRows] = useState<UserRecord[]>([]);
+  const [roles, setRoles] = useState<UserRoleOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | string>('all');
   const [currentPage, setCurrentPage] = useState(1);
+  const [assigningId, setAssigningId] = useState<string | null>(null);
   const pageSize = 50;
+
+  const loadRoles = useCallback(async () => {
+    try {
+      const response = await fetch('/api/admin/user-roles', { cache: 'no-store' });
+      const payload = (await response.json()) as { roles?: UserRoleOption[] };
+      setRoles(payload.roles ?? []);
+    } catch {
+      /* role dropdown stays empty */
+    }
+  }, []);
 
   const loadUsers = useCallback(async () => {
     setLoading(true);
@@ -78,8 +94,9 @@ export default function UsersPage() {
         id: user.id,
         name: user.fullName || user.email || user.id,
         email: user.email ?? 'No email',
+        roleId: user.roleId,
         role: user.role,
-        status: user.isActive ? 'active' : 'blocked',
+        status: user.isActive ? ('active' as const) : ('blocked' as const),
         lastSeenLabel: formatRelativeOrNever(user.lastLoginAt),
         createdAtLabel: formatCreatedDate(user.createdAt),
       }));
@@ -94,7 +111,36 @@ export default function UsersPage() {
 
   useEffect(() => {
     void loadUsers();
-  }, [loadUsers]);
+    void loadRoles();
+  }, [loadUsers, loadRoles]);
+
+  const assignRole = async (userId: string, roleId: string) => {
+    setAssigningId(userId);
+    try {
+      const response = await fetch(`/api/admin/users/${userId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roleId }),
+      });
+      const payload = (await response.json()) as { user?: UsersApiRow; error?: string };
+      if (!response.ok) throw new Error(payload.error ?? 'Unable to assign role.');
+      const updated = payload.user;
+      if (updated) {
+        setRows((prev) =>
+          prev.map((row) =>
+            row.id === userId
+              ? { ...row, roleId: updated.roleId, role: updated.role }
+              : row,
+          ),
+        );
+      }
+      toast.success('Role updated.');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Unable to assign role.');
+    } finally {
+      setAssigningId(null);
+    }
+  };
 
   const roleOptions = useMemo(() => {
     const roles = Array.from(new Set(rows.map((row) => row.role).filter(Boolean))).sort((a, b) =>
@@ -220,7 +266,30 @@ export default function UsersPage() {
                   <div className="text-xs text-[var(--muted-foreground)]">{user.email}</div>
                   <div className="text-[10px] font-mono text-[var(--muted-foreground)]">{user.id}</div>
                 </TableCell>
-                <TableCell className="capitalize">{user.role}</TableCell>
+                <TableCell>
+                  {roles.length > 0 ? (
+                    <Select
+                      value={user.roleId ?? undefined}
+                      disabled={assigningId === user.id}
+                      onValueChange={(value) => {
+                        if (value && value !== user.roleId) void assignRole(user.id, value);
+                      }}
+                    >
+                      <SelectTrigger className="h-8 w-36">
+                        <SelectValue placeholder="Assign role" />
+                      </SelectTrigger>
+                      <SelectPopup>
+                        {roles.map((role) => (
+                          <SelectItem key={role.id} value={role.id}>
+                            {role.name}
+                          </SelectItem>
+                        ))}
+                      </SelectPopup>
+                    </Select>
+                  ) : (
+                    <span className="capitalize">{user.role}</span>
+                  )}
+                </TableCell>
                 <TableCell><StatusBadge status={user.status} /></TableCell>
                 <TableCell className="text-sm text-[var(--muted-foreground)]">{user.lastSeenLabel}</TableCell>
                 <TableCell className="text-xs text-[var(--muted-foreground)]">{user.createdAtLabel}</TableCell>

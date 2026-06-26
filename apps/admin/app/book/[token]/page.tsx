@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { PublicBookingForm } from '@/src/components/scheduling/PublicBookingForm';
 import { prisma } from '@/src/lib/prisma';
 import { renderBookingContentHtml } from '@/src/lib/scheduling/booking-page';
+import { proposeSlotsForBookingLink } from '@/src/lib/scheduling/slots-server';
 import type { CollectField, ProposedSlot } from '@/src/lib/validation/scheduling';
 
 type PageProps = { params: Promise<{ token: string }> };
@@ -16,6 +17,7 @@ export default async function PublicBookingPage({ params }: PageProps) {
       name: true,
       linkKind: true,
       isActive: true,
+      serviceId: true,
       durationMinutes: true,
       channel: true,
       knownData: true,
@@ -37,6 +39,12 @@ export default async function PublicBookingPage({ params }: PageProps) {
     );
   }
 
+  const proposedSlots = await proposeSlotsForBookingLink({
+    serviceId: link.serviceId,
+    durationMinutes: link.durationMinutes,
+    proposedSlots: link.proposedSlots,
+  });
+
   const pageData = {
     name: link.name,
     linkKind: link.linkKind as 'standard' | 'personalized' | 'confirmation',
@@ -45,7 +53,7 @@ export default async function PublicBookingPage({ params }: PageProps) {
     durationMinutes: link.durationMinutes,
     channel: link.channel,
     fieldsToCollect: (link.fieldsToCollect ?? []) as unknown as CollectField[],
-    proposedSlots: (link.proposedSlots ?? []) as unknown as ProposedSlot[],
+    proposedSlots: proposedSlots as ProposedSlot[],
     expiresAt: link.expiresAt ? link.expiresAt.toISOString() : null,
   };
 

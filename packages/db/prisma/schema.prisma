@@ -21,6 +21,18 @@ datasource db {
 // At runtime, src/lib/prisma.ts instantiates PrismaClient with a
 // PrismaPg adapter built from process.env.DATABASE_URL.
 
+model UserRole {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String    @unique @db.VarChar(80)
+  permissions Json      @default("{}") @db.JsonB
+  isSystem    Boolean   @default(false) @map("is_system")
+  createdAt   DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime? @default(now()) @map("updated_at") @db.Timestamptz(6)
+  users       User[]
+
+  @@map("user_roles")
+}
+
 model User {
   id                                 String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   email                              String?                  @unique @db.VarChar(255)
@@ -30,7 +42,8 @@ model User {
   passwordHash                       String?                  @map("password_hash")
   apiKey                             String?                  @unique @map("api_key") @db.VarChar(255)
   userType                           String                   @default("human") @map("user_type") /// CHECK user_type IN ('human', 'ai_agent', 'automation')
-  role                               String                   @default("user") /// CHECK role IN ('user', 'admin', 'moderator')
+  roleId                             String?                  @map("role_id") @db.Uuid
+  roleRef                            UserRole?                @relation(fields: [roleId], references: [id], onDelete: Restrict)
   aiModel                            String?                  @map("ai_model") @db.VarChar(120)
   description                        String?
   isActive                           Boolean                  @default(true) @map("is_active")
@@ -106,9 +119,8 @@ model User {
   materialReturnsAsUpdatedBy         MaterialReturn[]         @relation("material_returns_updated_by_users")
   materialPurchasesAsCreatedBy       MaterialPurchase[]       @relation("material_purchases_created_by_users")
   materialPurchasesAsUpdatedBy       MaterialPurchase[]       @relation("material_purchases_updated_by_users")
-  availabilityRulesAsUser            AvailabilityRule[]       @relation("availability_rules_user_id_users")
-  availabilityRulesAsCreatedBy       AvailabilityRule[]       @relation("availability_rules_created_by_users")
-  availabilityRulesAsUpdatedBy       AvailabilityRule[]       @relation("availability_rules_updated_by_users")
+  availabilitySchedulesAsSubject     AvailabilitySchedule[]   @relation("availability_schedules_user_id_users")
+  availabilitySchedulesAsCreatedBy   AvailabilitySchedule[]   @relation("availability_schedules_created_by_users")
   bookingLinksAsCreatedBy            BookingLink[]            @relation("booking_links_created_by_users")
   bookingLinksAsUpdatedBy            BookingLink[]            @relation("booking_links_updated_by_users")
   sopsAsCreatedBy                    Sop[]                    @relation("sops_created_by_users")
@@ -265,7 +277,7 @@ model User {
   @@index([username])
   @@index([apiKey])
   @@index([userType])
-  @@index([role])
+  @@index([roleId])
   @@index([isActive])
   @@index([createdAt])
   @@map("users")
@@ -361,7 +373,7 @@ model Business {
   updatedBy           String?   @map("updated_by") @db.Uuid
   createdByRef        User?     @relation("businesses_created_by_users", fields: [createdBy], references: [id], onDelete: SetNull)
   updatedByRef        User?     @relation("businesses_updated_by_users", fields: [updatedBy], references: [id], onDelete: SetNull)
-  availabilityRules   AvailabilityRule[]
+  availabilitySchedules AvailabilitySchedule[]
 
   @@index([isPrimary])
   @@map("businesses")
@@ -450,7 +462,6 @@ model Contact {
   reviews                        Review[]
   bookings                       Booking[]
   bookingLinks                   BookingLink[]
-  availabilityRules              AvailabilityRule[]
   workOrderAssignments           WorkOrderAssignment[]
   invoices                       Invoice[]
   recurringInvoices              RecurringInvoice[]
@@ -661,7 +672,7 @@ model Service {
   workOrders               WorkOrder[]
   bookings                 Booking[]
   bookingLinks             BookingLink[]
-  availabilityRules        AvailabilityRule[]
+  availabilitySchedules    AvailabilitySchedule[]
   serviceSops              ServiceSop[]
   invoiceItems             InvoiceItem[]
   estimateItems            EstimateItem[]
@@ -1179,37 +1190,62 @@ model BookingLink {
   @@map("booking_links")
 }
 
-model AvailabilityRule {
-  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  subjectKind      String    @map("subject_kind") /// CHECK subject_kind IN ('business', 'contact', 'user', 'service')
-  businessId       String?   @map("business_id") @db.Uuid
-  contactId        String?   @map("contact_id") @db.Uuid
-  userId           String?   @map("user_id") @db.Uuid
-  serviceId        String?   @map("service_id") @db.Uuid
-  layerKey         String    @map("layer_key") /// CHECK layer_key IN ('contractor', 'contact', 'owner', 'business', 'service')
-  availabilityType String    @map("availability_type") /// CHECK availability_type IN ('recurring', 'specific_date', 'blocked')
-  dayOfWeek        Int?      @map("day_of_week") /// CHECK day_of_week BETWEEN 0 AND 6
-  specificDate     DateTime? @map("specific_date") @db.Date
-  startTime        DateTime? @map("start_time") @db.Time(6)
-  endTime          DateTime? @map("end_time") @db.Time(6)
-  isAvailable      Boolean   @default(true) @map("is_available")
-  isPublished      Boolean   @default(true) @map("is_published")
-  timezone         String    @default("America/Chicago") @db.VarChar(64)
-  notes            String?
-  createdAt        DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt        DateTime? @default(now()) @map("updated_at") @db.Timestamptz(6)
-  createdBy        String?   @map("created_by") @db.Uuid
-  updatedBy        String?   @map("updated_by") @db.Uuid
-  business         Business? @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  contact          Contact?  @relation(fields: [contactId], references: [id], onDelete: Cascade)
-  user             User?     @relation("availability_rules_user_id_users", fields: [userId], references: [id], onDelete: Cascade)
-  service          Service?  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-  createdByRef     User?     @relation("availability_rules_created_by_users", fields: [createdBy], references: [id], onDelete: SetNull)
-  updatedByRef     User?     @relation("availability_rules_updated_by_users", fields: [updatedBy], references: [id], onDelete: SetNull)
+model AvailabilitySchedule {
+  id                  String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  subjectKind         String                   @map("subject_kind") /// CHECK subject_kind IN ('owner', 'contractor', 'business', 'service')
+  userId              String?                  @map("user_id") @db.Uuid
+  serviceId           String?                  @map("service_id") @db.Uuid
+  businessId          String?                  @map("business_id") @db.Uuid
+  patternWeeks        Int                      @default(1) @map("pattern_weeks") /// 1 or 2
+  validFrom           DateTime                 @map("valid_from") @db.Date
+  validTo             DateTime                 @map("valid_to") @db.Date
+  slotDurationMinutes Int                      @default(60) @map("slot_duration_minutes")
+  slotGapMinutes      Int                      @default(15) @map("slot_gap_minutes")
+  timezone            String                   @default("America/Chicago") @db.VarChar(64)
+  isPublished         Boolean                  @default(true) @map("is_published")
+  notes               String?
+  createdAt           DateTime?                @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime?                @default(now()) @map("updated_at") @db.Timestamptz(6)
+  createdBy           String?                  @map("created_by") @db.Uuid
+  user                User?                    @relation("availability_schedules_user_id_users", fields: [userId], references: [id], onDelete: Cascade)
+  service             Service?                 @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  business            Business?                @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  createdByRef        User?                    @relation("availability_schedules_created_by_users", fields: [createdBy], references: [id], onDelete: SetNull)
+  patternDays         AvailabilityPatternDay[]
+  exceptions          AvailabilityException[]
 
-  @@index([subjectKind, contactId])
-  @@index([layerKey, isPublished])
-  @@map("availability_rules")
+  @@index([subjectKind, userId])
+  @@index([subjectKind, serviceId])
+  @@index([subjectKind, businessId])
+  @@index([validFrom, validTo])
+  @@index([isPublished])
+  @@map("availability_schedules")
+}
+
+model AvailabilityPatternDay {
+  id         String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  scheduleId String               @map("schedule_id") @db.Uuid
+  weekIndex  Int                  @default(0) @map("week_index") /// 0 or 1 for two-week patterns
+  dayOfWeek  Int                  @map("day_of_week") /// 0-6
+  startTime  DateTime             @map("start_time") @db.Time(6)
+  endTime    DateTime             @map("end_time") @db.Time(6)
+  schedule   AvailabilitySchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  @@index([scheduleId])
+  @@map("availability_pattern_days")
+}
+
+model AvailabilityException {
+  id            String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  scheduleId    String               @map("schedule_id") @db.Uuid
+  exceptionType String               @map("exception_type") /// CHECK exception_type IN ('exclude', 'add')
+  specificDate  DateTime             @map("specific_date") @db.Date
+  startTime     DateTime             @map("start_time") @db.Time(6)
+  endTime       DateTime             @map("end_time") @db.Time(6)
+  schedule      AvailabilitySchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  @@index([scheduleId, specificDate])
+  @@map("availability_exceptions")
 }
 
 model Sop {

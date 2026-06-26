@@ -8,9 +8,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { CalendarEvent } from '@/src/lib/scheduling/events';
+import { snapRangeToBookableSlot } from '@/src/lib/scheduling/slots';
 import type { CollectField } from '@/src/lib/validation/scheduling';
 
 import { AvailabilityEditor } from './AvailabilityEditor';
+import { AvailabilityOverlayDialog } from './AvailabilityOverlayDialog';
 import { BookingLinkCardRows, type BookingLinkRow } from './BookingLinkCardRows';
 import { BookingLinkFormDialog, type BookingLinkDto } from './BookingLinkFormDialog';
 import {
@@ -18,7 +20,14 @@ import {
   type SlotSelection,
 } from './CreateBookingFromSlotDialog';
 import { DayCalendarGrid } from './DayCalendarGrid';
-import { LayerVisibilityMenu, DEFAULT_LAYER_VISIBILITY, type LayerVisibility } from './LayerVisibilityMenu';
+import {
+  buildAvailabilityFilterKey,
+  buildDefaultVisibility,
+  eventMatchesVisibility,
+  LayerVisibilityMenu,
+  type AvailabilityFilterOption,
+  type AvailabilityFilterVisibility,
+} from './LayerVisibilityMenu';
 import { MonthCalendarGrid } from './MonthCalendarGrid';
 import { WeekCalendarGrid } from './WeekCalendarGrid';
 import {
@@ -52,7 +61,8 @@ interface ApiLink {
 export function Calendar(): React.ReactElement {
   const [view, setView] = React.useState<CalendarView>('week');
   const [anchor, setAnchor] = React.useState<Date>(() => startOfDay(new Date()));
-  const [visibility, setVisibility] = React.useState<LayerVisibility>(DEFAULT_LAYER_VISIBILITY);
+  const [visibility, setVisibility] = React.useState<AvailabilityFilterVisibility>({});
+  const [filterOptions, setFilterOptions] = React.useState<AvailabilityFilterOption[]>([]);
   const [events, setEvents] = React.useState<CalendarEvent[]>([]);
   const [loadingEvents, setLoadingEvents] = React.useState(true);
 
@@ -63,6 +73,8 @@ export function Calendar(): React.ReactElement {
 
   const [slot, setSlot] = React.useState<SlotSelection | null>(null);
   const [slotDialogOpen, setSlotDialogOpen] = React.useState(false);
+  const [availabilityEvent, setAvailabilityEvent] = React.useState<CalendarEvent | null>(null);
+  const [availabilityDialogOpen, setAvailabilityDialogOpen] = React.useState(false);
 
   const range = React.useMemo(() => {
     if (view === 'month') return monthRange(anchor);
@@ -97,6 +109,84 @@ export function Calendar(): React.ReactElement {
     }
   }, []);
 
+  const loadFilterOptions = React.useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/availability-subjects');
+      const body = (await res.json()) as {
+        subjects?: {
+          owners: Array<{ id: string; fullName: string }>;
+          contractors: Array<{ id: string; fullName: string }>;
+          services: Array<{ id: string; name: string }>;
+          businesses: Array<{ id: string; name: string }>;
+        };
+        actingUser?: { id?: string; permissions?: { availability?: { layers?: string[]; scope?: string } } } | null;
+      };
+      const subjects = body.subjects;
+      if (!subjects) return;
+
+      const allowedLayers = new Set(body.actingUser?.permissions?.availability?.layers ?? []);
+      const actingUser = body.actingUser;
+      const scope = actingUser?.permissions?.availability?.scope ?? 'own';
+      const actingUserId = actingUser?.id;
+      const options: AvailabilityFilterOption[] = [];
+
+      for (const owner of subjects.owners) {
+        if (!allowedLayers.has('owner')) continue;
+        if (scope === 'own' && actingUserId && owner.id !== actingUserId) continue;
+        options.push({
+          key: buildAvailabilityFilterKey('owner', owner.id),
+          subjectKind: 'owner',
+          entityId: owner.id,
+          label: owner.fullName,
+        });
+      }
+
+      for (const contractor of subjects.contractors) {
+        if (!allowedLayers.has('contractor')) continue;
+        if (scope === 'own' && actingUserId && contractor.id !== actingUserId) continue;
+        options.push({
+          key: buildAvailabilityFilterKey('contractor', contractor.id),
+          subjectKind: 'contractor',
+          entityId: contractor.id,
+          label: contractor.fullName,
+        });
+      }
+      for (const business of subjects.businesses) {
+        if (!allowedLayers.has('business')) continue;
+        options.push({
+          key: buildAvailabilityFilterKey('business', business.id),
+          subjectKind: 'business',
+          entityId: business.id,
+          label: business.name,
+        });
+      }
+      for (const service of subjects.services) {
+        if (!allowedLayers.has('service')) continue;
+        options.push({
+          key: buildAvailabilityFilterKey('service', service.id),
+          subjectKind: 'service',
+          entityId: service.id,
+          label: service.name,
+        });
+      }
+
+      setFilterOptions(options);
+      setVisibility((prev) => {
+        const next = buildDefaultVisibility(options);
+        for (const option of options) {
+          if (option.key in prev) next[option.key] = prev[option.key]!;
+        }
+        return next;
+      });
+    } catch {
+      /* filter menu stays empty */
+    }
+  }, []);
+
+  React.useEffect(() => {
+    void loadFilterOptions();
+  }, [loadFilterOptions]);
+
   React.useEffect(() => {
     void loadEvents();
   }, [loadEvents]);
@@ -115,10 +205,7 @@ export function Calendar(): React.ReactElement {
   }, []);
 
   const visibleEvents = React.useMemo(
-    () =>
-      events.filter((ev) =>
-        ev.kind === 'booking' ? true : ev.layerKey ? visibility[ev.layerKey] : true,
-      ),
+    () => events.filter((ev) => eventMatchesVisibility(ev, visibility)),
     [events, visibility],
   );
 
@@ -129,6 +216,22 @@ export function Calendar(): React.ReactElement {
       return addDays(prev, dir * 7);
     });
   };
+
+  const snapSlotSelection = React.useCallback(
+    (start: Date, end: Date): SlotSelection => {
+      const windows = visibleEvents
+        .filter((ev) => ev.kind === 'availability' && ev.isAvailable !== false)
+        .map((ev) => ({
+          startsAt: ev.startsAt,
+          endsAt: ev.endsAt,
+          slotDurationMinutes: ev.slotDurationMinutes ?? 60,
+          slotGapMinutes: ev.slotGapMinutes ?? 15,
+        }));
+      const snapped = snapRangeToBookableSlot({ start, end, windows });
+      return snapped ?? { start, end };
+    },
+    [visibleEvents],
+  );
 
   const rangeLabel =
     view === 'month' ? formatMonthLabel(anchor) : view === 'day' ? formatDayLabel(anchor) : formatWeekLabel(anchor);
@@ -240,13 +343,14 @@ export function Calendar(): React.ReactElement {
                 <ChevronRight className="h-4 w-4" />
               </Button>
               {/* Right-aligned overlay dropdown ABOVE the calendar */}
-              <LayerVisibilityMenu visibility={visibility} onChange={setVisibility} />
+              <LayerVisibilityMenu options={filterOptions} visibility={visibility} onChange={setVisibility} />
             </div>
           </div>
 
-          {view === 'week' && (
+          {(view === 'week' || view === 'day') && (
             <p className="text-xs text-muted-foreground">
-              Tip: click and drag across time slots to create a booking.
+              Tip: click or drag time slots to create a booking. Right-click (or long-press on touch)
+              availability overlays to edit.
             </p>
           )}
 
@@ -266,8 +370,12 @@ export function Calendar(): React.ReactElement {
                 anchor={anchor}
                 events={visibleEvents}
                 onCreateSlot={(start, end) => {
-                  setSlot({ start, end });
+                  setSlot(snapSlotSelection(start, end));
                   setSlotDialogOpen(true);
+                }}
+                onAvailabilityClick={(ev) => {
+                  setAvailabilityEvent(ev);
+                  setAvailabilityDialogOpen(true);
                 }}
               />
             )}
@@ -276,8 +384,12 @@ export function Calendar(): React.ReactElement {
                 anchor={anchor}
                 events={visibleEvents}
                 onCreateSlot={(start, end) => {
-                  setSlot({ start, end });
+                  setSlot(snapSlotSelection(start, end));
                   setSlotDialogOpen(true);
+                }}
+                onAvailabilityClick={(ev) => {
+                  setAvailabilityEvent(ev);
+                  setAvailabilityDialogOpen(true);
                 }}
               />
             )}
@@ -288,7 +400,12 @@ export function Calendar(): React.ReactElement {
       {/* Availability editor — kept in the DOM on the same page */}
       <Card id="availability" className="scroll-mt-20 rounded-2xl border">
         <CardContent className="p-4 sm:p-6">
-          <AvailabilityEditor onSaved={loadEvents} />
+          <AvailabilityEditor
+            onSaved={() => {
+              void loadEvents();
+              void loadFilterOptions();
+            }}
+          />
         </CardContent>
       </Card>
 
@@ -345,6 +462,12 @@ export function Calendar(): React.ReactElement {
             );
           }
         }}
+      />
+      <AvailabilityOverlayDialog
+        open={availabilityDialogOpen}
+        onOpenChange={setAvailabilityDialogOpen}
+        event={availabilityEvent}
+        onSaved={() => void loadEvents()}
       />
     </div>
   );

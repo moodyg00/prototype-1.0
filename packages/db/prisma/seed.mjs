@@ -285,14 +285,53 @@ async function seedChartOfAccountsIfEmpty(userId) {
   return { seeded, skipped: false, existing: 0 };
 }
 
+async function ensureDefaultUserRoles() {
+  const roles = [
+    {
+      name: 'Admin',
+      permissions: JSON.stringify({
+        availability: { layers: ['owner', 'contractor', 'business', 'service'], scope: 'all' },
+        settings: { read: true, write: true },
+      }),
+    },
+    {
+      name: 'Owner',
+      permissions: JSON.stringify({
+        availability: { layers: ['owner', 'contractor', 'business', 'service'], scope: 'all' },
+        settings: { read: true, write: true },
+      }),
+    },
+    {
+      name: 'Contractor',
+      permissions: JSON.stringify({
+        availability: { layers: ['contractor'], scope: 'own' },
+        settings: { read: false, write: false },
+      }),
+    },
+  ];
+
+  for (const role of roles) {
+    await client.query(
+      `INSERT INTO user_roles (name, permissions, is_system)
+       VALUES ($1, $2::jsonb, true)
+       ON CONFLICT (name) DO NOTHING`,
+      [role.name, role.permissions],
+    );
+  }
+
+  const { rows } = await client.query(`SELECT id FROM user_roles WHERE name = 'Admin' LIMIT 1`);
+  return rows[0]?.id ?? null;
+}
+
 async function replaceUsersWithDefault() {
   await client.query('SET session_replication_role = replica');
   try {
+    const adminRoleId = await ensureDefaultUserRoles();
     const { rowCount } = await client.query('DELETE FROM users');
     await client.query(
-      `INSERT INTO users (id, email, full_name, user_type, role, is_active)
-       VALUES ($1, $2, $3, 'human', 'admin', true)`,
-      [DEFAULT_USER_ID, DEFAULT_USER_EMAIL, DEFAULT_USER_NAME],
+      `INSERT INTO users (id, email, full_name, user_type, role_id, is_active)
+       VALUES ($1, $2, $3, 'human', $4, true)`,
+      [DEFAULT_USER_ID, DEFAULT_USER_EMAIL, DEFAULT_USER_NAME, adminRoleId],
     );
     return rowCount ?? 0;
   } finally {
@@ -339,7 +378,7 @@ async function main() {
     await client.query('COMMIT');
 
     console.log('Seed complete.');
-    console.log(`  Default user: ${DEFAULT_USER_EMAIL} (${DEFAULT_USER_ID}), role=admin`);
+    console.log(`  Default user: ${DEFAULT_USER_EMAIL} (${DEFAULT_USER_ID}), role=Admin`);
     console.log(`  Demo UI rows removed: ${demoRemoved}`);
     console.log(`  Users replaced: ${usersRemoved} removed, 1 inserted`);
     console.log(
