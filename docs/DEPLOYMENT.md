@@ -25,8 +25,6 @@ prototype-1.0/
 
 Four deploy targets, one git repo. **Not** one merged Next app.
 
-Legacy PHP under `apps/public-site/` (outside `dev/` and `live/`) is retired — do not deploy it.
-
 ## Why a worker app?
 
 | Run on | Good for | Bad for |

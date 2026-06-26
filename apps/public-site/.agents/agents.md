@@ -19,7 +19,6 @@ You are working on **`apps/public-site`** — static HTML/CSS/JS only. No Node s
 apps/public-site/
   dev/           Preview site (agents edit here)
   live/          Production copy (promote from dev)
-  legacy PHP/    Retired — do not deploy or document as active
 ```
 
 </project_structure>
