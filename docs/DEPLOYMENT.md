@@ -186,6 +186,7 @@ Build wizard is **dropdown-only** (reads root `package.json` scripts). Webroot s
 | Setting | Value |
 |---------|-------|
 | Build command | `hostinger:admin` |
+| Start command | `hostinger:admin:start` |
 | Output directory | `apps/admin/.next` |
 | Framework | Next.js |
 | Node | 22 |

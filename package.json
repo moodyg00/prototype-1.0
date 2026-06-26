@@ -13,8 +13,11 @@
     "dev:public:live": "npx --yes serve apps/public-site/live -p 8081",
     "promote:public": "node scripts/promote-public-site.mjs",
     "hostinger:admin": "npm exec pnpm -- install --frozen-lockfile && npm run prisma:generate && npm exec pnpm -- --filter @prototype/admin build",
+    "hostinger:admin:start": "npm --prefix apps/admin run start",
     "hostinger:agent": "npm exec pnpm -- install --frozen-lockfile && npm run prisma:generate && npm exec pnpm -- --filter @prototype/agent build",
+    "hostinger:agent:start": "npm --prefix apps/agent run start",
     "hostinger:worker": "npm exec pnpm -- install --frozen-lockfile && npm run prisma:generate",
+    "hostinger:worker:start": "npm --prefix apps/worker run start",
     "postinstall": "node scripts/prisma-generate.mjs",
     "typecheck": "turbo run typecheck",
     "prisma:generate": "node scripts/prisma-generate.mjs"
