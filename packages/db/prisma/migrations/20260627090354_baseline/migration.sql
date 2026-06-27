@@ -471,62 +471,6 @@ CREATE TABLE "work_order_status_history" (
 );
 
 -- CreateTable
-CREATE TABLE "work_order_photos" (
-    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
-    "work_order_id" UUID NOT NULL,
-    "photo_url" TEXT NOT NULL,
-    "description" TEXT,
-    "uploaded_by" UUID,
-    "uploaded_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
-    "created_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
-    "created_by" UUID,
-    "updated_by" UUID,
-
-    CONSTRAINT "work_order_photos_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "work_order_documents" (
-    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
-    "work_order_id" UUID NOT NULL,
-    "document_name" VARCHAR(255) NOT NULL,
-    "document_url" TEXT NOT NULL,
-    "document_type" VARCHAR(60),
-    "description" TEXT,
-    "uploaded_by" UUID,
-    "uploaded_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
-    "created_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
-    "created_by" UUID,
-    "updated_by" UUID,
-
-    CONSTRAINT "work_order_documents_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "attachments" (
-    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
-    "filename" VARCHAR(255) NOT NULL,
-    "original_name" VARCHAR(255),
-    "url" TEXT NOT NULL,
-    "mime_type" VARCHAR(120) NOT NULL,
-    "size_bytes" INTEGER NOT NULL,
-    "kind" TEXT NOT NULL DEFAULT 'file',
-    "scope" TEXT NOT NULL DEFAULT 'global',
-    "lead_id" UUID,
-    "work_order_id" UUID,
-    "description" TEXT,
-    "uploaded_by" UUID,
-    "created_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
-    "created_by" UUID,
-    "updated_by" UUID,
-
-    CONSTRAINT "attachments_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "work_order_time_logs" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "work_order_id" UUID NOT NULL,
@@ -1538,22 +1482,6 @@ CREATE TABLE "media_files" (
 );
 
 -- CreateTable
-CREATE TABLE "social_media_accounts" (
-    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
-    "platform" VARCHAR(80) NOT NULL,
-    "account_name" VARCHAR(255) NOT NULL,
-    "username" VARCHAR(120),
-    "account_type" TEXT NOT NULL,
-    "is_active" BOOLEAN NOT NULL DEFAULT true,
-    "created_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
-    "created_by" UUID,
-    "updated_by" UUID,
-
-    CONSTRAINT "social_media_accounts_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "social_media_content" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "primary_creative_asset_id" UUID,
@@ -1571,52 +1499,14 @@ CREATE TABLE "social_media_content" (
 );
 
 -- CreateTable
-CREATE TABLE "assets" (
-    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
-    "filename" VARCHAR(255) NOT NULL,
-    "original_filename" VARCHAR(255),
-    "file_url" TEXT NOT NULL,
-    "mime_type" VARCHAR(120) NOT NULL,
-    "size_bytes" INTEGER,
-    "width" INTEGER,
-    "height" INTEGER,
-    "tags" JSONB,
-    "alt_text" VARCHAR(255),
-    "uploaded_by" UUID,
-    "created_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
-    "created_by" UUID,
-    "updated_by" UUID,
-
-    CONSTRAINT "assets_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "documents" (
-    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
-    "filename" VARCHAR(255) NOT NULL,
-    "original_filename" VARCHAR(255),
-    "file_url" TEXT NOT NULL,
-    "mime_type" VARCHAR(120) NOT NULL,
-    "size_bytes" INTEGER,
-    "tags" JSONB,
-    "alt_text" VARCHAR(255),
-    "uploaded_by" UUID,
-    "created_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
-    "created_by" UUID,
-    "updated_by" UUID,
-
-    CONSTRAINT "documents_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "printful_products" (
+CREATE TABLE "product_blanks" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "name" VARCHAR(255) NOT NULL,
     "slug" VARCHAR(120) NOT NULL,
     "category" VARCHAR(40) NOT NULL DEFAULT 'apparel',
-    "printful_catalog_product_id" INTEGER,
+    "product_type" VARCHAR(40) NOT NULL DEFAULT 'apparel',
+    "fulfillment_provider" VARCHAR(60),
+    "provider_product_id" VARCHAR(120),
     "base_unit_price" DECIMAL(12,2),
     "sku_prefix" VARCHAR(80),
     "print_areas" JSONB,
@@ -1624,20 +1514,22 @@ CREATE TABLE "printful_products" (
     "available_colors" JSONB,
     "available_techniques" JSONB,
     "placement_capabilities" JSONB,
+    "specs" JSONB,
     "is_active" BOOLEAN NOT NULL DEFAULT true,
     "created_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
     "created_by" UUID,
     "updated_by" UUID,
 
-    CONSTRAINT "printful_products_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "product_blanks_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "printful_product_templates" (
+CREATE TABLE "product_templates" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
-    "printful_product_id" UUID NOT NULL,
+    "product_blank_id" UUID NOT NULL,
     "color_key" VARCHAR(40) NOT NULL,
+    "color_hex" VARCHAR(9),
     "front_image_url" VARCHAR(500),
     "back_image_url" VARCHAR(500),
     "thumbnail_url" VARCHAR(500),
@@ -1647,16 +1539,17 @@ CREATE TABLE "printful_product_templates" (
     "created_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "printful_product_templates_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "product_templates_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "designs" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "name" VARCHAR(255) NOT NULL,
-    "printful_product_id" UUID,
+    "product_blank_id" UUID,
     "default_color_key" VARCHAR(40),
     "canvas_json" JSONB,
+    "canvas_svg" TEXT,
     "thumbnail_url" VARCHAR(500),
     "status" TEXT NOT NULL DEFAULT 'draft',
     "created_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
@@ -1671,12 +1564,12 @@ CREATE TABLE "designs" (
 CREATE TABLE "design_mockups" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "design_id" UUID NOT NULL,
-    "printful_product_template_id" UUID NOT NULL,
+    "product_template_id" UUID NOT NULL,
     "image_url" VARCHAR(500) NOT NULL,
     "width" INTEGER,
     "height" INTEGER,
     "kind" VARCHAR(20) NOT NULL DEFAULT 'front',
-    "printful_print_file_url" VARCHAR(500),
+    "print_file_url" VARCHAR(500),
     "generated_at" TIMESTAMPTZ(6),
     "created_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
@@ -1685,9 +1578,10 @@ CREATE TABLE "design_mockups" (
 );
 
 -- CreateTable
-CREATE TABLE "printful_orders" (
+CREATE TABLE "print_orders" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
-    "printful_order_id" BIGINT,
+    "fulfillment_provider" VARCHAR(60),
+    "external_order_id" VARCHAR(120),
     "status" VARCHAR(40) NOT NULL DEFAULT 'draft',
     "recipient" JSONB,
     "subtotal" DECIMAL(12,2),
@@ -1698,24 +1592,24 @@ CREATE TABLE "printful_orders" (
     "updated_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
     "created_by" UUID,
 
-    CONSTRAINT "printful_orders_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "print_orders_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "printful_order_items" (
+CREATE TABLE "print_order_items" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
-    "printful_order_id" UUID NOT NULL,
+    "print_order_id" UUID NOT NULL,
     "design_id" UUID,
-    "printful_product_template_id" UUID,
+    "product_template_id" UUID,
     "size_code" VARCHAR(20),
     "quantity" INTEGER NOT NULL DEFAULT 1,
     "unit_price" DECIMAL(12,2),
-    "printful_variant_id" INTEGER,
+    "external_variant_id" VARCHAR(120),
     "print_files" JSONB,
     "created_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "printful_order_items_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "print_order_items_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -1759,22 +1653,6 @@ CREATE TABLE "campaign_budgets" (
 );
 
 -- CreateTable
-CREATE TABLE "funnels" (
-    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
-    "name" VARCHAR(255) NOT NULL,
-    "description" TEXT,
-    "steps" JSONB,
-    "status" TEXT NOT NULL DEFAULT 'active',
-    "overall_conversion_rate" DECIMAL(8,2),
-    "created_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
-    "created_by" UUID,
-    "updated_by" UUID,
-
-    CONSTRAINT "funnels_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "landing_pages" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "name" VARCHAR(255) NOT NULL,
@@ -1800,7 +1678,6 @@ CREATE TABLE "ads" (
     "name" VARCHAR(255) NOT NULL,
     "platform" VARCHAR(80) NOT NULL,
     "campaign_id" UUID,
-    "funnel_id" UUID,
     "headline" VARCHAR(255),
     "hook" VARCHAR(255),
     "description" TEXT,
@@ -1934,7 +1811,6 @@ CREATE TABLE "marketing_attribution" (
     "contact_id" UUID,
     "ad_id" UUID,
     "campaign_id" UUID,
-    "funnel_id" UUID,
     "touchpoint" VARCHAR(120) NOT NULL,
     "touchpoint_date" TIMESTAMPTZ(6) NOT NULL,
     "conversion_value" DECIMAL(12,2),
@@ -1992,29 +1868,9 @@ CREATE TABLE "credentials" (
 );
 
 -- CreateTable
-CREATE TABLE "webhooks" (
-    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
-    "integration_id" UUID NOT NULL,
-    "direction" TEXT NOT NULL,
-    "event_type" VARCHAR(120) NOT NULL,
-    "endpoint_url" TEXT,
-    "secret" TEXT,
-    "status" TEXT NOT NULL DEFAULT 'active',
-    "is_active" BOOLEAN NOT NULL DEFAULT true,
-    "last_triggered_at" TIMESTAMPTZ(6),
-    "created_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
-    "created_by" UUID,
-    "updated_by" UUID,
-
-    CONSTRAINT "webhooks_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "integration_logs" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "integration_id" UUID NOT NULL,
-    "webhook_id" UUID,
     "log_type" TEXT NOT NULL,
     "status" TEXT NOT NULL,
     "endpoint" TEXT,
@@ -2028,25 +1884,6 @@ CREATE TABLE "integration_logs" (
     "updated_by" UUID,
 
     CONSTRAINT "integration_logs_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "snippets" (
-    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
-    "name" VARCHAR(255) NOT NULL,
-    "description" TEXT,
-    "code" TEXT NOT NULL,
-    "snippet_type" TEXT NOT NULL,
-    "placement" TEXT NOT NULL,
-    "page_slug" VARCHAR(180),
-    "status" TEXT NOT NULL DEFAULT 'active',
-    "is_active" BOOLEAN NOT NULL DEFAULT true,
-    "created_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
-    "created_by" UUID,
-    "updated_by" UUID,
-
-    CONSTRAINT "snippets_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -2158,25 +1995,6 @@ CREATE TABLE "ai_alerts" (
     "updated_by" UUID,
 
     CONSTRAINT "ai_alerts_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "system_health_events" (
-    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
-    "event_type" TEXT NOT NULL,
-    "severity" TEXT NOT NULL DEFAULT 'warning',
-    "title" VARCHAR(255) NOT NULL,
-    "details" JSONB,
-    "related_table_name" VARCHAR(120),
-    "related_record_id" UUID,
-    "resolved_by" UUID,
-    "resolved_at" TIMESTAMPTZ(6),
-    "created_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
-    "created_by" UUID,
-    "updated_by" UUID,
-
-    CONSTRAINT "system_health_events_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -2791,30 +2609,6 @@ CREATE INDEX "work_order_status_history_work_order_id_idx" ON "work_order_status
 CREATE INDEX "work_order_status_history_changed_at_idx" ON "work_order_status_history"("changed_at");
 
 -- CreateIndex
-CREATE INDEX "work_order_photos_work_order_id_idx" ON "work_order_photos"("work_order_id");
-
--- CreateIndex
-CREATE INDEX "work_order_documents_work_order_id_idx" ON "work_order_documents"("work_order_id");
-
--- CreateIndex
-CREATE INDEX "work_order_documents_document_type_idx" ON "work_order_documents"("document_type");
-
--- CreateIndex
-CREATE INDEX "attachments_lead_id_idx" ON "attachments"("lead_id");
-
--- CreateIndex
-CREATE INDEX "attachments_work_order_id_idx" ON "attachments"("work_order_id");
-
--- CreateIndex
-CREATE INDEX "attachments_kind_idx" ON "attachments"("kind");
-
--- CreateIndex
-CREATE INDEX "attachments_scope_idx" ON "attachments"("scope");
-
--- CreateIndex
-CREATE INDEX "attachments_created_at_idx" ON "attachments"("created_at");
-
--- CreateIndex
 CREATE INDEX "work_order_time_logs_work_order_id_idx" ON "work_order_time_logs"("work_order_id");
 
 -- CreateIndex
@@ -3316,12 +3110,6 @@ CREATE INDEX "media_files_work_order_id_idx" ON "media_files"("work_order_id");
 CREATE INDEX "media_files_uploaded_by_idx" ON "media_files"("uploaded_by");
 
 -- CreateIndex
-CREATE INDEX "social_media_accounts_platform_idx" ON "social_media_accounts"("platform");
-
--- CreateIndex
-CREATE INDEX "social_media_accounts_is_active_idx" ON "social_media_accounts"("is_active");
-
--- CreateIndex
 CREATE INDEX "social_media_content_platform_idx" ON "social_media_content"("platform");
 
 -- CreateIndex
@@ -3334,49 +3122,40 @@ CREATE INDEX "social_media_content_scheduled_at_idx" ON "social_media_content"("
 CREATE INDEX "social_media_content_primary_creative_asset_id_idx" ON "social_media_content"("primary_creative_asset_id");
 
 -- CreateIndex
-CREATE INDEX "assets_mime_type_idx" ON "assets"("mime_type");
+CREATE UNIQUE INDEX "product_blanks_slug_key" ON "product_blanks"("slug");
 
 -- CreateIndex
-CREATE INDEX "assets_uploaded_by_idx" ON "assets"("uploaded_by");
+CREATE INDEX "product_blanks_slug_idx" ON "product_blanks"("slug");
 
 -- CreateIndex
-CREATE INDEX "documents_mime_type_idx" ON "documents"("mime_type");
+CREATE INDEX "product_blanks_is_active_idx" ON "product_blanks"("is_active");
 
 -- CreateIndex
-CREATE INDEX "documents_uploaded_by_idx" ON "documents"("uploaded_by");
+CREATE INDEX "product_blanks_fulfillment_provider_idx" ON "product_blanks"("fulfillment_provider");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "printful_products_slug_key" ON "printful_products"("slug");
+CREATE INDEX "product_templates_product_blank_id_idx" ON "product_templates"("product_blank_id");
 
 -- CreateIndex
-CREATE INDEX "printful_products_slug_idx" ON "printful_products"("slug");
-
--- CreateIndex
-CREATE INDEX "printful_products_is_active_idx" ON "printful_products"("is_active");
-
--- CreateIndex
-CREATE INDEX "printful_product_templates_printful_product_id_idx" ON "printful_product_templates"("printful_product_id");
-
--- CreateIndex
-CREATE UNIQUE INDEX "printful_product_templates_printful_product_id_color_key_key" ON "printful_product_templates"("printful_product_id", "color_key");
+CREATE UNIQUE INDEX "product_templates_product_blank_id_color_key_key" ON "product_templates"("product_blank_id", "color_key");
 
 -- CreateIndex
 CREATE INDEX "designs_status_idx" ON "designs"("status");
 
 -- CreateIndex
-CREATE INDEX "designs_printful_product_id_idx" ON "designs"("printful_product_id");
+CREATE INDEX "designs_product_blank_id_idx" ON "designs"("product_blank_id");
 
 -- CreateIndex
 CREATE INDEX "design_mockups_design_id_idx" ON "design_mockups"("design_id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "design_mockups_design_id_printful_product_template_id_kind_key" ON "design_mockups"("design_id", "printful_product_template_id", "kind");
+CREATE UNIQUE INDEX "design_mockups_design_id_product_template_id_kind_key" ON "design_mockups"("design_id", "product_template_id", "kind");
 
 -- CreateIndex
-CREATE INDEX "printful_orders_status_idx" ON "printful_orders"("status");
+CREATE INDEX "print_orders_status_idx" ON "print_orders"("status");
 
 -- CreateIndex
-CREATE INDEX "printful_order_items_printful_order_id_idx" ON "printful_order_items"("printful_order_id");
+CREATE INDEX "print_order_items_print_order_id_idx" ON "print_order_items"("print_order_id");
 
 -- CreateIndex
 CREATE INDEX "ad_campaigns_status_idx" ON "ad_campaigns"("status");
@@ -3389,9 +3168,6 @@ CREATE INDEX "campaign_budgets_budget_status_idx" ON "campaign_budgets"("budget_
 
 -- CreateIndex
 CREATE UNIQUE INDEX "campaign_budgets_campaign_id_key" ON "campaign_budgets"("campaign_id");
-
--- CreateIndex
-CREATE INDEX "funnels_status_idx" ON "funnels"("status");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "landing_pages_slug_key" ON "landing_pages"("slug");
@@ -3478,18 +3254,6 @@ CREATE INDEX "credentials_is_active_idx" ON "credentials"("is_active");
 CREATE INDEX "credentials_name_idx" ON "credentials"("name");
 
 -- CreateIndex
-CREATE INDEX "webhooks_integration_id_idx" ON "webhooks"("integration_id");
-
--- CreateIndex
-CREATE INDEX "webhooks_direction_idx" ON "webhooks"("direction");
-
--- CreateIndex
-CREATE INDEX "webhooks_event_type_idx" ON "webhooks"("event_type");
-
--- CreateIndex
-CREATE INDEX "webhooks_status_idx" ON "webhooks"("status");
-
--- CreateIndex
 CREATE INDEX "integration_logs_integration_id_idx" ON "integration_logs"("integration_id");
 
 -- CreateIndex
@@ -3500,18 +3264,6 @@ CREATE INDEX "integration_logs_status_idx" ON "integration_logs"("status");
 
 -- CreateIndex
 CREATE INDEX "integration_logs_created_at_idx" ON "integration_logs"("created_at");
-
--- CreateIndex
-CREATE INDEX "snippets_name_idx" ON "snippets"("name");
-
--- CreateIndex
-CREATE INDEX "snippets_snippet_type_idx" ON "snippets"("snippet_type");
-
--- CreateIndex
-CREATE INDEX "snippets_placement_idx" ON "snippets"("placement");
-
--- CreateIndex
-CREATE INDEX "snippets_status_idx" ON "snippets"("status");
 
 -- CreateIndex
 CREATE INDEX "tasks_assigned_to_idx" ON "tasks"("assigned_to");
@@ -3593,15 +3345,6 @@ CREATE INDEX "ai_alerts_is_resolved_idx" ON "ai_alerts"("is_resolved");
 
 -- CreateIndex
 CREATE INDEX "ai_alerts_created_at_idx" ON "ai_alerts"("created_at");
-
--- CreateIndex
-CREATE INDEX "system_health_events_event_type_idx" ON "system_health_events"("event_type");
-
--- CreateIndex
-CREATE INDEX "system_health_events_severity_idx" ON "system_health_events"("severity");
-
--- CreateIndex
-CREATE INDEX "system_health_events_created_at_idx" ON "system_health_events"("created_at");
 
 -- CreateIndex
 CREATE INDEX "low_stock_alerts_status_idx" ON "low_stock_alerts"("status");
@@ -3935,36 +3678,6 @@ ALTER TABLE "work_order_status_history" ADD CONSTRAINT "work_order_status_histor
 
 -- AddForeignKey
 ALTER TABLE "work_order_status_history" ADD CONSTRAINT "work_order_status_history_updated_by_fkey" FOREIGN KEY ("updated_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "work_order_photos" ADD CONSTRAINT "work_order_photos_work_order_id_fkey" FOREIGN KEY ("work_order_id") REFERENCES "work_orders"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "work_order_photos" ADD CONSTRAINT "work_order_photos_uploaded_by_fkey" FOREIGN KEY ("uploaded_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "work_order_photos" ADD CONSTRAINT "work_order_photos_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "work_order_photos" ADD CONSTRAINT "work_order_photos_updated_by_fkey" FOREIGN KEY ("updated_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "work_order_documents" ADD CONSTRAINT "work_order_documents_work_order_id_fkey" FOREIGN KEY ("work_order_id") REFERENCES "work_orders"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "work_order_documents" ADD CONSTRAINT "work_order_documents_uploaded_by_fkey" FOREIGN KEY ("uploaded_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "work_order_documents" ADD CONSTRAINT "work_order_documents_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "work_order_documents" ADD CONSTRAINT "work_order_documents_updated_by_fkey" FOREIGN KEY ("updated_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "attachments" ADD CONSTRAINT "attachments_lead_id_fkey" FOREIGN KEY ("lead_id") REFERENCES "leads"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "attachments" ADD CONSTRAINT "attachments_work_order_id_fkey" FOREIGN KEY ("work_order_id") REFERENCES "work_orders"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "work_order_time_logs" ADD CONSTRAINT "work_order_time_logs_work_order_id_fkey" FOREIGN KEY ("work_order_id") REFERENCES "work_orders"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -4501,12 +4214,6 @@ ALTER TABLE "media_files" ADD CONSTRAINT "media_files_created_by_fkey" FOREIGN K
 ALTER TABLE "media_files" ADD CONSTRAINT "media_files_updated_by_fkey" FOREIGN KEY ("updated_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "social_media_accounts" ADD CONSTRAINT "social_media_accounts_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "social_media_accounts" ADD CONSTRAINT "social_media_accounts_updated_by_fkey" FOREIGN KEY ("updated_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "social_media_content" ADD CONSTRAINT "social_media_content_primary_creative_asset_id_fkey" FOREIGN KEY ("primary_creative_asset_id") REFERENCES "creative_assets"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -4516,34 +4223,16 @@ ALTER TABLE "social_media_content" ADD CONSTRAINT "social_media_content_created_
 ALTER TABLE "social_media_content" ADD CONSTRAINT "social_media_content_updated_by_fkey" FOREIGN KEY ("updated_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "assets" ADD CONSTRAINT "assets_uploaded_by_fkey" FOREIGN KEY ("uploaded_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "product_blanks" ADD CONSTRAINT "product_blanks_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "assets" ADD CONSTRAINT "assets_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "product_blanks" ADD CONSTRAINT "product_blanks_updated_by_fkey" FOREIGN KEY ("updated_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "assets" ADD CONSTRAINT "assets_updated_by_fkey" FOREIGN KEY ("updated_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "product_templates" ADD CONSTRAINT "product_templates_product_blank_id_fkey" FOREIGN KEY ("product_blank_id") REFERENCES "product_blanks"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "documents" ADD CONSTRAINT "documents_uploaded_by_fkey" FOREIGN KEY ("uploaded_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "documents" ADD CONSTRAINT "documents_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "documents" ADD CONSTRAINT "documents_updated_by_fkey" FOREIGN KEY ("updated_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "printful_products" ADD CONSTRAINT "printful_products_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "printful_products" ADD CONSTRAINT "printful_products_updated_by_fkey" FOREIGN KEY ("updated_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "printful_product_templates" ADD CONSTRAINT "printful_product_templates_printful_product_id_fkey" FOREIGN KEY ("printful_product_id") REFERENCES "printful_products"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "designs" ADD CONSTRAINT "designs_printful_product_id_fkey" FOREIGN KEY ("printful_product_id") REFERENCES "printful_products"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "designs" ADD CONSTRAINT "designs_product_blank_id_fkey" FOREIGN KEY ("product_blank_id") REFERENCES "product_blanks"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "designs" ADD CONSTRAINT "designs_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -4555,19 +4244,19 @@ ALTER TABLE "designs" ADD CONSTRAINT "designs_updated_by_fkey" FOREIGN KEY ("upd
 ALTER TABLE "design_mockups" ADD CONSTRAINT "design_mockups_design_id_fkey" FOREIGN KEY ("design_id") REFERENCES "designs"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "design_mockups" ADD CONSTRAINT "design_mockups_printful_product_template_id_fkey" FOREIGN KEY ("printful_product_template_id") REFERENCES "printful_product_templates"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "design_mockups" ADD CONSTRAINT "design_mockups_product_template_id_fkey" FOREIGN KEY ("product_template_id") REFERENCES "product_templates"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "printful_orders" ADD CONSTRAINT "printful_orders_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "print_orders" ADD CONSTRAINT "print_orders_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "printful_order_items" ADD CONSTRAINT "printful_order_items_printful_order_id_fkey" FOREIGN KEY ("printful_order_id") REFERENCES "printful_orders"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "print_order_items" ADD CONSTRAINT "print_order_items_print_order_id_fkey" FOREIGN KEY ("print_order_id") REFERENCES "print_orders"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "printful_order_items" ADD CONSTRAINT "printful_order_items_design_id_fkey" FOREIGN KEY ("design_id") REFERENCES "designs"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "print_order_items" ADD CONSTRAINT "print_order_items_design_id_fkey" FOREIGN KEY ("design_id") REFERENCES "designs"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "printful_order_items" ADD CONSTRAINT "printful_order_items_printful_product_template_id_fkey" FOREIGN KEY ("printful_product_template_id") REFERENCES "printful_product_templates"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "print_order_items" ADD CONSTRAINT "print_order_items_product_template_id_fkey" FOREIGN KEY ("product_template_id") REFERENCES "product_templates"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ad_campaigns" ADD CONSTRAINT "ad_campaigns_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -4585,12 +4274,6 @@ ALTER TABLE "campaign_budgets" ADD CONSTRAINT "campaign_budgets_created_by_fkey"
 ALTER TABLE "campaign_budgets" ADD CONSTRAINT "campaign_budgets_updated_by_fkey" FOREIGN KEY ("updated_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "funnels" ADD CONSTRAINT "funnels_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "funnels" ADD CONSTRAINT "funnels_updated_by_fkey" FOREIGN KEY ("updated_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "landing_pages" ADD CONSTRAINT "landing_pages_ad_id_fkey" FOREIGN KEY ("ad_id") REFERENCES "ads"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -4601,9 +4284,6 @@ ALTER TABLE "landing_pages" ADD CONSTRAINT "landing_pages_updated_by_fkey" FOREI
 
 -- AddForeignKey
 ALTER TABLE "ads" ADD CONSTRAINT "ads_campaign_id_fkey" FOREIGN KEY ("campaign_id") REFERENCES "ad_campaigns"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "ads" ADD CONSTRAINT "ads_funnel_id_fkey" FOREIGN KEY ("funnel_id") REFERENCES "funnels"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ads" ADD CONSTRAINT "ads_primary_creative_asset_id_fkey" FOREIGN KEY ("primary_creative_asset_id") REFERENCES "creative_assets"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -4672,9 +4352,6 @@ ALTER TABLE "marketing_attribution" ADD CONSTRAINT "marketing_attribution_ad_id_
 ALTER TABLE "marketing_attribution" ADD CONSTRAINT "marketing_attribution_campaign_id_fkey" FOREIGN KEY ("campaign_id") REFERENCES "ad_campaigns"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "marketing_attribution" ADD CONSTRAINT "marketing_attribution_funnel_id_fkey" FOREIGN KEY ("funnel_id") REFERENCES "funnels"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "marketing_attribution" ADD CONSTRAINT "marketing_attribution_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -4693,31 +4370,13 @@ ALTER TABLE "credentials" ADD CONSTRAINT "credentials_created_by_fkey" FOREIGN K
 ALTER TABLE "credentials" ADD CONSTRAINT "credentials_updated_by_fkey" FOREIGN KEY ("updated_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "webhooks" ADD CONSTRAINT "webhooks_integration_id_fkey" FOREIGN KEY ("integration_id") REFERENCES "integrations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "webhooks" ADD CONSTRAINT "webhooks_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "webhooks" ADD CONSTRAINT "webhooks_updated_by_fkey" FOREIGN KEY ("updated_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "integration_logs" ADD CONSTRAINT "integration_logs_integration_id_fkey" FOREIGN KEY ("integration_id") REFERENCES "integrations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "integration_logs" ADD CONSTRAINT "integration_logs_webhook_id_fkey" FOREIGN KEY ("webhook_id") REFERENCES "webhooks"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "integration_logs" ADD CONSTRAINT "integration_logs_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "integration_logs" ADD CONSTRAINT "integration_logs_updated_by_fkey" FOREIGN KEY ("updated_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "snippets" ADD CONSTRAINT "snippets_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "snippets" ADD CONSTRAINT "snippets_updated_by_fkey" FOREIGN KEY ("updated_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "tasks" ADD CONSTRAINT "tasks_assigned_to_fkey" FOREIGN KEY ("assigned_to") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -4787,15 +4446,6 @@ ALTER TABLE "ai_alerts" ADD CONSTRAINT "ai_alerts_created_by_fkey" FOREIGN KEY (
 
 -- AddForeignKey
 ALTER TABLE "ai_alerts" ADD CONSTRAINT "ai_alerts_updated_by_fkey" FOREIGN KEY ("updated_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "system_health_events" ADD CONSTRAINT "system_health_events_resolved_by_fkey" FOREIGN KEY ("resolved_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "system_health_events" ADD CONSTRAINT "system_health_events_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "system_health_events" ADD CONSTRAINT "system_health_events_updated_by_fkey" FOREIGN KEY ("updated_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "low_stock_alerts" ADD CONSTRAINT "low_stock_alerts_inventory_id_fkey" FOREIGN KEY ("inventory_id") REFERENCES "inventory"("id") ON DELETE CASCADE ON UPDATE CASCADE;

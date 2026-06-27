@@ -11,9 +11,30 @@ function allowedOrigins(): string[] {
   return [...new Set([...defaults, ...fromEnv])];
 }
 
+function isDevLocalOrigin(origin: string): boolean {
+  try {
+    const { hostname, protocol } = new URL(origin);
+    if (protocol !== 'http:' && protocol !== 'https:') return false;
+    return (
+      hostname === 'localhost' ||
+      hostname === '127.0.0.1' ||
+      /^192\.168\.\d{1,3}\.\d{1,3}$/.test(hostname) ||
+      /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(hostname) ||
+      hostname.endsWith('.local')
+    );
+  } catch {
+    return false;
+  }
+}
+
+function isOriginAllowed(origin: string): boolean {
+  if (allowedOrigins().includes(origin)) return true;
+  return process.env.NODE_ENV === 'development' && isDevLocalOrigin(origin);
+}
+
 export function applyPublicSiteCors(request: Request, response: NextResponse): NextResponse {
   const origin = request.headers.get('origin');
-  if (origin && allowedOrigins().includes(origin)) {
+  if (origin && isOriginAllowed(origin)) {
     response.headers.set('Access-Control-Allow-Origin', origin);
     response.headers.set('Vary', 'Origin');
     response.headers.set('Access-Control-Allow-Methods', 'POST, OPTIONS');

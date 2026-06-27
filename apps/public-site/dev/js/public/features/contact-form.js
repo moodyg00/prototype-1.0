@@ -23,9 +23,11 @@
       setStatus(form, 'Sending…', null);
 
       try {
-        const response = await fetch(`${getApiBase()}/api/public/contact`, {
+        const apiBase = getApiBase();
+        const response = await fetch(`${apiBase}/api/public/contact`, {
           method: 'POST',
           body: new FormData(form),
+          mode: 'cors',
         });
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) {
@@ -34,7 +36,14 @@
         form.reset();
         setStatus(form, 'Thanks — we got your message and will follow up soon.', 'success');
       } catch (error) {
-        setStatus(form, error instanceof Error ? error.message : 'Unable to send your message right now.', 'error');
+        const apiBase = getApiBase();
+        const message =
+          error instanceof TypeError && error.message === 'Failed to fetch'
+            ? `Could not reach the server at ${apiBase}. Make sure the admin app is running (pnpm dev:admin).`
+            : error instanceof Error
+              ? error.message
+              : 'Unable to send your message right now.';
+        setStatus(form, message, 'error');
       } finally {
         if (submitButton) submitButton.disabled = false;
       }

@@ -265,7 +265,6 @@ async function getSystemsKpis(now: Date): Promise<DashboardMetric[]> {
   const [
     apiIntegrations,
     integrationsNeedAttention,
-    activeWebhooks,
     adminUsers,
     usersActiveToday,
     recentLogEvents,
@@ -285,7 +284,6 @@ async function getSystemsKpis(now: Date): Promise<DashboardMetric[]> {
         ],
       },
     }),
-    prisma.webhook.count({ where: { isActive: true, status: 'active' } }),
     prisma.user.count({ where: { isActive: true, userType: 'human' } }),
     prisma.user.count({
       where: {
@@ -308,9 +306,9 @@ async function getSystemsKpis(now: Date): Promise<DashboardMetric[]> {
           : 'All configured integrations healthy',
     },
     {
-      label: 'Active webhooks',
-      value: formatCount(activeWebhooks),
-      note: `${formatCount(savedCredentials)} saved credentials`,
+      label: 'Saved credentials',
+      value: formatCount(savedCredentials),
+      note: 'Stored login credentials',
     },
     {
       label: 'Admin users',

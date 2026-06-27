@@ -31,6 +31,7 @@ export default defineConfig({
   datasource: {
     url:
       process.env.DIRECT_DATABASE_URL ??
+      process.env.DIRECT_URL ?? // Supabase/Prisma docs name; alias for DIRECT_DATABASE_URL
       process.env.DATABASE_URL ??
       process.env.SUPABASE_DB_URL ??
       process.env.SUPABASE_POOLER_URL ??

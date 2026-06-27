@@ -30,6 +30,10 @@ pnpm-debug.log*
 # prisma / generated local artifacts
 **/generated/
 packages/db/generated/
+packages/db/prisma/seed-data/production-users-backup.json
+packages/db/prisma/seed-data/credentials.json
+packages/db/prisma/seed-data/integrations.json
+packages/db/prisma/seed-data/settings.json
 
 # runtime files
 apps/admin/public/uploads/*

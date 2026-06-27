@@ -26,7 +26,10 @@ export function getDatabaseUrl(): string {
 
 /** Direct Postgres URL for migrations (Supabase port 5432). Falls back to DATABASE_URL. */
 export function getDirectDatabaseUrl(): string {
-  return pickFirstDefined(process.env.DIRECT_DATABASE_URL, process.env.DATABASE_URL) ?? getDatabaseUrl();
+  return (
+    pickFirstDefined(process.env.DIRECT_DATABASE_URL, process.env.DIRECT_URL, process.env.DATABASE_URL) ??
+    getDatabaseUrl()
+  );
 }
 
 /** True when DATABASE_URL points at Supabase pooler/host. */

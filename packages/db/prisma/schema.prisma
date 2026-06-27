@@ -96,12 +96,6 @@ model User {
   workOrderStatusHistorysAsChangedBy WorkOrderStatusHistory[] @relation("work_order_status_history_changed_by_users")
   workOrderStatusHistorysAsCreatedBy WorkOrderStatusHistory[] @relation("work_order_status_history_created_by_users")
   workOrderStatusHistorysAsUpdatedBy WorkOrderStatusHistory[] @relation("work_order_status_history_updated_by_users")
-  workOrderPhotosAsUploadedBy        WorkOrderPhoto[]         @relation("work_order_photos_uploaded_by_users")
-  workOrderPhotosAsCreatedBy         WorkOrderPhoto[]         @relation("work_order_photos_created_by_users")
-  workOrderPhotosAsUpdatedBy         WorkOrderPhoto[]         @relation("work_order_photos_updated_by_users")
-  workOrderDocumentsAsUploadedBy     WorkOrderDocument[]      @relation("work_order_documents_uploaded_by_users")
-  workOrderDocumentsAsCreatedBy      WorkOrderDocument[]      @relation("work_order_documents_created_by_users")
-  workOrderDocumentsAsUpdatedBy      WorkOrderDocument[]      @relation("work_order_documents_updated_by_users")
   workOrderTimeLogsAsLoggedBy        WorkOrderTimeLog[]       @relation("work_order_time_logs_logged_by_users")
   workOrderTimeLogsAsCreatedBy       WorkOrderTimeLog[]       @relation("work_order_time_logs_created_by_users")
   workOrderTimeLogsAsUpdatedBy       WorkOrderTimeLog[]       @relation("work_order_time_logs_updated_by_users")
@@ -195,27 +189,17 @@ model User {
   mediaFilesAsUploadedBy             MediaFile[]              @relation("media_files_uploaded_by_users")
   mediaFilesAsCreatedBy              MediaFile[]              @relation("media_files_created_by_users")
   mediaFilesAsUpdatedBy              MediaFile[]              @relation("media_files_updated_by_users")
-  socialMediaAccountsAsCreatedBy     SocialMediaAccount[]     @relation("social_media_accounts_created_by_users")
-  socialMediaAccountsAsUpdatedBy     SocialMediaAccount[]     @relation("social_media_accounts_updated_by_users")
   socialMediaContentsAsCreatedBy     SocialMediaContent[]     @relation("social_media_content_created_by_users")
   socialMediaContentsAsUpdatedBy     SocialMediaContent[]     @relation("social_media_content_updated_by_users")
-  assetsAsUploadedBy                 Asset[]                  @relation("assets_uploaded_by_users")
-  assetsAsCreatedBy                  Asset[]                  @relation("assets_created_by_users")
-  assetsAsUpdatedBy                  Asset[]                  @relation("assets_updated_by_users")
-  documentsAsUploadedBy              Document[]               @relation("documents_uploaded_by_users")
-  documentsAsCreatedBy               Document[]               @relation("documents_created_by_users")
-  documentsAsUpdatedBy               Document[]               @relation("documents_updated_by_users")
-  printfulProductsAsCreatedBy        PrintfulProduct[]        @relation("printful_products_created_by_users")
-  printfulProductsAsUpdatedBy        PrintfulProduct[]        @relation("printful_products_updated_by_users")
+  productBlanksAsCreatedBy           ProductBlank[]           @relation("product_blanks_created_by_users")
+  productBlanksAsUpdatedBy           ProductBlank[]           @relation("product_blanks_updated_by_users")
   designsAsCreatedBy                 Design[]                 @relation("designs_created_by_users")
   designsAsUpdatedBy                 Design[]                 @relation("designs_updated_by_users")
-  printfulOrders                     PrintfulOrder[]
+  printOrders                        PrintOrder[]
   adCampaignsAsCreatedBy             AdCampaign[]             @relation("ad_campaigns_created_by_users")
   adCampaignsAsUpdatedBy             AdCampaign[]             @relation("ad_campaigns_updated_by_users")
   campaignBudgetsAsCreatedBy         CampaignBudget[]         @relation("campaign_budgets_created_by_users")
   campaignBudgetsAsUpdatedBy         CampaignBudget[]         @relation("campaign_budgets_updated_by_users")
-  funnelsAsCreatedBy                 Funnel[]                 @relation("funnels_created_by_users")
-  funnelsAsUpdatedBy                 Funnel[]                 @relation("funnels_updated_by_users")
   landingPagesAsCreatedBy            LandingPage[]            @relation("landing_pages_created_by_users")
   landingPagesAsUpdatedBy            LandingPage[]            @relation("landing_pages_updated_by_users")
   adsAsCreatedBy                     Ad[]                     @relation("ads_created_by_users")
@@ -236,12 +220,8 @@ model User {
   integrationsAsUpdatedBy            Integration[]            @relation("integrations_updated_by_users")
   credentialsAsCreatedBy             Credential[]             @relation("credentials_created_by_users")
   credentialsAsUpdatedBy             Credential[]             @relation("credentials_updated_by_users")
-  webhooksAsCreatedBy                Webhook[]                @relation("webhooks_created_by_users")
-  webhooksAsUpdatedBy                Webhook[]                @relation("webhooks_updated_by_users")
   integrationLogsAsCreatedBy         IntegrationLog[]         @relation("integration_logs_created_by_users")
   integrationLogsAsUpdatedBy         IntegrationLog[]         @relation("integration_logs_updated_by_users")
-  snippetsAsCreatedBy                Snippet[]                @relation("snippets_created_by_users")
-  snippetsAsUpdatedBy                Snippet[]                @relation("snippets_updated_by_users")
   tasksAsAssignedTo                  Task[]                   @relation("tasks_assigned_to_users")
   tasksAsOwnerUser                   Task[]                   @relation("tasks_owner_user_id_users")
   tasksAsOriginatorUser              Task[]                   @relation("tasks_originator_user_id_users")
@@ -259,9 +239,6 @@ model User {
   aiAlertsAsAgentUser                AiAlert[]                @relation("ai_alerts_agent_user_id_users")
   aiAlertsAsCreatedBy                AiAlert[]                @relation("ai_alerts_created_by_users")
   aiAlertsAsUpdatedBy                AiAlert[]                @relation("ai_alerts_updated_by_users")
-  systemHealthEventsAsResolvedBy     SystemHealthEvent[]      @relation("system_health_events_resolved_by_users")
-  systemHealthEventsAsCreatedBy      SystemHealthEvent[]      @relation("system_health_events_created_by_users")
-  systemHealthEventsAsUpdatedBy      SystemHealthEvent[]      @relation("system_health_events_updated_by_users")
   lowStockAlertsAsCreatedBy          LowStockAlert[]          @relation("low_stock_alerts_created_by_users")
   lowStockAlertsAsUpdatedBy          LowStockAlert[]          @relation("low_stock_alerts_updated_by_users")
   emailTemplatesAsReviewedBy         EmailTemplate[]          @relation("email_templates_reviewed_by_users")
@@ -527,7 +504,6 @@ model Lead {
   updatedByRef    User?         @relation("leads_updated_by_users", fields: [updatedBy], references: [id], onDelete: SetNull)
   estimates       Estimate[]
   activitys       Activity[]
-  attachments     Attachment[]
 
   @@index([status])
   @@index([assignedTo])
@@ -803,8 +779,6 @@ model WorkOrder {
   bookings                      Booking[]
   workOrderMaterials            WorkOrderMaterial[]
   workOrderStatusHistorys       WorkOrderStatusHistory[]
-  workOrderPhotos               WorkOrderPhoto[]
-  workOrderDocuments            WorkOrderDocument[]
   workOrderTimeLogs             WorkOrderTimeLog[]
   contractorPerformances        ContractorPerformance[]
   safetyIncidents               SafetyIncident[]
@@ -819,7 +793,6 @@ model WorkOrder {
   mediaFiles                    MediaFile[]
   workOrderItems                WorkOrderItem[]
   bookingLinks                  BookingLink[]
-  attachments                   Attachment[]
 
   @@index([workOrderNumber])
   @@index([status])
@@ -916,79 +889,6 @@ model WorkOrderStatusHistory {
   @@index([workOrderId])
   @@index([changedAt])
   @@map("work_order_status_history")
-}
-
-model WorkOrderPhoto {
-  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  workOrderId   String    @map("work_order_id") @db.Uuid
-  photoUrl      String    @map("photo_url")
-  description   String?
-  uploadedBy    String?   @map("uploaded_by") @db.Uuid
-  uploadedAt    DateTime? @default(now()) @map("uploaded_at") @db.Timestamptz(6)
-  createdAt     DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt     DateTime? @default(now()) @map("updated_at") @db.Timestamptz(6)
-  createdBy     String?   @map("created_by") @db.Uuid
-  updatedBy     String?   @map("updated_by") @db.Uuid
-  workOrder     WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
-  uploadedByRef User?     @relation("work_order_photos_uploaded_by_users", fields: [uploadedBy], references: [id], onDelete: SetNull)
-  createdByRef  User?     @relation("work_order_photos_created_by_users", fields: [createdBy], references: [id], onDelete: SetNull)
-  updatedByRef  User?     @relation("work_order_photos_updated_by_users", fields: [updatedBy], references: [id], onDelete: SetNull)
-
-  @@index([workOrderId])
-  @@map("work_order_photos")
-}
-
-model WorkOrderDocument {
-  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  workOrderId   String    @map("work_order_id") @db.Uuid
-  documentName  String    @map("document_name") @db.VarChar(255)
-  documentUrl   String    @map("document_url")
-  documentType  String?   @map("document_type") @db.VarChar(60)
-  description   String?
-  uploadedBy    String?   @map("uploaded_by") @db.Uuid
-  uploadedAt    DateTime? @default(now()) @map("uploaded_at") @db.Timestamptz(6)
-  createdAt     DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt     DateTime? @default(now()) @map("updated_at") @db.Timestamptz(6)
-  createdBy     String?   @map("created_by") @db.Uuid
-  updatedBy     String?   @map("updated_by") @db.Uuid
-  workOrder     WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
-  uploadedByRef User?     @relation("work_order_documents_uploaded_by_users", fields: [uploadedBy], references: [id], onDelete: SetNull)
-  createdByRef  User?     @relation("work_order_documents_created_by_users", fields: [createdBy], references: [id], onDelete: SetNull)
-  updatedByRef  User?     @relation("work_order_documents_updated_by_users", fields: [updatedBy], references: [id], onDelete: SetNull)
-
-  @@index([workOrderId])
-  @@index([documentType])
-  @@map("work_order_documents")
-}
-
-// Generic uploaded files / photos. A single record can be scoped to a lead, a
-// work order, or the global upload bucket (both leadId and workOrderId null).
-model Attachment {
-  id           String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  filename     String     @db.VarChar(255)
-  originalName String?    @map("original_name") @db.VarChar(255)
-  url          String
-  mimeType     String     @map("mime_type") @db.VarChar(120)
-  sizeBytes    Int        @map("size_bytes")
-  kind         String     @default("file") /// CHECK kind IN ('photo', 'file')
-  scope        String     @default("global") /// CHECK scope IN ('global', 'lead', 'work_order')
-  leadId       String?    @map("lead_id") @db.Uuid
-  workOrderId  String?    @map("work_order_id") @db.Uuid
-  description  String?
-  uploadedBy   String?    @map("uploaded_by") @db.Uuid
-  createdAt    DateTime?  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt    DateTime?  @default(now()) @map("updated_at") @db.Timestamptz(6)
-  createdBy    String?    @map("created_by") @db.Uuid
-  updatedBy    String?    @map("updated_by") @db.Uuid
-  lead         Lead?      @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  workOrder    WorkOrder? @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
-
-  @@index([leadId])
-  @@index([workOrderId])
-  @@index([kind])
-  @@index([scope])
-  @@index([createdAt])
-  @@map("attachments")
 }
 
 model WorkOrderTimeLog {
@@ -2341,25 +2241,6 @@ model MediaFile {
   @@map("media_files")
 }
 
-model SocialMediaAccount {
-  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  platform     String    @db.VarChar(80)
-  accountName  String    @map("account_name") @db.VarChar(255)
-  username     String?   @db.VarChar(120)
-  accountType  String    @map("account_type") /// CHECK account_type IN ('personal', 'business', 'creator')
-  isActive     Boolean   @default(true) @map("is_active")
-  createdAt    DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt    DateTime? @default(now()) @map("updated_at") @db.Timestamptz(6)
-  createdBy    String?   @map("created_by") @db.Uuid
-  updatedBy    String?   @map("updated_by") @db.Uuid
-  createdByRef User?     @relation("social_media_accounts_created_by_users", fields: [createdBy], references: [id], onDelete: SetNull)
-  updatedByRef User?     @relation("social_media_accounts_updated_by_users", fields: [updatedBy], references: [id], onDelete: SetNull)
-
-  @@index([platform])
-  @@index([isActive])
-  @@map("social_media_accounts")
-}
-
 model SocialMediaContent {
   id                     String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   primaryCreativeAssetId String?        @map("primary_creative_asset_id") @db.Uuid
@@ -2383,183 +2264,142 @@ model SocialMediaContent {
   @@map("social_media_content")
 }
 
-model Asset {
-  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  filename         String    @db.VarChar(255)
-  originalFilename String?   @map("original_filename") @db.VarChar(255)
-  fileUrl          String    @map("file_url")
-  mimeType         String    @map("mime_type") @db.VarChar(120)
-  sizeBytes        Int?      @map("size_bytes")
-  width            Int?
-  height           Int?
-  tags             Json?     @db.JsonB
-  altText          String?   @map("alt_text") @db.VarChar(255)
-  uploadedBy       String?   @map("uploaded_by") @db.Uuid
-  createdAt        DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt        DateTime? @default(now()) @map("updated_at") @db.Timestamptz(6)
-  createdBy        String?   @map("created_by") @db.Uuid
-  updatedBy        String?   @map("updated_by") @db.Uuid
-  uploadedByRef    User?     @relation("assets_uploaded_by_users", fields: [uploadedBy], references: [id], onDelete: SetNull)
-  createdByRef     User?     @relation("assets_created_by_users", fields: [createdBy], references: [id], onDelete: SetNull)
-  updatedByRef     User?     @relation("assets_updated_by_users", fields: [updatedBy], references: [id], onDelete: SetNull)
-
-  @@index([mimeType])
-  @@index([uploadedBy])
-  @@map("assets")
-}
-
-model Document {
-  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  filename         String    @db.VarChar(255)
-  originalFilename String?   @map("original_filename") @db.VarChar(255)
-  fileUrl          String    @map("file_url")
-  mimeType         String    @map("mime_type") @db.VarChar(120)
-  sizeBytes        Int?      @map("size_bytes")
-  tags             Json?     @db.JsonB
-  altText          String?   @map("alt_text") @db.VarChar(255)
-  uploadedBy       String?   @map("uploaded_by") @db.Uuid
-  createdAt        DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt        DateTime? @default(now()) @map("updated_at") @db.Timestamptz(6)
-  createdBy        String?   @map("created_by") @db.Uuid
-  updatedBy        String?   @map("updated_by") @db.Uuid
-  uploadedByRef    User?     @relation("documents_uploaded_by_users", fields: [uploadedBy], references: [id], onDelete: SetNull)
-  createdByRef     User?     @relation("documents_created_by_users", fields: [createdBy], references: [id], onDelete: SetNull)
-  updatedByRef     User?     @relation("documents_updated_by_users", fields: [updatedBy], references: [id], onDelete: SetNull)
-
-  @@index([mimeType])
-  @@index([uploadedBy])
-  @@map("documents")
-}
-
-model PrintfulProduct {
-  id                       String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name                     String                    @db.VarChar(255)
-  slug                     String                    @unique @db.VarChar(120)
-  category                 String                    @default("apparel") @db.VarChar(40)
-  printfulCatalogProductId Int?                      @map("printful_catalog_product_id")
-  baseUnitPrice            Decimal?                  @map("base_unit_price") @db.Decimal(12, 2)
-  skuPrefix                String?                   @map("sku_prefix") @db.VarChar(80)
-  printAreas               Json?                     @map("print_areas") @db.JsonB
-  availableSizes           Json?                     @map("available_sizes") @db.JsonB
-  availableColors          Json?                     @map("available_colors") @db.JsonB
-  availableTechniques      Json?                     @map("available_techniques") @db.JsonB
-  placementCapabilities    Json?                     @map("placement_capabilities") @db.JsonB
-  isActive                 Boolean                   @default(true) @map("is_active")
-  createdAt                DateTime?                 @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt                DateTime?                 @default(now()) @map("updated_at") @db.Timestamptz(6)
-  createdBy                String?                   @map("created_by") @db.Uuid
-  updatedBy                String?                   @map("updated_by") @db.Uuid
-  createdByRef             User?                     @relation("printful_products_created_by_users", fields: [createdBy], references: [id], onDelete: SetNull)
-  updatedByRef             User?                     @relation("printful_products_updated_by_users", fields: [updatedBy], references: [id], onDelete: SetNull)
-  printfulProductTemplates PrintfulProductTemplate[]
-  designs                  Design[]
+model ProductBlank {
+  id                    String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                  String            @db.VarChar(255)
+  slug                  String            @unique @db.VarChar(120)
+  category              String            @default("apparel") @db.VarChar(40)
+  productType           String            @default("apparel") @map("product_type") @db.VarChar(40)
+  fulfillmentProvider   String?           @map("fulfillment_provider") @db.VarChar(60)
+  providerProductId     String?           @map("provider_product_id") @db.VarChar(120)
+  baseUnitPrice         Decimal?          @map("base_unit_price") @db.Decimal(12, 2)
+  skuPrefix             String?           @map("sku_prefix") @db.VarChar(80)
+  printAreas            Json?             @map("print_areas") @db.JsonB
+  availableSizes        Json?             @map("available_sizes") @db.JsonB
+  availableColors       Json?             @map("available_colors") @db.JsonB
+  availableTechniques   Json?             @map("available_techniques") @db.JsonB
+  placementCapabilities Json?             @map("placement_capabilities") @db.JsonB
+  specs                 Json?             @db.JsonB
+  isActive              Boolean           @default(true) @map("is_active")
+  createdAt             DateTime?         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime?         @default(now()) @map("updated_at") @db.Timestamptz(6)
+  createdBy             String?           @map("created_by") @db.Uuid
+  updatedBy             String?           @map("updated_by") @db.Uuid
+  createdByRef          User?             @relation("product_blanks_created_by_users", fields: [createdBy], references: [id], onDelete: SetNull)
+  updatedByRef          User?             @relation("product_blanks_updated_by_users", fields: [updatedBy], references: [id], onDelete: SetNull)
+  productTemplates      ProductTemplate[]
+  designs               Design[]
 
   @@index([slug])
   @@index([isActive])
-  @@map("printful_products")
+  @@index([fulfillmentProvider])
+  @@map("product_blanks")
 }
 
-model PrintfulProductTemplate {
-  id                 String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  printfulProductId  String              @map("printful_product_id") @db.Uuid
-  colorKey           String              @map("color_key") @db.VarChar(40)
-  frontImageUrl      String?             @map("front_image_url") @db.VarChar(500)
-  backImageUrl       String?             @map("back_image_url") @db.VarChar(500)
-  thumbnailUrl       String?             @map("thumbnail_url") @db.VarChar(500)
-  printAreaOverlays  Json?               @map("print_area_overlays") @db.JsonB
-  viewImages         Json?               @map("view_images") @db.JsonB
-  isDefault          Boolean             @default(false) @map("is_default")
-  createdAt          DateTime?           @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt          DateTime?           @default(now()) @map("updated_at") @db.Timestamptz(6)
-  printfulProduct    PrintfulProduct     @relation(fields: [printfulProductId], references: [id], onDelete: Cascade)
-  designMockups      DesignMockup[]
-  printfulOrderItems PrintfulOrderItem[]
+model ProductTemplate {
+  id                String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  productBlankId    String          @map("product_blank_id") @db.Uuid
+  colorKey          String          @map("color_key") @db.VarChar(40)
+  colorHex          String?         @map("color_hex") @db.VarChar(9)
+  frontImageUrl     String?         @map("front_image_url") @db.VarChar(500)
+  backImageUrl      String?         @map("back_image_url") @db.VarChar(500)
+  thumbnailUrl      String?         @map("thumbnail_url") @db.VarChar(500)
+  printAreaOverlays Json?           @map("print_area_overlays") @db.JsonB
+  viewImages        Json?           @map("view_images") @db.JsonB
+  isDefault         Boolean         @default(false) @map("is_default")
+  createdAt         DateTime?       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime?       @default(now()) @map("updated_at") @db.Timestamptz(6)
+  productBlank      ProductBlank    @relation(fields: [productBlankId], references: [id], onDelete: Cascade)
+  designMockups     DesignMockup[]
+  printOrderItems   PrintOrderItem[]
 
-  @@unique([printfulProductId, colorKey])
-  @@index([printfulProductId])
-  @@map("printful_product_templates")
+  @@unique([productBlankId, colorKey])
+  @@index([productBlankId])
+  @@map("product_templates")
 }
 
 model Design {
-  id                 String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name               String              @db.VarChar(255)
-  printfulProductId  String?             @map("printful_product_id") @db.Uuid
-  defaultColorKey    String?             @map("default_color_key") @db.VarChar(40)
-  canvasJson         Json?               @map("canvas_json") @db.JsonB
-  thumbnailUrl       String?             @map("thumbnail_url") @db.VarChar(500)
-  status             String              @default("draft") /// CHECK status IN ('draft', 'ready', 'archived')
-  createdAt          DateTime?           @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt          DateTime?           @default(now()) @map("updated_at") @db.Timestamptz(6)
-  createdBy          String?             @map("created_by") @db.Uuid
-  updatedBy          String?             @map("updated_by") @db.Uuid
-  printfulProduct    PrintfulProduct?    @relation(fields: [printfulProductId], references: [id], onDelete: SetNull)
-  createdByRef       User?               @relation("designs_created_by_users", fields: [createdBy], references: [id], onDelete: SetNull)
-  updatedByRef       User?               @relation("designs_updated_by_users", fields: [updatedBy], references: [id], onDelete: SetNull)
-  designMockups      DesignMockup[]
-  printfulOrderItems PrintfulOrderItem[]
+  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name            String           @db.VarChar(255)
+  productBlankId  String?          @map("product_blank_id") @db.Uuid
+  defaultColorKey String?          @map("default_color_key") @db.VarChar(40)
+  canvasJson      Json?            @map("canvas_json") @db.JsonB
+  canvasSvg       String?          @map("canvas_svg")
+  thumbnailUrl    String?          @map("thumbnail_url") @db.VarChar(500)
+  status          String           @default("draft") /// CHECK status IN ('draft', 'ready', 'archived')
+  createdAt       DateTime?        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime?        @default(now()) @map("updated_at") @db.Timestamptz(6)
+  createdBy       String?          @map("created_by") @db.Uuid
+  updatedBy       String?          @map("updated_by") @db.Uuid
+  productBlank    ProductBlank?    @relation(fields: [productBlankId], references: [id], onDelete: SetNull)
+  createdByRef    User?            @relation("designs_created_by_users", fields: [createdBy], references: [id], onDelete: SetNull)
+  updatedByRef    User?            @relation("designs_updated_by_users", fields: [updatedBy], references: [id], onDelete: SetNull)
+  designMockups   DesignMockup[]
+  printOrderItems PrintOrderItem[]
 
   @@index([status])
-  @@index([printfulProductId])
+  @@index([productBlankId])
   @@map("designs")
 }
 
 model DesignMockup {
-  id                        String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  designId                  String                  @map("design_id") @db.Uuid
-  printfulProductTemplateId String                  @map("printful_product_template_id") @db.Uuid
-  imageUrl                  String                  @map("image_url") @db.VarChar(500)
-  width                     Int?
-  height                    Int?
-  kind                      String                  @default("front") @db.VarChar(20)
-  printfulPrintFileUrl      String?                 @map("printful_print_file_url") @db.VarChar(500)
-  generatedAt               DateTime?               @map("generated_at") @db.Timestamptz(6)
-  createdAt                 DateTime?               @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt                 DateTime?               @default(now()) @map("updated_at") @db.Timestamptz(6)
-  design                    Design                  @relation(fields: [designId], references: [id], onDelete: Cascade)
-  printfulProductTemplate   PrintfulProductTemplate @relation(fields: [printfulProductTemplateId], references: [id], onDelete: Cascade)
+  id                String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  designId          String          @map("design_id") @db.Uuid
+  productTemplateId String          @map("product_template_id") @db.Uuid
+  imageUrl          String          @map("image_url") @db.VarChar(500)
+  width             Int?
+  height            Int?
+  kind              String          @default("front") @db.VarChar(20)
+  printFileUrl      String?         @map("print_file_url") @db.VarChar(500)
+  generatedAt       DateTime?       @map("generated_at") @db.Timestamptz(6)
+  createdAt         DateTime?       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime?       @default(now()) @map("updated_at") @db.Timestamptz(6)
+  design            Design          @relation(fields: [designId], references: [id], onDelete: Cascade)
+  productTemplate   ProductTemplate @relation(fields: [productTemplateId], references: [id], onDelete: Cascade)
 
-  @@unique([designId, printfulProductTemplateId, kind])
+  @@unique([designId, productTemplateId, kind])
   @@index([designId])
   @@map("design_mockups")
 }
 
-model PrintfulOrder {
-  id                 String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  printfulOrderId    BigInt?             @map("printful_order_id")
-  status             String              @default("draft") @db.VarChar(40)
-  recipient          Json?               @db.JsonB
-  subtotal           Decimal?            @db.Decimal(12, 2)
-  shipping           Decimal?            @db.Decimal(12, 2)
-  tax                Decimal?            @db.Decimal(12, 2)
-  total              Decimal?            @db.Decimal(12, 2)
-  createdAt          DateTime?           @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt          DateTime?           @default(now()) @map("updated_at") @db.Timestamptz(6)
-  createdBy          String?             @map("created_by") @db.Uuid
-  createdByRef       User?               @relation(fields: [createdBy], references: [id], onDelete: SetNull)
-  printfulOrderItems PrintfulOrderItem[]
+model PrintOrder {
+  id                  String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fulfillmentProvider String?          @map("fulfillment_provider") @db.VarChar(60)
+  externalOrderId     String?          @map("external_order_id") @db.VarChar(120)
+  status              String           @default("draft") @db.VarChar(40)
+  recipient           Json?            @db.JsonB
+  subtotal            Decimal?         @db.Decimal(12, 2)
+  shipping            Decimal?         @db.Decimal(12, 2)
+  tax                 Decimal?         @db.Decimal(12, 2)
+  total               Decimal?         @db.Decimal(12, 2)
+  createdAt           DateTime?        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime?        @default(now()) @map("updated_at") @db.Timestamptz(6)
+  createdBy           String?          @map("created_by") @db.Uuid
+  createdByRef        User?            @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+  printOrderItems     PrintOrderItem[]
 
   @@index([status])
-  @@map("printful_orders")
+  @@map("print_orders")
 }
 
-model PrintfulOrderItem {
-  id                        String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  printfulOrderId           String                   @map("printful_order_id") @db.Uuid
-  designId                  String?                  @map("design_id") @db.Uuid
-  printfulProductTemplateId String?                  @map("printful_product_template_id") @db.Uuid
-  sizeCode                  String?                  @map("size_code") @db.VarChar(20)
-  quantity                  Int                      @default(1)
-  unitPrice                 Decimal?                 @map("unit_price") @db.Decimal(12, 2)
-  printfulVariantId         Int?                     @map("printful_variant_id")
-  printFiles                Json?                    @map("print_files") @db.JsonB
-  createdAt                 DateTime?                @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt                 DateTime?                @default(now()) @map("updated_at") @db.Timestamptz(6)
-  printfulOrder             PrintfulOrder            @relation(fields: [printfulOrderId], references: [id], onDelete: Cascade)
-  design                    Design?                  @relation(fields: [designId], references: [id], onDelete: SetNull)
-  printfulProductTemplate   PrintfulProductTemplate? @relation(fields: [printfulProductTemplateId], references: [id], onDelete: SetNull)
+model PrintOrderItem {
+  id                String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  printOrderId      String           @map("print_order_id") @db.Uuid
+  designId          String?          @map("design_id") @db.Uuid
+  productTemplateId String?          @map("product_template_id") @db.Uuid
+  sizeCode          String?          @map("size_code") @db.VarChar(20)
+  quantity          Int              @default(1)
+  unitPrice         Decimal?         @map("unit_price") @db.Decimal(12, 2)
+  externalVariantId String?          @map("external_variant_id") @db.VarChar(120)
+  printFiles        Json?            @map("print_files") @db.JsonB
+  createdAt         DateTime?        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime?        @default(now()) @map("updated_at") @db.Timestamptz(6)
+  printOrder        PrintOrder       @relation(fields: [printOrderId], references: [id], onDelete: Cascade)
+  design            Design?          @relation(fields: [designId], references: [id], onDelete: SetNull)
+  productTemplate   ProductTemplate? @relation(fields: [productTemplateId], references: [id], onDelete: SetNull)
 
-  @@index([printfulOrderId])
-  @@map("printful_order_items")
+  @@index([printOrderId])
+  @@map("print_order_items")
 }
 
 model AdCampaign {
@@ -2613,26 +2453,6 @@ model CampaignBudget {
   @@map("campaign_budgets")
 }
 
-model Funnel {
-  id                    String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name                  String                 @db.VarChar(255)
-  description           String?
-  steps                 Json?                  @db.JsonB
-  status                String                 @default("active") /// CHECK status IN ('active', 'archived')
-  overallConversionRate Decimal?               @map("overall_conversion_rate") @db.Decimal(8, 2)
-  createdAt             DateTime?              @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt             DateTime?              @default(now()) @map("updated_at") @db.Timestamptz(6)
-  createdBy             String?                @map("created_by") @db.Uuid
-  updatedBy             String?                @map("updated_by") @db.Uuid
-  createdByRef          User?                  @relation("funnels_created_by_users", fields: [createdBy], references: [id], onDelete: SetNull)
-  updatedByRef          User?                  @relation("funnels_updated_by_users", fields: [updatedBy], references: [id], onDelete: SetNull)
-  ads                   Ad[]
-  marketingAttributions MarketingAttribution[]
-
-  @@index([status])
-  @@map("funnels")
-}
-
 model LandingPage {
   id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name             String    @db.VarChar(255)
@@ -2662,7 +2482,6 @@ model Ad {
   name                   String                 @db.VarChar(255)
   platform               String                 @db.VarChar(80)
   campaignId             String?                @map("campaign_id") @db.Uuid
-  funnelId               String?                @map("funnel_id") @db.Uuid
   headline               String?                @db.VarChar(255)
   hook                   String?                @db.VarChar(255)
   description            String?
@@ -2681,7 +2500,6 @@ model Ad {
   createdBy              String?                @map("created_by") @db.Uuid
   updatedBy              String?                @map("updated_by") @db.Uuid
   campaign               AdCampaign?            @relation(fields: [campaignId], references: [id], onDelete: SetNull)
-  funnel                 Funnel?                @relation(fields: [funnelId], references: [id], onDelete: SetNull)
   primaryCreativeAsset   CreativeAsset?         @relation(fields: [primaryCreativeAssetId], references: [id], onDelete: SetNull)
   landingPage            LandingPage?           @relation("ads_landing_page_id_landing_pages", fields: [landingPageId], references: [id], onDelete: SetNull)
   createdByRef           User?                  @relation("ads_created_by_users", fields: [createdBy], references: [id], onDelete: SetNull)
@@ -2834,7 +2652,6 @@ model MarketingAttribution {
   contactId       String?     @map("contact_id") @db.Uuid
   adId            String?     @map("ad_id") @db.Uuid
   campaignId      String?     @map("campaign_id") @db.Uuid
-  funnelId        String?     @map("funnel_id") @db.Uuid
   touchpoint      String      @db.VarChar(120)
   touchpointDate  DateTime    @map("touchpoint_date") @db.Timestamptz(6)
   conversionValue Decimal?    @map("conversion_value") @db.Decimal(12, 2)
@@ -2845,7 +2662,6 @@ model MarketingAttribution {
   contact         Contact?    @relation(fields: [contactId], references: [id], onDelete: SetNull)
   ad              Ad?         @relation(fields: [adId], references: [id], onDelete: SetNull)
   campaign        AdCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
-  funnel          Funnel?     @relation(fields: [funnelId], references: [id], onDelete: SetNull)
   createdByRef    User?       @relation("marketing_attribution_created_by_users", fields: [createdBy], references: [id], onDelete: SetNull)
   updatedByRef    User?       @relation("marketing_attribution_updated_by_users", fields: [updatedBy], references: [id], onDelete: SetNull)
 
@@ -2858,7 +2674,7 @@ model MarketingAttribution {
 model Integration {
   id                String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name              String           @db.VarChar(255)
-  type              String /// CHECK type IN ('api', 'webhook', 'snippets')
+  type              String /// CHECK type IN ('api', 'webhook')
   description       String?
   status            String           @default("active") /// CHECK status IN ('active', 'inactive', 'error')
   provider          String?          @db.VarChar(80)
@@ -2879,7 +2695,6 @@ model Integration {
   updatedBy         String?          @map("updated_by") @db.Uuid
   createdByRef      User?            @relation("integrations_created_by_users", fields: [createdBy], references: [id], onDelete: SetNull)
   updatedByRef      User?            @relation("integrations_updated_by_users", fields: [updatedBy], references: [id], onDelete: SetNull)
-  webhooks          Webhook[]
   integrationLogs   IntegrationLog[]
 
   @@index([type])
@@ -2910,36 +2725,9 @@ model Credential {
   @@map("credentials")
 }
 
-model Webhook {
-  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  integrationId   String           @map("integration_id") @db.Uuid
-  direction       String /// CHECK direction IN ('incoming', 'outgoing')
-  eventType       String           @map("event_type") @db.VarChar(120)
-  endpointUrl     String?          @map("endpoint_url")
-  secret          String?
-  status          String           @default("active") /// CHECK status IN ('active', 'failed', 'disabled')
-  isActive        Boolean          @default(true) @map("is_active")
-  lastTriggeredAt DateTime?        @map("last_triggered_at") @db.Timestamptz(6)
-  createdAt       DateTime?        @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt       DateTime?        @default(now()) @map("updated_at") @db.Timestamptz(6)
-  createdBy       String?          @map("created_by") @db.Uuid
-  updatedBy       String?          @map("updated_by") @db.Uuid
-  integration     Integration      @relation(fields: [integrationId], references: [id], onDelete: Cascade)
-  createdByRef    User?            @relation("webhooks_created_by_users", fields: [createdBy], references: [id], onDelete: SetNull)
-  updatedByRef    User?            @relation("webhooks_updated_by_users", fields: [updatedBy], references: [id], onDelete: SetNull)
-  integrationLogs IntegrationLog[]
-
-  @@index([integrationId])
-  @@index([direction])
-  @@index([eventType])
-  @@index([status])
-  @@map("webhooks")
-}
-
 model IntegrationLog {
   id              String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   integrationId   String      @map("integration_id") @db.Uuid
-  webhookId       String?     @map("webhook_id") @db.Uuid
   logType         String      @map("log_type") /// CHECK log_type IN ('api_call', 'webhook', 'error', 'sync', 'other')
   status          String /// CHECK status IN ('success', 'failed', 'warning')
   endpoint        String?
@@ -2952,7 +2740,6 @@ model IntegrationLog {
   createdBy       String?     @map("created_by") @db.Uuid
   updatedBy       String?     @map("updated_by") @db.Uuid
   integration     Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
-  webhook         Webhook?    @relation(fields: [webhookId], references: [id], onDelete: SetNull)
   createdByRef    User?       @relation("integration_logs_created_by_users", fields: [createdBy], references: [id], onDelete: SetNull)
   updatedByRef    User?       @relation("integration_logs_updated_by_users", fields: [updatedBy], references: [id], onDelete: SetNull)
 
@@ -2961,30 +2748,6 @@ model IntegrationLog {
   @@index([status])
   @@index([createdAt])
   @@map("integration_logs")
-}
-
-model Snippet {
-  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name         String    @db.VarChar(255)
-  description  String?
-  code         String
-  snippetType  String    @map("snippet_type") /// CHECK snippet_type IN ('javascript', 'html', 'css', 'php', 'other')
-  placement    String /// CHECK placement IN ('head', 'body_start', 'body_end', 'footer', 'specific_page')
-  pageSlug     String?   @map("page_slug") @db.VarChar(180)
-  status       String    @default("active") /// CHECK status IN ('active', 'inactive')
-  isActive     Boolean   @default(true) @map("is_active")
-  createdAt    DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt    DateTime? @default(now()) @map("updated_at") @db.Timestamptz(6)
-  createdBy    String?   @map("created_by") @db.Uuid
-  updatedBy    String?   @map("updated_by") @db.Uuid
-  createdByRef User?     @relation("snippets_created_by_users", fields: [createdBy], references: [id], onDelete: SetNull)
-  updatedByRef User?     @relation("snippets_updated_by_users", fields: [updatedBy], references: [id], onDelete: SetNull)
-
-  @@index([name])
-  @@index([snippetType])
-  @@index([placement])
-  @@index([status])
-  @@map("snippets")
 }
 
 model Task {
@@ -3145,30 +2908,6 @@ model AiAlert {
   @@index([isResolved])
   @@index([createdAt])
   @@map("ai_alerts")
-}
-
-model SystemHealthEvent {
-  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  eventType        String    @map("event_type") /// CHECK event_type IN ('integration_error', 'job_failed', 'storage_threshold', 'low_stock', 'security')
-  severity         String    @default("warning") /// CHECK severity IN ('info', 'warning', 'error', 'critical')
-  title            String    @db.VarChar(255)
-  details          Json?     @db.JsonB
-  relatedTableName String?   @map("related_table_name") @db.VarChar(120)
-  relatedRecordId  String?   @map("related_record_id") @db.Uuid
-  resolvedBy       String?   @map("resolved_by") @db.Uuid
-  resolvedAt       DateTime? @map("resolved_at") @db.Timestamptz(6)
-  createdAt        DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt        DateTime? @default(now()) @map("updated_at") @db.Timestamptz(6)
-  createdBy        String?   @map("created_by") @db.Uuid
-  updatedBy        String?   @map("updated_by") @db.Uuid
-  resolvedByRef    User?     @relation("system_health_events_resolved_by_users", fields: [resolvedBy], references: [id], onDelete: SetNull)
-  createdByRef     User?     @relation("system_health_events_created_by_users", fields: [createdBy], references: [id], onDelete: SetNull)
-  updatedByRef     User?     @relation("system_health_events_updated_by_users", fields: [updatedBy], references: [id], onDelete: SetNull)
-
-  @@index([eventType])
-  @@index([severity])
-  @@index([createdAt])
-  @@map("system_health_events")
 }
 
 model LowStockAlert {
