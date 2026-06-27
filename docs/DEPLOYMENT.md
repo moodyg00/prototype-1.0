@@ -186,7 +186,7 @@ Build wizard is **dropdown-only** (reads root `package.json` scripts). Webroot s
 | Setting | Value |
 |---------|-------|
 | Framework | **Other** |
-| Entry file | `scripts/hostinger-serve-admin.mjs` |
+| Entry file | `apps/admin/.next/hostinger-boot.mjs` (after build) or `scripts/hostinger-serve-admin.mjs` |
 | Build command | `build` (requires `HOSTINGER_APP=admin`) or `hostinger:admin` |
 | Output directory | `apps/admin/.next` |
 | Node | 22 |
@@ -198,7 +198,7 @@ Env: see `apps/admin/.env.example` — `DATABASE_URL`, `DIRECT_DATABASE_URL`, `A
 | Setting | Value |
 |---------|-------|
 | Framework | **Other** |
-| Entry file | `scripts/hostinger-serve-agent.mjs` |
+| Entry file | `apps/agent/.next/hostinger-boot.mjs` (after build) or `scripts/hostinger-serve-agent.mjs` |
 | Build command | `build` (requires `HOSTINGER_APP=agent`) or `hostinger:agent` |
 | Output directory | `apps/agent/.next` |
 | Node | 22 |
