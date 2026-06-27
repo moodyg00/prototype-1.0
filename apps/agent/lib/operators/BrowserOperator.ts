@@ -14,10 +14,8 @@ import { SpecialistContext } from '../reasoners/types';
 
 // Screenshot archive on page change only.
 const SCREENSHOTS_DIR = path.join(process.cwd(), 'logs', 'screenshots');
-try {
-  if (!fs.existsSync(SCREENSHOTS_DIR)) fs.mkdirSync(SCREENSHOTS_DIR, { recursive: true });
-} catch {
-  // Non-fatal: read-only fs on some hosting platforms; screenshots will be skipped
+if (!fs.existsSync(SCREENSHOTS_DIR)) {
+  fs.mkdirSync(SCREENSHOTS_DIR, { recursive: true });
 }
 
 function archiveScreenshot(buffer: Buffer, metadata: any) {
