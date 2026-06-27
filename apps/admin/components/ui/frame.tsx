@@ -7,11 +7,7 @@ export function Frame({
 }: React.ComponentProps<"div">): React.ReactElement {
   return (
     <div
-      className={cn(
-        "relative flex flex-col items-center rounded-xl bg-muted/72 p-1",
-        "*:[[data-slot=frame-panel]+[data-slot=frame-panel]]:mt-[10px]",
-        className,
-      )}
+      className={cn("admin-surface flex flex-col overflow-hidden", className)}
       data-slot="frame"
       {...props}
     />
@@ -25,7 +21,7 @@ export function FramePanel({
   return (
     <div
       className={cn(
-        "relative w-full rounded-lg bg-background bg-clip-padding p-5",
+        "relative w-full border-b border-border/40 p-5 last:border-b-0",
         className,
       )}
       data-slot="frame-panel"
@@ -40,7 +36,7 @@ export function FrameHeader({
 }: React.ComponentProps<"header">): React.ReactElement {
   return (
     <header
-      className={cn("flex flex-col px-5 py-4", className)}
+      className={cn("flex flex-col gap-1 px-5 py-4", className)}
       data-slot="frame-panel-header"
       {...props}
     />
@@ -53,7 +49,7 @@ export function FrameTitle({
 }: React.ComponentProps<"div">): React.ReactElement {
   return (
     <div
-      className={cn("font-semibold text-sm", className)}
+      className={cn("font-medium text-sm tracking-tight", className)}
       data-slot="frame-panel-title"
       {...props}
     />
@@ -66,7 +62,7 @@ export function FrameDescription({
 }: React.ComponentProps<"div">): React.ReactElement {
   return (
     <div
-      className={cn("text-muted-foreground text-sm", className)}
+      className={cn("text-muted-foreground text-sm leading-relaxed", className)}
       data-slot="frame-panel-description"
       {...props}
     />
@@ -79,7 +75,7 @@ export function FrameFooter({
 }: React.ComponentProps<"footer">): React.ReactElement {
   return (
     <footer
-      className={cn("px-5 py-4", className)}
+      className={cn("border-t border-border/40 px-5 py-4", className)}
       data-slot="frame-panel-footer"
       {...props}
     />

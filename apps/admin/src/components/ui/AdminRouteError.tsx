@@ -3,7 +3,6 @@
 import { AlertCircle, RotateCcw } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 type AdminRouteErrorProps = {
   error: Error & { digest?: string };
@@ -17,25 +16,21 @@ export function AdminRouteError({
   title = 'Something went wrong',
 }: AdminRouteErrorProps) {
   return (
-    <Card className="max-w-2xl rounded-3xl border shadow-xs/10">
-      <CardHeader>
-        <div className="mb-2 flex size-10 items-center justify-center rounded-full bg-red-500/10 text-red-600">
-          <AlertCircle className="size-5" />
-        </div>
-        <CardTitle>{title}</CardTitle>
-        <CardDescription>
-          This page hit an unexpected error. You can retry or navigate away and come back.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <p className="rounded-2xl border px-4 py-3 font-mono text-xs text-red-600">
-          {error.message || 'Unknown error'}
-        </p>
-        <Button type="button" onClick={reset} className="gap-2">
-          <RotateCcw className="size-4" />
-          Try again
-        </Button>
-      </CardContent>
-    </Card>
+    <div className="admin-surface max-w-2xl p-6">
+      <div className="mb-4 flex size-10 items-center justify-center rounded-full bg-red-500/10 text-red-600">
+        <AlertCircle className="size-5" />
+      </div>
+      <h2 className="font-display text-xl font-medium tracking-tight">{title}</h2>
+      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+        This page hit an unexpected error. You can retry or navigate away and come back.
+      </p>
+      <p className="mt-4 border-t border-border/40 pt-4 font-mono text-xs text-red-600">
+        {error.message || 'Unknown error'}
+      </p>
+      <Button type="button" onClick={reset} className="mt-4 gap-2">
+        <RotateCcw className="size-4" />
+        Try again
+      </Button>
+    </div>
   );
 }

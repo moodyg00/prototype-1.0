@@ -6,6 +6,10 @@
 
 /* Tailwind v4 theme extensions (migrated from tailwind.config.ts) */
 @theme inline {
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-display: var(--font-display);
+
   --color-brand-50: #f5f3ff;
   --color-brand-100: #ede9fe;
   --color-brand-500: #8b5cf6;
@@ -50,16 +54,16 @@
 
 :root {
   /* Fixed surface tokens — not user-configurable (see theme-provider.tsx). */
-  --light-background: #ffffff;
-  --light-foreground: #0f172a;
-  --light-surface: #fafafa;
-  --light-card-foreground: #0f172a;
-  --light-popover: #fafafa;
-  --light-popover-foreground: #0f172a;
-  --light-border: #d9dadd;
-  --light-input: #d4d6d9;
-  --light-muted: #fcfcfc;
-  --light-muted-foreground: #646975;
+  --light-background: #f8f6f2;
+  --light-foreground: #1a1814;
+  --light-surface: #fdfcfa;
+  --light-card-foreground: #1a1814;
+  --light-popover: #fdfcfa;
+  --light-popover-foreground: #1a1814;
+  --light-border: #e4e0d8;
+  --light-input: #ddd8cf;
+  --light-muted: #f3f0ea;
+  --light-muted-foreground: #6b6560;
   --light-accent: #dedfe1;
   --light-accent-foreground: #0f172a;
   --dark-background: #000000;
@@ -299,9 +303,19 @@ html[data-palette='sunset'] {
 }
 
 body {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--font-sans), 'IBM Plex Sans', sans-serif;
   background: var(--background);
   color: var(--foreground);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.font-display {
+  font-family: var(--font-display), 'Newsreader', Georgia, serif;
+}
+
+.font-mono {
+  font-family: var(--font-mono), 'IBM Plex Mono', ui-monospace, monospace;
 }
 
 /* Normalize default browser link styles for unclassed anchors only. */
@@ -437,6 +451,75 @@ html.dark textarea {
   box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.04);
   padding: 1.25rem;
 }
+
+/* -------------------------------------------------------------------------
+ * Admin surface system — single-layer surfaces, hairline dividers only.
+ * Avoid nested bordered boxes; use these utilities for consistent density.
+ * ------------------------------------------------------------------------- */
+
+.admin-surface {
+  background: var(--card);
+  border: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+  border-radius: 0.5rem;
+}
+
+.admin-divider {
+  border-color: color-mix(in srgb, var(--border) 45%, transparent);
+}
+
+.admin-row {
+  display: block;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+  transition: background-color 0.15s ease;
+}
+
+.admin-row:last-child {
+  border-bottom: none;
+}
+
+.admin-row:hover {
+  background: color-mix(in srgb, var(--muted) 55%, transparent);
+}
+
+.admin-meta-label {
+  font-family: var(--font-mono), 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.admin-eyebrow {
+  font-family: var(--font-mono), 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+@keyframes admin-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.admin-stagger > * {
+  animation: admin-fade-up 0.4s ease both;
+}
+
+.admin-stagger > *:nth-child(1) { animation-delay: 0ms; }
+.admin-stagger > *:nth-child(2) { animation-delay: 40ms; }
+.admin-stagger > *:nth-child(3) { animation-delay: 80ms; }
+.admin-stagger > *:nth-child(4) { animation-delay: 120ms; }
+.admin-stagger > *:nth-child(5) { animation-delay: 160ms; }
+.admin-stagger > *:nth-child(n+6) { animation-delay: 200ms; }
 
 /* -------------------------------------------------------------------------
  * Pill helper — driven entirely by palette CSS variables so it changes

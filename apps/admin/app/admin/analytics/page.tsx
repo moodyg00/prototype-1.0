@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card';
+
+import { AdminPageHeader } from '@/src/components/admin/AdminPageHeader';
 
 const PANELS = [
   {
@@ -22,51 +23,39 @@ const PANELS = [
   },
 ];
 
+const ACCENTS = ['#be185d', '#7c3aed', '#0891b2', '#d97706'];
+
 export default function AnalyticsPage() {
   return (
-    <div className="space-y-6">
-      <header className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight">Marketing Analytics</h1>
-        <p className="max-w-3xl text-sm" style={{ color: 'var(--muted-foreground)' }}>
-          A quick reference view for current ads, campaign performance, and recent social output. Read-only by design.
-        </p>
-      </header>
+    <div className="space-y-6 admin-stagger">
+      <AdminPageHeader
+        eyebrow="Marketing"
+        title="Marketing Analytics"
+        description="A quick reference view for current ads, campaign performance, and recent social output. Read-only by design."
+      />
 
       <div className="grid gap-4 md:grid-cols-2">
         {PANELS.map((panel, index) => (
-          <Card key={panel.title} className="rounded-3xl border shadow-xs/10">
-            <CardHeader>
-              <div
-                className="mb-3 h-1.5 w-16 rounded-full"
-                style={{
-                  background:
-                    index % 4 === 0
-                      ? '#be185d'
-                      : index % 4 === 1
-                        ? '#7c3aed'
-                        : index % 4 === 2
-                          ? '#0891b2'
-                          : '#d97706',
-                }}
+          <section key={panel.title} className="admin-surface p-5">
+            <div className="mb-4 flex items-center gap-2">
+              <span
+                className="h-2 w-2 rounded-full"
+                style={{ background: ACCENTS[index % ACCENTS.length] }}
+                aria-hidden
               />
-              <CardTitle>{panel.title}</CardTitle>
-              <CardDescription>Reference-only summary for the human admin layer.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3 pt-0">
+              <h2 className="font-display text-base font-medium tracking-tight">{panel.title}</h2>
+            </div>
+            <p className="mb-4 text-sm text-muted-foreground">
+              Reference-only summary for the human admin layer.
+            </p>
+            <ul className="space-y-3 border-t border-border/35 pt-4">
               {panel.items.map((item) => (
-                <div
-                  key={item}
-                  className="rounded-2xl border px-4 py-3 text-sm"
-                  style={{
-                    background: 'color-mix(in srgb, var(--card) 88%, var(--background) 12%)',
-                    borderColor: 'color-mix(in srgb, var(--border) 78%, transparent 22%)',
-                  }}
-                >
+                <li key={item} className="text-sm leading-relaxed">
                   {item}
-                </div>
+                </li>
               ))}
-            </CardContent>
-          </Card>
+            </ul>
+          </section>
         ))}
       </div>
     </div>

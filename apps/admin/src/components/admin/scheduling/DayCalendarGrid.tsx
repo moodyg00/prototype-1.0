@@ -124,7 +124,7 @@ export function DayCalendarGrid({
     range !== null && hour >= Math.min(range.start, range.end) && hour <= Math.max(range.start, range.end);
 
   return (
-    <div className="overflow-hidden rounded-2xl border select-none" style={{ borderColor: 'var(--border)' }}>
+    <div className="admin-surface overflow-hidden select-none">
       {TIME_SLOTS.map((hour) => (
         <div
           key={hour}

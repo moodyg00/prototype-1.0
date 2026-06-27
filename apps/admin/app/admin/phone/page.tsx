@@ -1,32 +1,30 @@
 'use client';
 
 import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card';
+
+import { AdminPageHeader } from '@/src/components/admin/AdminPageHeader';
 
 export default function PhonePage() {
   return (
-    <div className="space-y-6">
-      <header className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight">Phone</h1>
-        <p className="max-w-3xl text-sm" style={{ color: 'var(--muted-foreground)' }}>
-          Call activity, inbound follow-up, and phone workflow references will live here.
-        </p>
-      </header>
+    <div className="space-y-6 admin-stagger">
+      <AdminPageHeader
+        eyebrow="Communications"
+        title="Phone"
+        description="Call activity, inbound follow-up, and phone workflow references will live here."
+      />
 
-      <Card className="rounded-3xl border shadow-xs/10">
-        <CardHeader>
-          <CardTitle>Phone workspace placeholder</CardTitle>
-          <CardDescription>
+      <div className="admin-surface space-y-4 p-5">
+        <div>
+          <h2 className="text-sm font-medium">Phone workspace placeholder</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
             This keeps the new navigation target live while the actual phone workflow is defined.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3 pt-0 text-sm" style={{ color: 'var(--muted-foreground)' }}>
-          <p>Use this section later for recent calls, missed-call triage, callback queues, and lead call outcomes.</p>
-          <div className="rounded-2xl border px-4 py-3" style={{ borderColor: 'var(--border)', background: 'var(--muted)' }}>
-            Placeholder only for now.
-          </div>
-        </CardContent>
-      </Card>
+          </p>
+        </div>
+        <p className="text-sm leading-relaxed text-muted-foreground">
+          Use this section later for recent calls, missed-call triage, callback queues, and lead call outcomes.
+        </p>
+        <p className="border-t border-border/35 pt-4 text-sm text-muted-foreground">Placeholder only for now.</p>
+      </div>
     </div>
   );
 }

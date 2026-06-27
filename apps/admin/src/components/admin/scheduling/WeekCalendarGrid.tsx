@@ -140,7 +140,7 @@ export function WeekCalendarGrid({
 
   return (
     <div
-      className="overflow-hidden rounded-2xl border select-none"
+      className="admin-surface overflow-hidden select-none"
       style={{ borderColor: 'var(--border)' }}
     >
       {/* Header row */}

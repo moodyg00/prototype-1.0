@@ -142,10 +142,7 @@ function FieldGroup({
   setValues: React.Dispatch<React.SetStateAction<Record<string, FieldValue>>>;
 }) {
   return (
-    <fieldset
-      className="rounded-[1.5rem] border p-5"
-      style={{ borderColor: 'var(--border)', background: 'color-mix(in srgb, var(--card) 92%, #f3efe7 8%)' }}
-    >
+    <fieldset className="border-t border-border/40 pt-5 first:border-t-0 first:pt-0">
       <legend className="px-2 text-sm font-semibold tracking-tight">{group.title}</legend>
       {group.description ? <div className="mb-4 text-sm text-[var(--muted-foreground)]">{group.description}</div> : null}
       <div className="grid gap-4 md:grid-cols-2">

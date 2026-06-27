@@ -3,8 +3,9 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Filter, Plus, Search, SlidersHorizontal } from 'lucide-react';
+import { Filter, Plus, Search } from 'lucide-react';
 
+import { AdminPageHeader } from '@/src/components/admin/AdminPageHeader';
 import { Badge } from '@/components/ui/badge';
 import { buttonVariants } from '@/components/ui/button';
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty';
@@ -149,181 +150,146 @@ export function RecordIndexPage({
   }, [sourceRecords, filter, query]);
 
   return (
-    <div className="space-y-6 pb-6">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div
-            className="inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.22em]"
-            style={{
-              borderColor: 'color-mix(in srgb, var(--border) 72%, #111111 28%)',
-              background: 'color-mix(in srgb, var(--card) 84%, #f3efe7 16%)',
-              color: 'var(--muted-foreground)',
-            }}
-          >
-            <SlidersHorizontal className="h-3.5 w-3.5" />
-            {config.eyebrow}
-          </div>
-          <span className="inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em]" style={{ borderColor: 'var(--border)', color: 'var(--muted-foreground)' }}>
-            {config.title}
-          </span>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em]" style={{ borderColor: 'var(--border)', color: 'var(--muted-foreground)' }}>
+    <div className="space-y-6 pb-6 admin-stagger">
+      <AdminPageHeader
+        eyebrow={config.eyebrow}
+        title={config.title}
+        description={config.description}
+        meta={
+          <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
             {filtered.length} visible
           </span>
-          {createHref && config.hideToolbar ? (
+        }
+        actions={
+          createHref && config.hideToolbar ? (
             <CreateRecordLink href={createHref} label={createLabel} />
-          ) : null}
-        </div>
-      </header>
+          ) : undefined
+        }
+      />
 
-      <div className="space-y-5">
-          {!config.hideToolbar ? (
-            <div className="grid gap-3 lg:grid-cols-[1fr_240px_auto]">
-              <label className="space-y-2">
-                <span className="text-xs font-medium uppercase tracking-[0.18em]" style={{ color: 'var(--muted-foreground)' }}>
-                  Search
-                </span>
-                <div className="relative">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" style={{ color: 'var(--muted-foreground)' }} />
-                  <Input
-                    value={query}
-                    onChange={(event) => setQuery(event.target.value)}
-                    placeholder={config.searchPlaceholder}
-                    className="pl-10"
-                    type="search"
-                  />
-                </div>
-              </label>
-              <label className="space-y-2">
-                <span className="text-xs font-medium uppercase tracking-[0.18em]" style={{ color: 'var(--muted-foreground)' }}>
-                  {config.filterLabel}
-                </span>
-                <div className="relative">
-                  <Filter className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" style={{ color: 'var(--muted-foreground)' }} />
-                  <select
-                    value={filter}
-                    onChange={(event) => setFilter(event.target.value)}
-                    className="h-9 w-full rounded-md border pl-10 pr-3 text-sm outline-none sm:h-8"
-                    style={{
-                      borderColor: 'var(--border)',
-                      background: 'var(--background)',
-                      color: 'var(--foreground)',
-                    }}
-                  >
-                    {config.filterOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </label>
-              {createHref ? (
-                <div className="flex items-end">
-                  <CreateRecordLink href={createHref} label={createLabel} />
-                </div>
-              ) : null}
-            </div>
-          ) : null}
+      <div className="space-y-4">
+        {!config.hideToolbar ? (
+          <div className="grid gap-3 border-b border-border/40 pb-4 lg:grid-cols-[1fr_220px_auto]">
+            <label className="space-y-1.5">
+              <span className="admin-meta-label">Search</span>
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder={config.searchPlaceholder}
+                  className="pl-10"
+                  type="search"
+                />
+              </div>
+            </label>
+            <label className="space-y-1.5">
+              <span className="admin-meta-label">{config.filterLabel}</span>
+              <div className="relative">
+                <Filter className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <select
+                  value={filter}
+                  onChange={(event) => setFilter(event.target.value)}
+                  className="h-9 w-full rounded-md border border-input bg-background pl-10 pr-3 text-sm outline-none focus:border-ring focus:ring-[3px] focus:ring-ring/20 sm:h-8"
+                >
+                  {config.filterOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </label>
+            {createHref ? (
+              <div className="flex items-end">
+                <CreateRecordLink href={createHref} label={createLabel} />
+              </div>
+            ) : null}
+          </div>
+        ) : null}
 
-          {loading ? (
-            <div
-              className="border px-5 py-10 text-center text-sm"
-              style={{ borderColor: 'var(--border)', color: 'var(--muted-foreground)' }}
-            >
-              Loading records...
-            </div>
-          ) : loadError ? (
-            <div
-              className="border px-5 py-10 text-center text-sm"
-              style={{ borderColor: 'var(--border)', color: 'var(--muted-foreground)' }}
-            >
-              {loadError}
-            </div>
-          ) : filtered.length === 0 ? (
-            <Empty
-              className="rounded-xl border py-14"
-              style={{ borderColor: 'var(--border)' }}
-            >
-              <EmptyHeader>
-                <EmptyTitle>No Records</EmptyTitle>
-                <EmptyDescription>
-                  {useDbRecords ? 'No records are available yet.' : config.emptyMessage}
-                </EmptyDescription>
-              </EmptyHeader>
-            </Empty>
-          ) : renderRecords ? (
-            renderRecords(filtered)
-          ) : (
-            <div className={config.gridClassName}>
-              {filtered.map((record) => {
-                const accent = record.accent ?? '#111111';
-                const detailHref = `${pathname.replace(/\/$/, '')}/${record.id}`;
+        {loading ? (
+          <div className="py-16 text-center text-sm text-muted-foreground">Loading records...</div>
+        ) : loadError ? (
+          <div className="py-16 text-center text-sm text-muted-foreground">{loadError}</div>
+        ) : filtered.length === 0 ? (
+          <Empty className="py-14">
+            <EmptyHeader>
+              <EmptyTitle>No Records</EmptyTitle>
+              <EmptyDescription>
+                {useDbRecords ? 'No records are available yet.' : config.emptyMessage}
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        ) : renderRecords ? (
+          renderRecords(filtered)
+        ) : (
+          <div className={config.gridClassName}>
+            {filtered.map((record) => {
+              const accent = record.accent ?? 'var(--primary)';
+              const detailHref = `${pathname.replace(/\/$/, '')}/${record.id}`;
 
-                return (
-                  <Link
-                    key={record.id}
-                    href={detailHref}
-                    className="group block rounded-xl border p-4 transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
-                    style={{
-                      borderColor: `color-mix(in srgb, var(--border) 84%, ${accent} 16%)`,
-                      background: 'var(--card)',
-                      boxShadow: '0 10px 24px rgba(17, 17, 17, 0.04)',
-                    }}
-                  >
-                    <article>
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="space-y-1">
-                          <div className="text-[15px] font-semibold leading-tight">{record.name}</div>
-                          <div className="text-sm leading-6" style={{ color: 'var(--muted-foreground)' }}>{record.subtitle}</div>
+              return (
+                <Link
+                  key={record.id}
+                  href={detailHref}
+                  className="admin-surface block px-4 py-4 transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:px-5"
+                >
+                  <article className="space-y-3">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0 space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="h-1.5 w-1.5 shrink-0 rounded-full"
+                            style={{ background: accent }}
+                            aria-hidden
+                          />
+                          <div className="truncate text-[15px] font-medium leading-tight">{record.name}</div>
                         </div>
-                        <div className="flex flex-col items-end gap-2">
-                          <div className="h-3 w-3 rounded-full" style={{ background: accent }} />
-                          {record.badge ? (
-                            <Badge variant={record.badge.variant ?? 'outline'}>{record.badge.label}</Badge>
-                          ) : null}
-                        </div>
+                        <div className="text-sm leading-6 text-muted-foreground">{record.subtitle}</div>
                       </div>
-
-                      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                        {record.meta.map((item) => (
-                          <div key={`${record.id}-${item.label}`} className="rounded-lg border px-3 py-2" style={{ borderColor: 'color-mix(in srgb, var(--border) 80%, transparent 20%)', background: 'color-mix(in srgb, var(--card) 96%, #f3efe7 4%)' }}>
-                            <div className="text-[10px] font-medium uppercase tracking-[0.16em]" style={{ color: 'var(--muted-foreground)' }}>
-                              {item.label}
-                            </div>
-                            <div className="mt-1 text-sm font-medium leading-6">{item.value}</div>
-                          </div>
-                        ))}
-                      </div>
-
-                      <div className="mt-4 flex items-end justify-between gap-3">
-                        <div className="flex flex-wrap gap-2">
-                          {(record.tags ?? []).map((tag) => (
-                            <span key={`${record.id}-${tag}`} className="rounded-full border px-2.5 py-1 text-[11px] uppercase tracking-[0.14em]" style={{ borderColor: 'var(--border)', color: 'var(--muted-foreground)' }}>
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
+                      <div className="flex shrink-0 flex-col items-end gap-2">
+                        {record.badge ? (
+                          <Badge variant={record.badge.variant ?? 'outline'}>{record.badge.label}</Badge>
+                        ) : null}
                         {record.metric ? (
                           <div className="text-right">
-                            <div className="text-[10px] uppercase tracking-[0.18em]" style={{ color: 'var(--muted-foreground)' }}>
-                              Snapshot
-                            </div>
-                            <div className="text-sm font-semibold leading-6">{record.metric}</div>
+                            <div className="admin-meta-label">Snapshot</div>
+                            <div className="mt-1 text-sm font-medium tabular-nums">{record.metric}</div>
                           </div>
-                        ) : (
-                          <div className="text-[10px] uppercase tracking-[0.18em]" style={{ color: 'var(--muted-foreground)' }}>
-                            Open record
-                          </div>
-                        )}
+                        ) : null}
                       </div>
-                    </article>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
+                    </div>
+
+                    {record.meta.length > 0 ? (
+                      <dl className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
+                        {record.meta.map((item) => (
+                          <div key={`${record.id}-${item.label}`} className="min-w-0">
+                            <dt className="admin-meta-label">{item.label}</dt>
+                            <dd className="mt-0.5 truncate text-sm font-medium">{item.value}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                    ) : null}
+
+                    {(record.tags ?? []).length > 0 ? (
+                      <div className="flex flex-wrap gap-x-3 gap-y-1 border-t border-border/35 pt-3">
+                        {(record.tags ?? []).map((tag) => (
+                          <span
+                            key={`${record.id}-${tag}`}
+                            className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
+                  </article>
+                </Link>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -319,7 +319,7 @@ export function Calendar(): React.ReactElement {
         </div>
       </header>
 
-      <Card className="overflow-hidden rounded-2xl border">
+      <Card className="admin-surface overflow-hidden">
         <CardContent className="space-y-4 p-4 sm:p-6">
           {/* Controls: view tabs (left) + nav + layers dropdown (right) */}
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -398,7 +398,7 @@ export function Calendar(): React.ReactElement {
       </Card>
 
       {/* Availability editor — kept in the DOM on the same page */}
-      <Card id="availability" className="scroll-mt-20 rounded-2xl border">
+      <Card id="availability" className="admin-surface scroll-mt-20">
         <CardContent className="p-4 sm:p-6">
           <AvailabilityEditor
             onSaved={() => {
@@ -410,7 +410,7 @@ export function Calendar(): React.ReactElement {
       </Card>
 
       {/* Booking links section */}
-      <Card id="booking-links" className="scroll-mt-20 rounded-2xl border">
+      <Card id="booking-links" className="admin-surface scroll-mt-20">
         <CardContent className="space-y-4 p-4 sm:p-6">
           <div className="flex items-center justify-between">
             <div>

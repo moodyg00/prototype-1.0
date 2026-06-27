@@ -1,14 +1,11 @@
 'use client';
 
-import {
-  BarChart3,
-  Download,
-  Loader2,
-} from 'lucide-react';
+import { Download, Loader2 } from 'lucide-react';
 import * as React from 'react';
 import { toast } from 'sonner';
 
 import { PrintShell } from '@/components/admin/billing/PrintShell';
+import { AdminPageHeader } from '@/src/components/admin/AdminPageHeader';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -151,17 +148,12 @@ export function AccountingReportsWorkspace(): React.ReactElement {
   const availableFormats = selectedReport?.formats ?? [];
 
   return (
-    <div className="space-y-6">
-      <header className="space-y-2">
-        <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--muted-foreground)' }}>
-          <BarChart3 className="size-4" />
-          <span>Accounting</span>
-        </div>
-        <h1 className="text-2xl font-semibold tracking-tight">Reports</h1>
-        <p className="max-w-3xl text-sm" style={{ color: 'var(--muted-foreground)' }}>
-          Generate trial balance, profit &amp; loss, balance sheet, and general ledger reports from posted journal entries.
-        </p>
-      </header>
+    <div className="space-y-6 admin-stagger">
+      <AdminPageHeader
+        eyebrow="Accounting"
+        title="Reports"
+        description="Generate trial balance, profit & loss, balance sheet, and general ledger reports from posted journal entries."
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {REPORT_DEFINITIONS.map((report) => {
@@ -171,15 +163,9 @@ export function AccountingReportsWorkspace(): React.ReactElement {
               key={report.id}
               type="button"
               onClick={() => openReport(report)}
-              className="group flex aspect-square flex-col items-start justify-between rounded-2xl border border-border bg-card p-5 text-left shadow-xs/10 transition-[transform,box-shadow,border-color] duration-200 ease-out hover:-translate-y-1 hover:border-primary/40 hover:shadow-md active:translate-y-0"
+              className="admin-surface group flex aspect-square flex-col items-start justify-between p-5 text-left transition-colors hover:bg-muted/40"
             >
-              <div
-                className="flex size-11 items-center justify-center rounded-xl"
-                style={{
-                  background: 'color-mix(in srgb, var(--primary) 12%, var(--card) 88%)',
-                  color: 'var(--primary)',
-                }}
-              >
+              <div className="flex size-10 items-center justify-center rounded-md bg-primary/10 text-primary">
                 <Icon className="size-5" />
               </div>
               <div className="space-y-1">

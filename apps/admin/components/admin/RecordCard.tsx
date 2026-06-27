@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { Mail, MapPin, Phone } from 'lucide-react';
-import { Card } from '@/components/ui/card';
+
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -39,7 +39,7 @@ export function RecordCard({ people, profileBasePath }: RecordCardProps) {
   return (
     <div className="grid gap-4 p-6 md:grid-cols-3">
       {people.map((p) => (
-        <Card key={p.id ?? p.name} className="p-5">
+        <article key={p.id ?? p.name} className="admin-surface p-5">
           <div className="flex items-start gap-3">
             <Avatar className="size-11">
               <AvatarFallback style={{ background: 'var(--primary-soft)', color: 'var(--primary)' }}>
@@ -97,7 +97,7 @@ export function RecordCard({ people, profileBasePath }: RecordCardProps) {
               </Button>
             )}
           </div>
-        </Card>
+        </article>
       ))}
     </div>
   );

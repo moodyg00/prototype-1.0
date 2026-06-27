@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { AdminSidebar } from '../../components/admin/AdminSidebar';
-import { Menu, X, User, LogOut, Sun, Moon } from 'lucide-react';
+import { Menu, X, LogOut, Sun, Moon } from 'lucide-react';
 import { useTheme } from '../../src/providers/theme-provider';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -18,84 +18,64 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   };
 
   return (
-    <div className="flex min-h-screen" style={{ background: 'var(--background)' }}>
-      <AdminSidebar 
-        isOpen={sidebarOpen} 
-        onClose={() => setSidebarOpen(false)} 
-      />
-      <div id="admin-main-column" className="relative flex min-h-screen flex-1 min-w-0 flex-col">
-        <header
-          className="h-14 flex items-center px-4 lg:px-6 justify-between"
-          style={{
-            background: 'var(--card)',
-            borderBottom: '1px solid var(--border)',
-          }}
-        >
+    <div className="flex min-h-screen bg-background">
+      <AdminSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <div id="admin-main-column" className="relative flex min-h-screen min-w-0 flex-1 flex-col">
+        <header className="flex h-12 items-center justify-between border-b border-border/50 bg-card/80 px-4 backdrop-blur-sm lg:px-6">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="lg:hidden p-2 -ml-2 rounded-lg hover:bg-[var(--muted)] transition-colors"
+              className="-ml-2 rounded-md p-2 transition-colors hover:bg-muted lg:hidden"
               aria-label="Toggle sidebar"
             >
-              {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
-            <div className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
-              Proto-2 · Full Admin Layer
-            </div>
+            <div className="admin-eyebrow">Proto-2 · Full Admin Layer</div>
           </div>
 
-          <div className="flex items-center gap-4 text-sm">
-            <div className="relative">
-              <button
-                onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className="flex items-center rounded-full hover:ring-2 hover:ring-[var(--primary)] transition-all"
-                aria-label="User menu"
-              >
-                <div className="w-8 h-8 rounded-full bg-[var(--primary)] flex items-center justify-center text-white text-xs font-semibold">
-                  JD
+          <div className="relative text-sm">
+            <button
+              onClick={() => setUserMenuOpen(!userMenuOpen)}
+              className="flex items-center rounded-full transition-all hover:ring-2 hover:ring-primary/30"
+              aria-label="User menu"
+            >
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
+                JD
+              </div>
+            </button>
+
+            {userMenuOpen ? (
+              <div className="absolute right-0 z-50 mt-2 w-56 overflow-hidden rounded-lg border border-border/50 bg-card py-1 shadow-lg">
+                <div className="border-b border-border/40 px-4 py-3">
+                  <div className="text-sm font-medium">John Doe</div>
+                  <div className="text-xs text-muted-foreground">john@doe.com</div>
                 </div>
-              </button>
 
-              {userMenuOpen && (
-                <div 
-                  className="absolute right-0 mt-2 w-56 rounded-xl border shadow-xl py-1 z-50"
-                  style={{ 
-                    background: 'var(--card)', 
-                    borderColor: 'var(--border)',
-                    boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'
-                  }}
-                >
-                  <div className="px-4 py-3 border-b" style={{ borderColor: 'var(--border)' }}>
-                    <div className="font-medium text-sm">John Doe</div>
-                    <div className="text-xs" style={{ color: 'var(--muted-foreground)' }}>john@doe.com</div>
-                  </div>
+                <div className="py-1">
+                  <button
+                    onClick={toggleDarkMode}
+                    className="flex w-full items-center gap-3 px-4 py-2.5 text-sm transition-colors hover:bg-muted"
+                  >
+                    {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                    <span>{isDark ? 'Switch to light mode' : 'Switch to dark mode'}</span>
+                  </button>
 
-                  <div className="py-1">
-                    <button
-                      onClick={toggleDarkMode}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-[var(--muted)] transition-colors"
-                    >
-                      {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-                      <span>{isDark ? 'Switch to light mode' : 'Switch to dark mode'}</span>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        alert('Logout (demo - no logic yet)');
-                        setUserMenuOpen(false);
-                      }}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-[var(--muted)] text-red-500 transition-colors"
-                    >
-                      <LogOut className="w-4 h-4" />
-                      <span>Logout</span>
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => {
+                      alert('Logout (demo - no logic yet)');
+                      setUserMenuOpen(false);
+                    }}
+                    className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-red-500 transition-colors hover:bg-muted"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    <span>Logout</span>
+                  </button>
                 </div>
-              )}
-            </div>
+              </div>
+            ) : null}
           </div>
         </header>
-        <main className="p-4 lg:p-6">{children}</main>
+        <main className="flex-1 p-4 lg:p-6 lg:px-8">{children}</main>
       </div>
     </div>
   );

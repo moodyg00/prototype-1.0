@@ -1,8 +1,9 @@
 'use client';
 
 import * as React from 'react';
-import { Mail, Pencil, Search, Send, Eye, SlidersHorizontal } from 'lucide-react';
+import { Mail, Pencil, Search, Send, Eye } from 'lucide-react';
 
+import { AdminPageHeader } from '@/src/components/admin/AdminPageHeader';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty';
@@ -91,40 +92,21 @@ export function MailBrowser(): React.ReactElement {
   };
 
   return (
-    <div className="space-y-6 pb-6">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div
-            className="inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.22em]"
-            style={{
-              borderColor: 'color-mix(in srgb, var(--border) 72%, #111111 28%)',
-              background: 'color-mix(in srgb, var(--card) 84%, #f3efe7 16%)',
-              color: 'var(--muted-foreground)',
-            }}
-          >
-            <SlidersHorizontal className="h-3.5 w-3.5" />
-            Customer Relations
-          </div>
-          <span
-            className="inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em]"
-            style={{ borderColor: 'var(--border)', color: 'var(--muted-foreground)' }}
-          >
-            Mail
+    <div className="space-y-6 pb-6 admin-stagger">
+      <AdminPageHeader
+        eyebrow="Customer Relations"
+        title="Mail"
+        description="Email templates for outbound communication and customer follow-up."
+        meta={
+          <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+            {filtered.length} visible
           </span>
-        </div>
-        <span
-          className="inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em]"
-          style={{ borderColor: 'var(--border)', color: 'var(--muted-foreground)' }}
-        >
-          {filtered.length} visible
-        </span>
-      </header>
+        }
+      />
 
-      <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
-        <label className="space-y-2">
-          <span className="text-xs font-medium uppercase tracking-[0.18em]" style={{ color: 'var(--muted-foreground)' }}>
-            Search
-          </span>
+      <div className="grid gap-3 border-b border-border/40 pb-4 sm:grid-cols-[1fr_auto]">
+        <label className="space-y-1.5">
+          <span className="admin-meta-label">Search</span>
           <div className="relative">
             <Search
               className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2"
@@ -148,21 +130,11 @@ export function MailBrowser(): React.ReactElement {
       </div>
 
       {loading ? (
-        <div
-          className="rounded-xl border px-5 py-10 text-center text-sm"
-          style={{ borderColor: 'var(--border)', color: 'var(--muted-foreground)' }}
-        >
-          Loading templates…
-        </div>
+        <div className="py-16 text-center text-sm text-muted-foreground">Loading templates…</div>
       ) : loadError ? (
-        <div
-          className="rounded-xl border px-5 py-10 text-center text-sm"
-          style={{ borderColor: 'var(--border)', color: 'var(--muted-foreground)' }}
-        >
-          {loadError}
-        </div>
+        <div className="py-16 text-center text-sm text-muted-foreground">{loadError}</div>
       ) : filtered.length === 0 ? (
-        <Empty className="rounded-xl border py-14" style={{ borderColor: 'var(--border)' }}>
+        <Empty className="py-14">
           <EmptyHeader>
             <EmptyTitle>No templates</EmptyTitle>
             <EmptyDescription>
@@ -175,15 +147,7 @@ export function MailBrowser(): React.ReactElement {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {filtered.map((template) => (
-            <article
-              key={template.id}
-              className="flex flex-col rounded-xl border p-4"
-              style={{
-                borderColor: 'var(--border)',
-                background: 'var(--card)',
-                boxShadow: '0 10px 24px rgba(17, 17, 17, 0.04)',
-              }}
-            >
+            <article key={template.id} className="admin-surface flex flex-col p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 space-y-1">
                   <div className="truncate text-[15px] font-semibold leading-tight">{template.name}</div>
@@ -201,7 +165,7 @@ export function MailBrowser(): React.ReactElement {
                 </span>
               </div>
 
-              <div className="mt-4 flex items-center gap-2 border-t pt-3" style={{ borderColor: 'var(--border)' }}>
+              <div className="mt-4 flex items-center gap-2 border-t border-border/35 pt-3">
                 <Button variant="outline" size="sm" onClick={() => handleEdit(template)}>
                   <Pencil />
                   Edit
