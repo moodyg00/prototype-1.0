@@ -36,13 +36,8 @@ function resolveStandaloneServer() {
 }
 
 const serverPath = resolveStandaloneServer();
-// #region agent log
-console.error(JSON.stringify({ sessionId: '59fcd2', hypothesisId: 'K', location: 'entry-boot', message: 'resolve', data: { app, cwd: process.cwd(), serverPath }, timestamp: Date.now() }));
-// #endregion
 if (!serverPath) {
-  // #region agent log
-  console.error(JSON.stringify({ sessionId: '59fcd2', hypothesisId: 'K', location: 'entry-boot', message: 'missing standalone', data: { cwd: process.cwd() }, timestamp: Date.now() }));
-  // #endregion
+  console.error(`[hostinger-boot] no standalone server under ${process.cwd()}`);
   process.exit(1);
 }
 
