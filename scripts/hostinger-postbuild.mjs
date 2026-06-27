@@ -1,4 +1,4 @@
-import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -16,12 +16,13 @@ function findStandaloneServer(standaloneDir, app) {
 }
 
 function bootSourceEsm(app) {
-  return `import { execFileSync } from 'node:child_process';
+  return `import { createRequire } from 'node:module';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const nextDir = path.dirname(fileURLToPath(import.meta.url));
+const require = createRequire(import.meta.url);
 const metaPath = path.join(nextDir, 'hostinger-server.json');
 const meta = existsSync(metaPath) ? JSON.parse(readFileSync(metaPath, 'utf8')) : null;
 const candidates = [
@@ -30,27 +31,26 @@ const candidates = [
   path.join(nextDir, 'standalone/server.js'),
 ].filter(Boolean);
 const port = process.env.PORT ?? '3000';
-const env = { ...process.env, PORT: port, HOSTNAME: '0.0.0.0' };
+process.env.PORT = port;
+process.env.HOSTNAME = process.env.HOSTNAME ?? '0.0.0.0';
 
 // #region agent log
-console.error(JSON.stringify({ sessionId: '59fcd2', hypothesisId: 'F', location: 'hostinger-boot', message: 'boot start', data: { nextDir, port, candidates }, timestamp: Date.now() }));
+console.error(JSON.stringify({ sessionId: '59fcd2', hypothesisId: 'G', location: 'hostinger-boot', message: 'boot start', data: { nextDir, port, candidates }, timestamp: Date.now() }));
 // #endregion
 
 for (const serverPath of candidates) {
   if (!existsSync(serverPath)) continue;
   // #region agent log
-  console.error(JSON.stringify({ sessionId: '59fcd2', hypothesisId: 'F', location: 'hostinger-boot', message: 'starting server', data: { serverPath, cwd: path.dirname(serverPath), port }, timestamp: Date.now() }));
+  console.error(JSON.stringify({ sessionId: '59fcd2', hypothesisId: 'G', location: 'hostinger-boot', message: 'requiring server in-process', data: { serverPath, cwd: path.dirname(serverPath), port }, timestamp: Date.now() }));
   // #endregion
-  execFileSync(process.execPath, [serverPath], {
-    cwd: path.dirname(serverPath),
-    stdio: 'inherit',
-    env,
-  });
-  process.exit(0);
+  process.chdir(path.dirname(serverPath));
+  require(serverPath);
+  setInterval(() => {}, 1 << 30);
+  return;
 }
 
 // #region agent log
-console.error(JSON.stringify({ sessionId: '59fcd2', hypothesisId: 'F', location: 'hostinger-boot', message: 'no server found', data: { nextDir, candidates }, timestamp: Date.now() }));
+console.error(JSON.stringify({ sessionId: '59fcd2', hypothesisId: 'G', location: 'hostinger-boot', message: 'no server found', data: { nextDir, candidates }, timestamp: Date.now() }));
 // #endregion
 process.exit(1);
 `;
@@ -58,11 +58,12 @@ process.exit(1);
 
 function bootSourceCjs(app) {
   return `'use strict';
-const { execFileSync } = require('node:child_process');
+const { createRequire } = require('node:module');
 const { existsSync, readFileSync } = require('node:fs');
 const path = require('node:path');
 
 const nextDir = __dirname;
+const requireFromApp = createRequire(__filename);
 const metaPath = path.join(nextDir, 'hostinger-server.json');
 const meta = existsSync(metaPath) ? JSON.parse(readFileSync(metaPath, 'utf8')) : null;
 const candidates = [
@@ -71,27 +72,26 @@ const candidates = [
   path.join(nextDir, 'standalone/server.js'),
 ].filter(Boolean);
 const port = process.env.PORT || '3000';
-const env = Object.assign({}, process.env, { PORT: port, HOSTNAME: '0.0.0.0' });
+process.env.PORT = port;
+process.env.HOSTNAME = process.env.HOSTNAME || '0.0.0.0';
 
 // #region agent log
-console.error(JSON.stringify({ sessionId: '59fcd2', hypothesisId: 'F', location: 'hostinger-server.js', message: 'boot start', data: { nextDir, port, candidates }, timestamp: Date.now() }));
+console.error(JSON.stringify({ sessionId: '59fcd2', hypothesisId: 'G', location: 'hostinger-server.js', message: 'boot start', data: { nextDir, port, candidates }, timestamp: Date.now() }));
 // #endregion
 
 for (const serverPath of candidates) {
   if (!existsSync(serverPath)) continue;
   // #region agent log
-  console.error(JSON.stringify({ sessionId: '59fcd2', hypothesisId: 'F', location: 'hostinger-server.js', message: 'starting server', data: { serverPath, cwd: path.dirname(serverPath), port }, timestamp: Date.now() }));
+  console.error(JSON.stringify({ sessionId: '59fcd2', hypothesisId: 'G', location: 'hostinger-server.js', message: 'requiring server in-process', data: { serverPath, cwd: path.dirname(serverPath), port }, timestamp: Date.now() }));
   // #endregion
-  execFileSync(process.execPath, [serverPath], {
-    cwd: path.dirname(serverPath),
-    stdio: 'inherit',
-    env,
-  });
-  process.exit(0);
+  process.chdir(path.dirname(serverPath));
+  requireFromApp(serverPath);
+  setInterval(function keepAlive() {}, 0x7fffffff);
+  return;
 }
 
 // #region agent log
-console.error(JSON.stringify({ sessionId: '59fcd2', hypothesisId: 'F', location: 'hostinger-server.js', message: 'no server found', data: { nextDir, candidates }, timestamp: Date.now() }));
+console.error(JSON.stringify({ sessionId: '59fcd2', hypothesisId: 'G', location: 'hostinger-server.js', message: 'no server found', data: { nextDir, candidates }, timestamp: Date.now() }));
 // #endregion
 process.exit(1);
 `;
@@ -149,7 +149,7 @@ export function runHostingerPostbuild(app) {
   const meta = { app, serverPath, bootPaths, nextDir };
   writeFileSync(path.join(nextDir, 'hostinger-server.json'), JSON.stringify(meta, null, 2));
   console.error(`[hostinger-postbuild] ${app} ready: ${serverPath}`);
-  console.error(`[hostinger-postbuild] ${app} entry options: server.js | hostinger-boot.mjs | scripts/hostinger-serve-${app}.mjs`);
+  console.error(`[hostinger-postbuild] ${app} entry options: standalone/apps/${app}/server.js | server.js | scripts/hostinger-serve-${app}.mjs`);
   return meta;
 }
 

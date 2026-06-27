@@ -5,6 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const requireFromLib = createRequire(import.meta.url);
 
 function debugLog(hypothesisId, message, data) {
   const payload = {
@@ -51,14 +52,18 @@ function resolveServerPath(app) {
   return { serverPath: null, source: 'not-found' };
 }
 
+function runStandaloneInProcess(serverPath, port) {
+  process.env.PORT = port;
+  process.env.HOSTNAME = process.env.HOSTNAME ?? '0.0.0.0';
+  process.chdir(path.dirname(serverPath));
+  debugLog('G', 'requiring standalone in-process', { serverPath, port, cwd: process.cwd() });
+  requireFromLib(serverPath);
+  setInterval(() => {}, 1 << 30);
+}
+
 export function startHostingerApp(app) {
   const appDir = path.join(root, 'apps', app);
   const port = process.env.PORT ?? '3000';
-  const env = {
-    ...process.env,
-    PORT: port,
-    HOSTNAME: '0.0.0.0',
-  };
 
   debugLog('A', 'startHostingerApp entry', {
     app,
@@ -69,26 +74,11 @@ export function startHostingerApp(app) {
     hasBoot: existsSync(path.join(appDir, '.next/hostinger-boot.mjs')),
   });
 
-  const bootPath = path.join(appDir, '.next/hostinger-boot.mjs');
-  if (existsSync(bootPath)) {
-    debugLog('B', 'delegating to hostinger-boot.mjs', { bootPath, port });
-    execFileSync(process.execPath, [bootPath], {
-      cwd: path.dirname(bootPath),
-      stdio: 'inherit',
-      env,
-    });
-    return;
-  }
-
   const { serverPath, source } = resolveServerPath(app);
   debugLog('A', 'resolved standalone server', { serverPath, source, port });
 
   if (serverPath) {
-    execFileSync(process.execPath, [serverPath], {
-      cwd: path.dirname(serverPath),
-      stdio: 'inherit',
-      env,
-    });
+    runStandaloneInProcess(serverPath, port);
     return;
   }
 
@@ -98,6 +88,6 @@ export function startHostingerApp(app) {
   execFileSync(process.execPath, [nextCli, 'start', '-p', port, '-H', '0.0.0.0'], {
     cwd: appDir,
     stdio: 'inherit',
-    env,
+    env: { ...process.env, PORT: port, HOSTNAME: '0.0.0.0' },
   });
 }
