@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { handleRouteError, jsonError } from '@/src/lib/accounting/api-helpers';
-import { getBankTransactionDetail } from '@/src/lib/banking/list-transactions';
+import { getBankTransactionDetail } from '@prototype/accounting';
 
 export async function GET(
   _request: Request,

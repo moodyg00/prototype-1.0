@@ -140,6 +140,34 @@ export async function createJournalEntry(
     });
   });
 
+  return mapJournalEntryDetail(created);
+}
+
+function mapJournalEntryDetail(created: {
+  id: string;
+  entryNumber: string;
+  entryDate: Date;
+  description: string | null;
+  reference: string | null;
+  status: JournalEntryStatus;
+  sourceModule: string | null;
+  totalDebits: Prisma.Decimal | null;
+  totalCredits: Prisma.Decimal | null;
+  postedAt: Date | null;
+  reversesEntryId: string | null;
+  reversedById: string | null;
+  createdAt: Date | null;
+  updatedAt: Date | null;
+  _count: { journalEntryLines: number };
+  journalEntryLines: Array<{
+    id: string;
+    position: number | null;
+    description: string | null;
+    debit: Prisma.Decimal | null;
+    credit: Prisma.Decimal | null;
+    account: { id: string; code: string; name: string; type: string };
+  }>;
+}): JournalEntryDetail {
   return {
     id: created.id,
     entryNumber: created.entryNumber,
@@ -168,4 +196,19 @@ export async function createJournalEntry(
       accountType: line.account.type,
     })),
   };
+}
+
+export async function deleteJournalEntry(id: string): Promise<void> {
+  const prisma = getAccountingPrisma();
+  const entry = await prisma.journalEntry.findUnique({ where: { id }, select: { id: true, status: true } });
+  if (!entry) {
+    throw new JournalEntryServiceError('not_found', 'Journal entry not found.');
+  }
+  if (entry.status !== 'Draft') {
+    throw new JournalEntryServiceError(
+      'invalid_state',
+      'Only Draft journal entries can be deleted; post or reverse posted entries instead.',
+    );
+  }
+  await prisma.journalEntry.delete({ where: { id } });
 }

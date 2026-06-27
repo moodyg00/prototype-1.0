@@ -1,5 +1,5 @@
-import { MERCURY_COA_BY_ACCOUNT_KIND } from '@/src/lib/mercury/config';
-import type { MercuryAccount, MercuryAccountCard, MercuryTransaction } from '@/src/lib/mercury/types';
+import { MERCURY_COA_BY_ACCOUNT_KIND } from '../mercury/config';
+import type { MercuryAccount, MercuryAccountCard, MercuryTransaction } from '../mercury/types';
 
 export function normalizeMercuryAccountKind(kind: string): 'checking' | 'savings' | 'other' {
   const value = kind.toLowerCase();

@@ -5,7 +5,9 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./money": "./src/money.ts"
+    "./money": "./src/money.ts",
+    "./banking/*": "./src/banking/*.ts",
+    "./mercury/*": "./src/mercury/*.ts"
   },
   "scripts": {
     "build": "echo \"no build step\"",

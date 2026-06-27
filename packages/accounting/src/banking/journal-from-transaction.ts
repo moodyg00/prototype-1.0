@@ -1,8 +1,8 @@
 import { Prisma } from '@prototype/db';
-import { createJournalEntry } from '@/src/lib/accounting/journal-entries';
-import type { BankRuleAction } from '@/src/lib/banking/bank-rule-types';
-import { logChange } from '@/src/lib/change-log';
-import { prisma } from '@/src/lib/prisma';
+import { createJournalEntry } from '../create-journal-entry';
+import type { BankRuleAction } from './bank-rule-types';
+import { getAccountingPrisma } from '../db';
+import { logBankAutomationChange } from './audit';
 
 const MERCHANT_CLEARING_CODE = '1200';
 const SOURCE_MODULE = 'bank_transactions';
@@ -20,7 +20,7 @@ const INTERNAL_CATEGORY_COA_CODES: Record<string, string> = {
   miscellaneous_expense: '7900',
 };
 
-export { JOURNAL_ALWAYS_DRAFT_CATEGORIES, journalMustStayDraft } from '@/src/lib/banking/bank-category-config';
+export { JOURNAL_ALWAYS_DRAFT_CATEGORIES, journalMustStayDraft } from './bank-category-config';
 
 export type JournalFromTransactionResult = {
   created: boolean;
@@ -51,7 +51,7 @@ type TransactionWithAccount = {
 };
 
 async function resolveCoaIdByCode(code: string): Promise<string | null> {
-  const account = await prisma.chartOfAccount.findFirst({
+  const account = await getAccountingPrisma().chartOfAccount.findFirst({
     where: { code, isActive: true },
     select: { id: true },
   });
@@ -77,7 +77,7 @@ function isEligibleForJournal(transaction: TransactionWithAccount): string | nul
 }
 
 async function resolveOffsetCoaCode(transaction: TransactionWithAccount): Promise<string | null> {
-  const latestMatch = await prisma.bankTransactionRuleMatche.findFirst({
+  const latestMatch = await getAccountingPrisma().bankTransactionRuleMatche.findFirst({
     where: {
       bankTransactionId: transaction.id,
       matched: true,
@@ -109,7 +109,7 @@ async function findInternalTransferPair(transaction: TransactionWithAccount) {
   const amount = Number(transaction.amount);
   const absAmount = Math.abs(amount).toFixed(2);
 
-  return prisma.bankTransaction.findFirst({
+  return getAccountingPrisma().bankTransaction.findFirst({
     where: {
       id: { not: transaction.id },
       ignoredAt: null,
@@ -127,7 +127,7 @@ async function findInternalTransferPair(transaction: TransactionWithAccount) {
 }
 
 async function linkJournalToTransactions(journalEntryId: string, transactionIds: string[]) {
-  await prisma.bankTransaction.updateMany({
+  await getAccountingPrisma().bankTransaction.updateMany({
     where: { id: { in: transactionIds } },
     data: { journalEntryId },
   });
@@ -160,10 +160,9 @@ async function createAndLinkJournalEntry(args: {
   await linkJournalToTransactions(entry.id, args.transactionIds);
 
   for (const transactionId of args.transactionIds) {
-    await logChange({
+    await logBankAutomationChange({
       tableName: 'bank_transactions',
       recordId: transactionId,
-      action: 'automation',
       changes: {
         journalEntryId: entry.id,
         entryNumber: entry.entryNumber,
@@ -322,7 +321,7 @@ async function createStandardJournalEntry(
 export async function tryCreateJournalFromBankTransaction(
   transactionId: string,
 ): Promise<JournalFromTransactionResult> {
-  const transaction = await prisma.bankTransaction.findUnique({
+  const transaction = await getAccountingPrisma().bankTransaction.findUnique({
     where: { id: transactionId },
     include: {
       bankAccount: { select: { chartOfAccountId: true, name: true } },
@@ -353,7 +352,7 @@ export async function generateJournalEntriesFromBankTransactions(options: { limi
 }> {
   const limit = Math.min(Math.max(options.limit ?? 500, 1), 2000);
 
-  const transactions = await prisma.bankTransaction.findMany({
+  const transactions = await getAccountingPrisma().bankTransaction.findMany({
     where: {
       ignoredAt: null,
       journalEntryId: null,

@@ -6,7 +6,7 @@ import {
   IgnoreTransactionError,
   ignoreTransactionErrorStatus,
   setBankTransactionIgnored,
-} from '@/src/lib/banking/ignore-transaction';
+} from '@prototype/accounting';
 
 const bodySchema = z.object({
   ignore: z.boolean(),

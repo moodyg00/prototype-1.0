@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { handleRouteError } from '@/src/lib/accounting/api-helpers';
-import { syncMercuryBankDataIncremental } from '@/src/lib/banking/sync-mercury';
+import { syncMercuryBankDataIncremental } from '@prototype/accounting';
 import { getCronSecret } from '@/src/lib/integrations/system-settings';
 
 async function isAuthorized(request: Request): Promise<boolean> {

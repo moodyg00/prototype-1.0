@@ -16,7 +16,7 @@ import { prisma } from '@/src/lib/prisma';
 import { round2, sum, toDecimal, toAmountString } from '@/src/lib/accounting/money';
 import { allocateOpaqueDocumentNumber } from '@/src/lib/accounting/numbering';
 import { collectDescendantIds, loadCoaHierarchy, buildChildrenByParent } from '@/src/lib/accounting/chart-of-accounts';
-import { excludeIgnoredBankJournalEntriesFilter } from '@/src/lib/banking/ignored-journal-entry-ids';
+import { excludeIgnoredBankJournalEntriesFilter } from '@prototype/accounting';
 import type {
   AccountLedgerQuery,
   JournalEntryCreateInput,

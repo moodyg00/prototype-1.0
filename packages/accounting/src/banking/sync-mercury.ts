@@ -5,14 +5,14 @@ import {
   listMercuryAccountTransactions,
   listMercuryAccounts,
   MercuryApiError,
-} from '@/src/lib/mercury/client';
+} from '../mercury/client';
 import {
   MERCURY_DEMO_ACCOUNT_ID_PREFIX,
   MERCURY_DEMO_CARD_ID_PREFIX,
   MERCURY_DEMO_TRANSACTION_ID_PREFIX,
   MERCURY_PROVIDER,
   MERCURY_TRANSACTION_BACKFILL_START,
-} from '@/src/lib/mercury/config';
+} from '../mercury/config';
 import {
   centsFromBalance,
   coaCodeForMercuryAccountKind,
@@ -30,16 +30,16 @@ import {
   normalizeMerchantName,
   transactionDescription,
   transactionReference,
-} from '@/src/lib/mercury/mappers';
-import type { MercuryAccount, MercuryAccountCard, MercuryTransaction } from '@/src/lib/mercury/types';
+} from '../mercury/mappers';
+import type { MercuryAccount, MercuryAccountCard, MercuryTransaction } from '../mercury/types';
 import {
   applyBankRulesToTransaction,
   ensureDefaultBankRules,
   reprocessUnprocessedBankTransactions,
-} from '@/src/lib/banking/apply-bank-rules';
-import { generateJournalEntriesFromBankTransactions } from '@/src/lib/banking/journal-from-transaction';
-import { logIntegrationEvent } from '@/src/lib/integrations/log-integration-event';
-import { prisma } from '@/src/lib/prisma';
+} from './apply-bank-rules';
+import { generateJournalEntriesFromBankTransactions } from './journal-from-transaction';
+import { logIntegrationEvent } from '../integrations/log-integration-event';
+import { getAccountingPrisma } from '../db';
 
 export type MercurySyncResult = {
   accountsSynced: number;
@@ -66,7 +66,7 @@ async function logSyncAttempt(args: {
   succeeded: boolean;
   errorMessage?: string | null;
 }) {
-  await prisma.bankSyncAuditLog.create({
+  await getAccountingPrisma().bankSyncAuditLog.create({
     data: {
       provider: MERCURY_PROVIDER,
       operation: args.operation,
@@ -102,7 +102,7 @@ async function logSyncAttempt(args: {
 }
 
 async function resolveCoaId(code: string): Promise<string | null> {
-  const account = await prisma.chartOfAccount.findFirst({
+  const account = await getAccountingPrisma().chartOfAccount.findFirst({
     where: { code, isActive: true },
     select: { id: true },
   });
@@ -111,7 +111,7 @@ async function resolveCoaId(code: string): Promise<string | null> {
 
 async function resolveLocalCardId(providerCardId: string | null): Promise<string | null> {
   if (!providerCardId) return null;
-  const card = await prisma.bankCard.findUnique({
+  const card = await getAccountingPrisma().bankCard.findUnique({
     where: {
       provider_providerCardId: {
         provider: MERCURY_PROVIDER,
@@ -124,7 +124,7 @@ async function resolveLocalCardId(providerCardId: string | null): Promise<string
 }
 
 export async function removeMercuryDemoSeedRows(): Promise<number> {
-  const demoAccounts = await prisma.bankAccount.findMany({
+  const demoAccounts = await getAccountingPrisma().bankAccount.findMany({
     where: {
       provider: MERCURY_PROVIDER,
       providerAccountId: { startsWith: MERCURY_DEMO_ACCOUNT_ID_PREFIX },
@@ -133,8 +133,8 @@ export async function removeMercuryDemoSeedRows(): Promise<number> {
   });
   const demoAccountIds = demoAccounts.map((row) => row.id);
 
-  const [txResult, cardResult, accountResult] = await prisma.$transaction([
-    prisma.bankTransaction.deleteMany({
+  const [txResult, cardResult, accountResult] = await getAccountingPrisma().$transaction([
+    getAccountingPrisma().bankTransaction.deleteMany({
       where: {
         OR: [
           { provider: MERCURY_PROVIDER, providerTransactionId: { startsWith: MERCURY_DEMO_TRANSACTION_ID_PREFIX } },
@@ -142,13 +142,13 @@ export async function removeMercuryDemoSeedRows(): Promise<number> {
         ],
       },
     }),
-    prisma.bankCard.deleteMany({
+    getAccountingPrisma().bankCard.deleteMany({
       where: {
         provider: MERCURY_PROVIDER,
         providerCardId: { startsWith: MERCURY_DEMO_CARD_ID_PREFIX },
       },
     }),
-    prisma.bankAccount.deleteMany({
+    getAccountingPrisma().bankAccount.deleteMany({
       where: {
         provider: MERCURY_PROVIDER,
         providerAccountId: { startsWith: MERCURY_DEMO_ACCOUNT_ID_PREFIX },
@@ -165,7 +165,7 @@ async function upsertMercuryAccount(account: MercuryAccount, syncedAt: Date): Pr
   const accountType = mapMercuryAccountType(account.kind);
   const last4 = account.accountNumber?.slice(-4) ?? null;
 
-  await prisma.bankAccount.upsert({
+  await getAccountingPrisma().bankAccount.upsert({
     where: {
       provider_providerAccountId: {
         provider: MERCURY_PROVIDER,
@@ -212,7 +212,7 @@ async function upsertMercuryAccount(account: MercuryAccount, syncedAt: Date): Pr
 async function upsertMercuryCard(bankAccountId: string, card: MercuryAccountCard, syncedAt: Date): Promise<void> {
   const limitAmount = card.spendLimit.amountCents / 100;
 
-  await prisma.bankCard.upsert({
+  await getAccountingPrisma().bankCard.upsert({
     where: {
       provider_providerCardId: {
         provider: MERCURY_PROVIDER,
@@ -254,7 +254,7 @@ async function upsertMerchant(tx: MercuryTransaction): Promise<string | null> {
   const displayName = merchantDisplayName(tx);
   const normalizedName = normalizeMerchantName(displayName);
 
-  const merchant = await prisma.bankMerchant.upsert({
+  const merchant = await getAccountingPrisma().bankMerchant.upsert({
     where: { normalizedName },
     create: {
       displayName,
@@ -313,7 +313,7 @@ async function upsertTransaction(
     llmReviewStatus: 'not_requested',
   };
 
-  const saved = await prisma.bankTransaction.upsert({
+  const saved = await getAccountingPrisma().bankTransaction.upsert({
     where: {
       provider_providerTransactionId: {
         provider: MERCURY_PROVIDER,
@@ -351,14 +351,14 @@ async function upsertTransaction(
 }
 
 async function getLocalMercuryAccounts() {
-  return prisma.bankAccount.findMany({
+  return getAccountingPrisma().bankAccount.findMany({
     where: { provider: MERCURY_PROVIDER, isActive: true },
     select: { id: true, providerAccountId: true },
   });
 }
 
 export async function wasMercuryWebhookEventProcessed(eventId: string): Promise<boolean> {
-  const existing = await prisma.bankSyncAuditLog.findFirst({
+  const existing = await getAccountingPrisma().bankSyncAuditLog.findFirst({
     where: {
       provider: MERCURY_PROVIDER,
       operation: WEBHOOK_EVENT_OPERATION,
@@ -388,7 +388,7 @@ export async function refreshMercuryAccountBalances(providerAccountId: string): 
 
 export async function syncMercuryTransactionByProviderId(providerTransactionId: string): Promise<void> {
   const tx = await getMercuryTransaction(providerTransactionId);
-  const localAccount = await prisma.bankAccount.findUnique({
+  const localAccount = await getAccountingPrisma().bankAccount.findUnique({
     where: {
       provider_providerAccountId: {
         provider: MERCURY_PROVIDER,
@@ -403,7 +403,7 @@ export async function syncMercuryTransactionByProviderId(providerTransactionId: 
       await upsertMercuryAccount(mercuryAccount, new Date());
     }
   }
-  const account = await prisma.bankAccount.findUnique({
+  const account = await getAccountingPrisma().bankAccount.findUnique({
     where: {
       provider_providerAccountId: {
         provider: MERCURY_PROVIDER,

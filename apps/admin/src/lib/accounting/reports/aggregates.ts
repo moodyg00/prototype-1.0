@@ -4,7 +4,7 @@ import { Prisma } from '@prototype/db';
 import { isDebitNatural } from '@/src/lib/accounting/journal-entries';
 import { loadCoaHierarchy, rollupNumericTotals } from '@/src/lib/accounting/chart-of-accounts';
 import { toAmountString, toDecimal } from '@/src/lib/accounting/money';
-import { excludeIgnoredBankJournalEntriesFilter } from '@/src/lib/banking/ignored-journal-entry-ids';
+import { excludeIgnoredBankJournalEntriesFilter } from '@prototype/accounting';
 import { prisma } from '@/src/lib/prisma';
 
 export type AccountAggregate = {

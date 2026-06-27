@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 
 import { SingleRecordViewPage } from '@/src/components/admin/SingleRecordViewPage';
-import { getBankTransactionDetail } from '@/src/lib/banking/list-transactions';
+import { getBankTransactionDetail } from '@prototype/accounting';
 import { maskSecret } from '@/src/lib/integrations/credentials';
 import { isAdminDbSection } from '@/src/lib/admin-record-form-config';
 import { prisma } from '@/src/lib/prisma';

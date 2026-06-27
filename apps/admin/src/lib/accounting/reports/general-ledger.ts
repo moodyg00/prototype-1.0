@@ -1,7 +1,7 @@
 import 'server-only';
 
 import { sum, toAmountString } from '@/src/lib/accounting/money';
-import { excludeIgnoredBankJournalEntriesFilter } from '@/src/lib/banking/ignored-journal-entry-ids';
+import { excludeIgnoredBankJournalEntriesFilter } from '@prototype/accounting';
 import { prisma } from '@/src/lib/prisma';
 import type { GeneralLedgerReport } from '@/src/lib/accounting/reports/types';
 

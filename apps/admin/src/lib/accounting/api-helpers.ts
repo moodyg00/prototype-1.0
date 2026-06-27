@@ -13,7 +13,7 @@ import { JournalEntryServiceError, serviceErrorStatus } from '@/src/lib/accounti
 import {
   IgnoreTransactionError,
   ignoreTransactionErrorStatus,
-} from '@/src/lib/banking/ignore-transaction';
+} from '@prototype/accounting';
 import { AcceptEstimateError, acceptEstimateErrorStatus } from '@/src/lib/operations/accept-estimate';
 import {
   AttachmentServiceError,

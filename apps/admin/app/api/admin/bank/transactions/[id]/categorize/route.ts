@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { handleRouteError } from '@/src/lib/accounting/api-helpers';
-import { assignManualBankCategory } from '@/src/lib/banking/manual-bank-category';
+import { assignManualBankCategory } from '@prototype/accounting';
 import { z } from 'zod';
 
 const bodySchema = z.object({

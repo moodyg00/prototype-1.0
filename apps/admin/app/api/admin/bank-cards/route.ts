@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { handleRouteError } from '@/src/lib/accounting/api-helpers';
-import { listBankCards } from '@/src/lib/banking/list-cards';
+import { listBankCards } from '@prototype/accounting';
 
 export async function GET() {
   try {

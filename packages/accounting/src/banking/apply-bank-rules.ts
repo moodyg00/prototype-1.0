@@ -5,11 +5,11 @@ import type {
   BankRuleConditions,
   BankRuleDefinition,
   BankRuleEvaluationContext,
-} from '@/src/lib/banking/bank-rule-types';
-import { DEFAULT_BANK_RULES } from '@/src/lib/banking/default-bank-rules';
-import { tryCreateJournalFromBankTransaction } from '@/src/lib/banking/journal-from-transaction';
-import { MERCURY_PROVIDER } from '@/src/lib/mercury/config';
-import { prisma } from '@/src/lib/prisma';
+} from './bank-rule-types';
+import { DEFAULT_BANK_RULES } from './default-bank-rules';
+import { tryCreateJournalFromBankTransaction } from './journal-from-transaction';
+import { MERCURY_PROVIDER } from '../mercury/config';
+import { getAccountingPrisma } from '../db';
 
 type TransactionForRules = {
   id: string;
@@ -97,7 +97,7 @@ export async function ensureDefaultBankRules(): Promise<number> {
   let createdOrUpdated = 0;
 
   for (const rule of DEFAULT_BANK_RULES) {
-    const existing = await prisma.bankRule.findFirst({
+    const existing = await getAccountingPrisma().bankRule.findFirst({
       where: { ruleName: rule.ruleName },
       select: { id: true },
     });
@@ -115,12 +115,12 @@ export async function ensureDefaultBankRules(): Promise<number> {
     };
 
     if (existing) {
-      await prisma.bankRule.update({
+      await getAccountingPrisma().bankRule.update({
         where: { id: existing.id },
         data,
       });
     } else {
-      await prisma.bankRule.create({ data });
+      await getAccountingPrisma().bankRule.create({ data });
     }
     createdOrUpdated += 1;
   }
@@ -129,7 +129,7 @@ export async function ensureDefaultBankRules(): Promise<number> {
 }
 
 async function loadActiveRules(bankAccountId: string, provider: string | null) {
-  return prisma.bankRule.findMany({
+  return getAccountingPrisma().bankRule.findMany({
     where: {
       isActive: true,
       AND: [
@@ -159,7 +159,7 @@ async function recordRuleMatch(args: {
   conditions: Prisma.InputJsonValue;
   actions: Prisma.InputJsonValue;
 }) {
-  await prisma.bankTransactionRuleMatche.create({
+  await getAccountingPrisma().bankTransactionRuleMatche.create({
     data: {
       bankTransactionId: args.bankTransactionId,
       bankRuleId: args.bankRuleId,
@@ -176,7 +176,7 @@ async function ensureReviewTask(transaction: TransactionForRules, reason: string
   const isPosted = transaction.providerStatus === 'sent' || transaction.status === 'categorized';
   if (!isPosted) return;
 
-  await prisma.bankTransactionReviewTask.upsert({
+  await getAccountingPrisma().bankTransactionReviewTask.upsert({
     where: { bankTransactionId: transaction.id },
     create: {
       bankTransactionId: transaction.id,
@@ -202,7 +202,7 @@ async function ensureReviewTask(transaction: TransactionForRules, reason: string
 }
 
 async function clearReviewTask(transactionId: string): Promise<void> {
-  await prisma.bankTransactionReviewTask.deleteMany({
+  await getAccountingPrisma().bankTransactionReviewTask.deleteMany({
     where: { bankTransactionId: transactionId, status: 'open' },
   });
 }
@@ -211,7 +211,7 @@ export async function applyBankRulesToTransaction(
   transactionId: string,
   options: { force?: boolean } = {},
 ): Promise<{ matched: boolean; ruleName?: string }> {
-  const transaction = await prisma.bankTransaction.findUnique({
+  const transaction = await getAccountingPrisma().bankTransaction.findUnique({
     where: { id: transactionId },
   });
 
@@ -243,7 +243,7 @@ export async function applyBankRulesToTransaction(
 
     if (!matched) continue;
 
-    await prisma.bankTransaction.update({
+    await getAccountingPrisma().bankTransaction.update({
       where: { id: transaction.id },
       data: {
         internalCategory: action.internalCategory,
@@ -264,7 +264,7 @@ export async function applyBankRulesToTransaction(
     return { matched: true, ruleName: rule.ruleName };
   }
 
-  await prisma.bankTransaction.update({
+  await getAccountingPrisma().bankTransaction.update({
     where: { id: transaction.id },
     data: {
       ruleResolutionStatus: 'unprocessed',
@@ -287,7 +287,7 @@ export async function reprocessUnprocessedBankTransactions(options: { limit?: nu
   unmatched: number;
 }> {
   const limit = Math.min(Math.max(options.limit ?? 500, 1), 2000);
-  const transactions = await prisma.bankTransaction.findMany({
+  const transactions = await getAccountingPrisma().bankTransaction.findMany({
     where: {
       ignoredAt: null,
       journalEntryId: null,

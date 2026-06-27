@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 
-import { processMercuryWebhookEvent } from '@/src/lib/banking/process-mercury-webhook';
+import { processMercuryWebhookEvent } from '@prototype/accounting';
 import { getActiveApiIntegration } from '@/src/lib/integrations/load-integration';
-import type { MercuryWebhookEvent } from '@/src/lib/mercury/types';
+import type { MercuryWebhookEvent } from '@prototype/accounting';
 import { verifyMercuryWebhookSignature } from '@/src/lib/mercury/webhook';
 
 export const runtime = 'nodejs';

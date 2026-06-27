@@ -1,6 +1,6 @@
-import { prisma } from '@/src/lib/prisma';
+import { getAccountingPrisma } from '../db';
 
-import { isBankTransactionIgnored } from '@/src/lib/banking/ignore-transaction';
+import { isBankTransactionIgnored } from './ignore-transaction';
 
 export type BankTransactionListItem = {
   id: string;
@@ -108,8 +108,8 @@ export async function listBankTransactions(args: {
             : {}),
   };
 
-  const [rows, total] = await prisma.$transaction([
-    prisma.bankTransaction.findMany({
+  const [rows, total] = await getAccountingPrisma().$transaction([
+    getAccountingPrisma().bankTransaction.findMany({
       where,
       orderBy: [{ transactionDate: 'desc' }, { createdAt: 'desc' }],
       take: limit,
@@ -120,7 +120,7 @@ export async function listBankTransactions(args: {
         journalEntry: { select: { id: true, entryNumber: true } },
       },
     }),
-    prisma.bankTransaction.count({ where }),
+    getAccountingPrisma().bankTransaction.count({ where }),
   ]);
 
   return {
@@ -137,7 +137,7 @@ export type BankTransactionDetail = BankTransactionListItem & {
 };
 
 export async function getBankTransactionDetail(id: string): Promise<BankTransactionDetail | null> {
-  const row = await prisma.bankTransaction.findUnique({
+  const row = await getAccountingPrisma().bankTransaction.findUnique({
     where: { id },
     include: {
       merchant: { select: { displayName: true, avatarInitials: true } },

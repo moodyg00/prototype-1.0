@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { BankTransactionIgnoreButton } from '@/src/components/admin/banking/BankTransactionIgnoreButton';
-import { getBankTransactionDetail } from '@/src/lib/banking/list-transactions';
+import { getBankTransactionDetail } from '@prototype/accounting';
 
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);

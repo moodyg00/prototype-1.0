@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { handleRouteError } from '@/src/lib/accounting/api-helpers';
-import { generateJournalEntriesFromBankTransactions } from '@/src/lib/banking/journal-from-transaction';
+import { generateJournalEntriesFromBankTransactions } from '@prototype/accounting';
 
 export async function POST() {
   try {

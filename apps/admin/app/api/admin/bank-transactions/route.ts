@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { handleRouteError } from '@/src/lib/accounting/api-helpers';
-import { listBankTransactions } from '@/src/lib/banking/list-transactions';
+import { listBankTransactions } from '@prototype/accounting';
 
 const querySchema = z.object({
   q: z.string().optional(),

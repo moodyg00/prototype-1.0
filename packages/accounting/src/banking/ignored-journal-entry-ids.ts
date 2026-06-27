@@ -1,7 +1,6 @@
-import 'server-only';
 
 import type { Prisma } from '@prototype/db';
-import { prisma } from '@/src/lib/prisma';
+import { getAccountingPrisma } from '../db';
 
 /**
  * Journal entry IDs still linked to ignored bank transactions.
@@ -9,7 +8,7 @@ import { prisma } from '@/src/lib/prisma';
  * Prisma client is briefly out of sync with the schema.
  */
 export async function journalEntryIdsLinkedToIgnoredTransactions(): Promise<string[]> {
-  const rows = await prisma.$queryRaw<Array<{ journal_entry_id: string }>>`
+  const rows = await getAccountingPrisma().$queryRaw<Array<{ journal_entry_id: string }>>`
     SELECT DISTINCT journal_entry_id
     FROM bank_transactions
     WHERE ignored_at IS NOT NULL

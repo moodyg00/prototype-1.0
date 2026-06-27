@@ -1,10 +1,10 @@
-import type { MercuryWebhookEvent } from '@/src/lib/mercury/types';
+import type { MercuryWebhookEvent } from '../mercury/types';
 import {
   refreshMercuryAccountBalances,
   syncMercuryTransactionByProviderId,
   wasMercuryWebhookEventProcessed,
   markMercuryWebhookEventProcessed,
-} from '@/src/lib/banking/sync-mercury';
+} from './sync-mercury';
 
 export async function processMercuryWebhookEvent(event: MercuryWebhookEvent): Promise<void> {
   if (await wasMercuryWebhookEventProcessed(event.id)) {

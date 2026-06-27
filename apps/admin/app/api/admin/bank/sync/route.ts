@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { handleRouteError } from '@/src/lib/accounting/api-helpers';
-import { syncMercuryBankData, syncMercuryBankDataIncremental } from '@/src/lib/banking/sync-mercury';
+import { syncMercuryBankData, syncMercuryBankDataIncremental } from '@prototype/accounting';
 
 export async function POST(request: Request) {
   try {

@@ -4,8 +4,8 @@ import type {
   MercuryAccountsResponse,
   MercuryTransaction,
   MercuryTransactionsResponse,
-} from '@/src/lib/mercury/types';
-import { getActiveApiIntegration, requireApiKey } from '@/src/lib/integrations/load-integration';
+} from '../mercury/types';
+import { getActiveApiIntegration, requireApiKey } from '../integrations/load-integration';
 
 const DEFAULT_BASE_URL = 'https://api.mercury.com/api/v1';
 

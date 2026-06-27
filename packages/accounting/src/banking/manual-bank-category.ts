@@ -1,6 +1,6 @@
-import { prisma } from '@/src/lib/prisma';
+import { getAccountingPrisma } from '../db';
 
-import { tryCreateJournalFromBankTransaction } from '@/src/lib/banking/journal-from-transaction';
+import { tryCreateJournalFromBankTransaction } from './journal-from-transaction';
 
 export async function assignManualBankCategory(
   transactionId: string,
@@ -10,7 +10,7 @@ export async function assignManualBankCategory(
     createJournalEntry?: boolean;
   },
 ): Promise<void> {
-  const transaction = await prisma.bankTransaction.findUnique({
+  const transaction = await getAccountingPrisma().bankTransaction.findUnique({
     where: { id: transactionId },
     select: { id: true, providerStatus: true, journalEntryId: true, ignoredAt: true },
   });
@@ -23,7 +23,7 @@ export async function assignManualBankCategory(
     throw new Error('Ignored transactions cannot be recategorized.');
   }
 
-  await prisma.bankTransaction.update({
+  await getAccountingPrisma().bankTransaction.update({
     where: { id: transactionId },
     data: {
       internalCategory: args.internalCategory,
@@ -35,7 +35,7 @@ export async function assignManualBankCategory(
     },
   });
 
-  await prisma.bankTransactionReviewTask.deleteMany({
+  await getAccountingPrisma().bankTransactionReviewTask.deleteMany({
     where: { bankTransactionId: transactionId, status: 'open' },
   });
 

@@ -1,7 +1,6 @@
-import 'server-only';
 
-import { prisma } from '@/src/lib/prisma';
-import { deleteJournalEntry } from '@/src/lib/accounting/journal-entries';
+import { getAccountingPrisma } from '../db';
+import { deleteJournalEntry } from '../create-journal-entry';
 
 export type IgnoreTransactionErrorCode = 'not_found' | 'posted_journal';
 
@@ -30,7 +29,7 @@ export async function setBankTransactionIgnored(
   transactionId: string,
   ignore: boolean,
 ): Promise<{ ignored: boolean }> {
-  const transaction = await prisma.bankTransaction.findUnique({
+  const transaction = await getAccountingPrisma().bankTransaction.findUnique({
     where: { id: transactionId },
     include: {
       journalEntry: { select: { id: true, status: true } },
@@ -42,7 +41,7 @@ export async function setBankTransactionIgnored(
   }
 
   if (!ignore) {
-    await prisma.bankTransaction.update({
+    await getAccountingPrisma().bankTransaction.update({
       where: { id: transactionId },
       data: { ignoredAt: null },
     });
@@ -62,7 +61,7 @@ export async function setBankTransactionIgnored(
 
   const journalEntryId = transaction.journalEntryId;
 
-  await prisma.$transaction(async (tx) => {
+  await getAccountingPrisma().$transaction(async (tx) => {
     if (journalEntryId) {
       await tx.bankTransaction.updateMany({
         where: { journalEntryId },

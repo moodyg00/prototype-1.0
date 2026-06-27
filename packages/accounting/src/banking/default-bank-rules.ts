@@ -1,5 +1,5 @@
-import { MERCURY_PROVIDER } from '@/src/lib/mercury/config';
-import type { BankRuleDefinition } from '@/src/lib/banking/bank-rule-types';
+import { MERCURY_PROVIDER } from '../mercury/config';
+import type { BankRuleDefinition } from './bank-rule-types';
 
 export const DEFAULT_BANK_RULES: BankRuleDefinition[] = [
   {

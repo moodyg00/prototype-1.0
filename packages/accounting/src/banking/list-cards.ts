@@ -1,4 +1,4 @@
-import { prisma } from '@/src/lib/prisma';
+import { getAccountingPrisma } from '../db';
 
 export type BankCardListItem = {
   id: string;
@@ -31,7 +31,7 @@ function networkValue(value: string | null): BankCardListItem['network'] {
 }
 
 export async function listBankCards(): Promise<BankCardListItem[]> {
-  const cards = await prisma.bankCard.findMany({
+  const cards = await getAccountingPrisma().bankCard.findMany({
     orderBy: [{ status: 'asc' }, { cardName: 'asc' }],
     take: 200,
     include: {

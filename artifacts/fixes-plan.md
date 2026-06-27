@@ -99,7 +99,7 @@
 | Phase | Status | Commit |
 |-------|--------|--------|
 | 1 | done | `phase-1: prune design explorations` |
-| 2 | pending | — |
+| 2 | done | `phase-2: extract banking to @prototype/accounting` |
 | 3 | pending | — |
 | 4 | pending | — |
 | 5 | pending | — |

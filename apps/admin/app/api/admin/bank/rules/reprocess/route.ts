@@ -4,7 +4,7 @@ import { handleRouteError } from '@/src/lib/accounting/api-helpers';
 import {
   ensureDefaultBankRules,
   reprocessUnprocessedBankTransactions,
-} from '@/src/lib/banking/apply-bank-rules';
+} from '@prototype/accounting';
 
 export async function POST() {
   try {

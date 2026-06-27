@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { handleRouteError } from '@/src/lib/accounting/api-helpers';
-import { ensureDefaultBankRules } from '@/src/lib/banking/apply-bank-rules';
+import { ensureDefaultBankRules } from '@prototype/accounting';
 import { prisma } from '@/src/lib/prisma';
 
 export async function GET() {
