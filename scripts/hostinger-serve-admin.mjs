@@ -9,6 +9,8 @@ process.env.HOSTNAME = process.env.HOSTNAME ?? '0.0.0.0';
 
 function resolveStandaloneServer() {
   const cwd = process.cwd();
+  
+  // 1. If cwd is the output directory (e.g. apps/admin/.next)
   const metaPath = path.join(cwd, 'hostinger-server.json');
   if (existsSync(metaPath)) {
     try {
@@ -21,8 +23,16 @@ function resolveStandaloneServer() {
       /* ignore invalid meta */
     }
   }
-  const direct = path.join(cwd, 'standalone', 'apps', app, 'server.js');
-  return existsSync(direct) ? direct : null;
+
+  // 2. Direct check if cwd is the output directory
+  const directInOutput = path.join(cwd, 'standalone', 'apps', app, 'server.js');
+  if (existsSync(directInOutput)) return directInOutput;
+
+  // 3. If cwd is the monorepo root (Hostinger "Root directory: ./")
+  const directInRepo = path.join(cwd, 'apps', app, '.next', 'standalone', 'apps', app, 'server.js');
+  if (existsSync(directInRepo)) return directInRepo;
+
+  return null;
 }
 
 const serverPath = resolveStandaloneServer();
