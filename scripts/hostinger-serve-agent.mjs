@@ -1,36 +1,10 @@
-import { createRequire } from 'node:module';
-import { existsSync, readFileSync } from 'node:fs';
-import path from 'node:path';
-
-const app = 'agent';
-const requireMod = createRequire(import.meta.url);
-process.env.PORT = process.env.PORT ?? '3000';
-process.env.HOSTNAME = process.env.HOSTNAME ?? '0.0.0.0';
-
-function resolveStandaloneServer() {
-  const cwd = process.cwd();
-  const metaPath = path.join(cwd, 'hostinger-server.json');
-  if (existsSync(metaPath)) {
-    try {
-      const meta = JSON.parse(readFileSync(metaPath, 'utf8'));
-      if (meta.serverPath) {
-        const abs = path.join(cwd, meta.serverPath);
-        if (existsSync(abs)) return abs;
-      }
-    } catch {
-      /* ignore invalid meta */
-    }
-  }
-  const direct = path.join(cwd, 'standalone', 'apps', app, 'server.js');
-  return existsSync(direct) ? direct : null;
-}
-
-const serverPath = resolveStandaloneServer();
-if (!serverPath) {
-  console.error(`[hostinger-boot] no standalone server under ${process.cwd()}`);
-  process.exit(1);
-}
-
-process.chdir(path.dirname(serverPath));
-requireMod(serverPath);
-setInterval(() => {}, 1 << 30);
+// TEMPORARY DIAGNOSTIC — plain HTTP server to verify Hostinger port binding
+import { createServer } from 'node:http';
+const port = +(process.env.PORT ?? '3000');
+const server = createServer((_req, res) => {
+  res.writeHead(200, { 'content-type': 'text/plain' });
+  res.end(`agent-infra-ok cwd=${process.cwd()} port=${port}`);
+});
+server.listen(port, '0.0.0.0', () => {
+  console.error(`[agent-diag] listening port=${port} cwd=${process.cwd()}`);
+});
