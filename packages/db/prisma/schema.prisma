@@ -2910,6 +2910,19 @@ model AiAlert {
   @@map("ai_alerts")
 }
 
+model AgentMemoryEvent {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  agentId   String   @map("agent_id") @db.VarChar(120)
+  type      String   @db.VarChar(40)
+  level     Int      @default(2)
+  content   String
+  metadata  Json?    @db.JsonB
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([agentId, createdAt])
+  @@map("agent_memory_events")
+}
+
 model LowStockAlert {
   id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   inventoryId    String    @map("inventory_id") @db.Uuid

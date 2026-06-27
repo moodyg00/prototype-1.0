@@ -101,5 +101,5 @@
 | 1 | done | `phase-1: prune design explorations` |
 | 2 | done | `phase-2: extract banking to @prototype/accounting` |
 | 3 | done | `phase-3: worker direct bank-sync` |
-| 4 | pending | — |
+| 4 | done | `phase-4: agent tools registry and harness` |
 | 5 | pending | — |
