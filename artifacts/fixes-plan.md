@@ -102,4 +102,4 @@
 | 2 | done | `phase-2: extract banking to @prototype/accounting` |
 | 3 | done | `phase-3: worker direct bank-sync` |
 | 4 | done | `phase-4: agent tools registry and harness` |
-| 5 | pending | — |
+| 5 | done | `phase-5: admin polish and root scripts` |

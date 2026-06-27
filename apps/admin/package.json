@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "NODE_OPTIONS='--max-old-space-size=8192' tsc --noEmit",
     "verify:coss-ui": "node scripts/verify-coss-ui.mjs",
     "integrations:bootstrap": "node scripts/bootstrap-integrations.mjs"
   },
