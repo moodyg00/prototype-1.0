@@ -226,6 +226,9 @@ importers:
 
   apps/worker:
     dependencies:
+      '@prototype/accounting':
+        specifier: workspace:*
+        version: link:../../packages/accounting
       dotenv:
         specifier: ^17.4.2
         version: 17.4.2

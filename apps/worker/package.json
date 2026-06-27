@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@prototype/accounting": "workspace:*",
     "dotenv": "^17.4.2"
   },
   "devDependencies": {

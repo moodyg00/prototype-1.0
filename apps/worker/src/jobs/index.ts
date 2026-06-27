@@ -1,4 +1,4 @@
-import { workerConfig } from '../config.js';
+import { syncMercuryBankDataIncremental } from '@prototype/accounting';
 
 export type JobResult = {
   ok: boolean;
@@ -8,31 +8,16 @@ export type JobResult = {
 };
 
 export async function runBankSyncJob(): Promise<JobResult> {
-  const { adminBaseUrl, cronSecret } = workerConfig;
-  if (!cronSecret) {
-    return { ok: false, job: 'bank-sync', error: 'CRON_SECRET is not configured.' };
-  }
-
-  const url = `${adminBaseUrl}/api/cron/bank-sync`;
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${cronSecret}`,
-      'Content-Type': 'application/json',
-    },
-  });
-
-  const detail = await response.json().catch(() => null);
-  if (!response.ok) {
+  try {
+    const result = await syncMercuryBankDataIncremental();
+    return { ok: true, job: 'bank-sync', detail: result };
+  } catch (error) {
     return {
       ok: false,
       job: 'bank-sync',
-      error: typeof detail?.error === 'string' ? detail.error : `HTTP ${response.status}`,
-      detail,
+      error: error instanceof Error ? error.message : 'Bank sync failed.',
     };
   }
-
-  return { ok: true, job: 'bank-sync', detail };
 }
 
 export const jobHandlers: Record<string, () => Promise<JobResult>> = {
