@@ -4,10 +4,45 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-function findStandaloneServer(standaloneDir, app) {
-  const rel = path.join('standalone', 'apps', app, 'server.js');
-  const abs = path.join(standaloneDir, 'apps', app, 'server.js');
-  return existsSync(abs) ? rel : null;
+function entryBootSource(app) {
+  return `import { createRequire } from 'node:module';
+import { existsSync, readFileSync } from 'node:fs';
+import path from 'node:path';
+
+const app = '${app}';
+const requireMod = createRequire(import.meta.url);
+process.env.PORT = process.env.PORT ?? '3000';
+process.env.HOSTNAME = process.env.HOSTNAME ?? '0.0.0.0';
+
+function resolveStandaloneServer() {
+  const cwd = process.cwd();
+  const metaPath = path.join(cwd, 'hostinger-server.json');
+  if (existsSync(metaPath)) {
+    try {
+      const meta = JSON.parse(readFileSync(metaPath, 'utf8'));
+      if (meta.serverPath) {
+        const abs = path.join(cwd, meta.serverPath);
+        if (existsSync(abs)) return abs;
+      }
+    } catch {
+      /* ignore invalid meta */
+    }
+  }
+  const direct = path.join(cwd, 'standalone', 'apps', app, 'server.js');
+  return existsSync(direct) ? direct : null;
+}
+
+const serverPath = resolveStandaloneServer();
+console.error(JSON.stringify({ sessionId: '59fcd2', hypothesisId: 'K', location: 'entry-boot', message: 'resolve', data: { app, cwd: process.cwd(), serverPath }, timestamp: Date.now() }));
+if (!serverPath) {
+  console.error(JSON.stringify({ sessionId: '59fcd2', hypothesisId: 'K', location: 'entry-boot', message: 'missing standalone', data: { cwd: process.cwd() }, timestamp: Date.now() }));
+  process.exit(1);
+}
+
+process.chdir(path.dirname(serverPath));
+requireMod(serverPath);
+setInterval(() => {}, 1 << 30);
+`;
 }
 
 function writeServerJs(nextDir, app) {
@@ -20,16 +55,13 @@ const { existsSync } = require('node:fs');
 const path = require('node:path');
 
 const nextDir = __dirname;
-const relServer = '${relServer}';
-const serverPath = path.join(nextDir, relServer);
+const serverPath = path.join(nextDir, '${relServer}');
 const port = process.env.PORT || '3000';
 process.env.PORT = port;
 process.env.HOSTNAME = process.env.HOSTNAME || '0.0.0.0';
 
-console.error(JSON.stringify({ sessionId: '59fcd2', hypothesisId: 'I', location: 'server.js', message: 'boot', data: { nextDir, serverPath, port, exists: existsSync(serverPath) }, timestamp: Date.now() }));
-
 if (!existsSync(serverPath)) {
-  console.error('[hostinger] missing standalone server at ' + serverPath);
+  console.error('[hostinger] missing ' + serverPath);
   process.exit(1);
 }
 
@@ -41,30 +73,30 @@ setInterval(function keepAlive() {}, 0x7fffffff);
 }
 
 function writeOutputEntry(nextDir, app) {
+  const boot = entryBootSource(app);
   const scriptsDir = path.join(nextDir, 'scripts');
   mkdirSync(scriptsDir, { recursive: true });
-  writeFileSync(
-    path.join(scriptsDir, `hostinger-serve-${app}.mjs`),
-    `import { createRequire } from 'node:module';\nimport path from 'node:path';\nimport { fileURLToPath } from 'node:url';\nconst nextDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');\ncreateRequire(import.meta.url)(path.join(nextDir, 'server.js'));\n`,
-  );
+  writeFileSync(path.join(scriptsDir, `hostinger-serve-${app}.mjs`), boot);
   writeFileSync(
     path.join(nextDir, 'package.json'),
     JSON.stringify({ type: 'commonjs', scripts: { start: 'node server.js' } }, null, 2),
   );
+  if (process.env.HOSTINGER_APP === app) {
+    writeFileSync(path.join(root, 'scripts', `hostinger-serve-${app}.mjs`), boot);
+  }
 }
 
 export function runHostingerPostbuild(app) {
   const appDir = path.join(root, 'apps', app);
   const nextDir = path.join(appDir, '.next');
   const standaloneDir = path.join(nextDir, 'standalone');
-  const relServer = findStandaloneServer(standaloneDir, app);
+  const absServer = path.join(standaloneDir, 'apps', app, 'server.js');
 
-  if (!relServer) {
-    console.error(`[hostinger-postbuild] missing standalone/apps/${app}/server.js`);
+  if (!existsSync(absServer)) {
+    console.error(`[hostinger-postbuild] missing ${absServer}`);
     return null;
   }
 
-  const absServer = path.join(nextDir, relServer);
   const serverDir = path.dirname(absServer);
   const staticSrc = path.join(nextDir, 'static');
   const staticDest = path.join(serverDir, '.next/static');
@@ -83,10 +115,10 @@ export function runHostingerPostbuild(app) {
   writeOutputEntry(nextDir, app);
   writeFileSync(
     path.join(nextDir, 'hostinger-server.json'),
-    JSON.stringify({ app, serverPath: relServer }, null, 2),
+    JSON.stringify({ app, serverPath: `standalone/apps/${app}/server.js` }, null, 2),
   );
-  console.error(`[hostinger-postbuild] ${app} ready (${relServer})`);
-  return { app, serverPath: relServer, nextDir };
+  console.error(`[hostinger-postbuild] ${app} ready (standalone/apps/${app}/server.js)`);
+  return { app, nextDir };
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
