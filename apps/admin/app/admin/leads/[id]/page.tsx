@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import * as React from 'react';
 
 import { AttachmentPanel } from '@/src/components/admin/attachments/AttachmentPanel';
@@ -14,6 +14,9 @@ type PageProps = { params: Promise<{ id: string }> };
 
 export default async function LeadDetailPage({ params }: PageProps): Promise<React.ReactElement> {
   const { id } = await params;
+  if (id === 'new') {
+    redirect('/admin/leads/new');
+  }
   if (!isUuidShape(id)) notFound();
 
   const [detail, attachments] = await Promise.all([
