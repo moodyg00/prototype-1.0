@@ -45,7 +45,7 @@ function writeOutputEntry(nextDir, app) {
   mkdirSync(scriptsDir, { recursive: true });
   writeFileSync(
     path.join(scriptsDir, `hostinger-serve-${app}.mjs`),
-    `import { pathToFileURL } from 'node:url';\nimport path from 'node:path';\nimport { fileURLToPath } from 'node:url';\nconst nextDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');\nawait import(pathToFileURL(path.join(nextDir, 'server.js')).href);\n`,
+    `import { createRequire } from 'node:module';\nimport path from 'node:path';\nimport { fileURLToPath } from 'node:url';\nconst nextDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');\ncreateRequire(import.meta.url)(path.join(nextDir, 'server.js'));\n`,
   );
   writeFileSync(
     path.join(nextDir, 'package.json'),

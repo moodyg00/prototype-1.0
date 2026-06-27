@@ -26,10 +26,10 @@ function debugLog(message, data) {
 
 function findNextDir(fromDir, app) {
   const candidates = [
-    path.join(fromDir, '..'),
-    path.join(fromDir, '..', '..'),
+    process.cwd(),
+    path.join(process.cwd(), 'apps', app, '.next'),
     path.join(fromDir, '..', 'apps', app, '.next'),
-    path.join(fromDir, '..', '..', 'apps', app, '.next'),
+    path.join(fromDir, '..'),
   ];
   for (const dir of candidates) {
     if (existsSync(path.join(dir, 'server.js')) && existsSync(path.join(dir, 'standalone'))) {
