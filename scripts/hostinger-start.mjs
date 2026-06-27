@@ -1,4 +1,4 @@
-import { startHostingerApp } from './hostinger-serve-lib.mjs';
+import { bootHostingerApp } from './hostinger-boot-lib.mjs';
 
 const app = process.env.HOSTINGER_APP;
 if (app !== 'admin' && app !== 'agent') {
@@ -6,4 +6,4 @@ if (app !== 'admin' && app !== 'agent') {
   process.exit(1);
 }
 
-startHostingerApp(app);
+bootHostingerApp(app);

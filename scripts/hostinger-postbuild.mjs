@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const bootLibSource = path.join(root, 'scripts/hostinger-boot-lib.mjs');
 
 function findStandaloneServer(standaloneDir, app) {
   const candidates = [
@@ -15,55 +16,23 @@ function findStandaloneServer(standaloneDir, app) {
   return null;
 }
 
-function bootSourceEsm(app) {
-  return `import { createRequire } from 'node:module';
-import { existsSync, readFileSync } from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-const nextDir = path.dirname(fileURLToPath(import.meta.url));
-const require = createRequire(import.meta.url);
-const metaPath = path.join(nextDir, 'hostinger-server.json');
-const meta = existsSync(metaPath) ? JSON.parse(readFileSync(metaPath, 'utf8')) : null;
-const candidates = [
-  meta?.serverPath,
-  path.join(nextDir, 'standalone/apps/${app}/server.js'),
-  path.join(nextDir, 'standalone/server.js'),
-].filter(Boolean);
-const port = process.env.PORT ?? '3000';
-process.env.PORT = port;
-process.env.HOSTNAME = process.env.HOSTNAME ?? '0.0.0.0';
-
-// #region agent log
-console.error(JSON.stringify({ sessionId: '59fcd2', hypothesisId: 'G', location: 'hostinger-boot', message: 'boot start', data: { nextDir, port, candidates }, timestamp: Date.now() }));
-// #endregion
-
-for (const serverPath of candidates) {
-  if (!existsSync(serverPath)) continue;
-  // #region agent log
-  console.error(JSON.stringify({ sessionId: '59fcd2', hypothesisId: 'G', location: 'hostinger-boot', message: 'requiring server in-process', data: { serverPath, cwd: path.dirname(serverPath), port }, timestamp: Date.now() }));
-  // #endregion
-  process.chdir(path.dirname(serverPath));
-  require(serverPath);
-  setInterval(() => {}, 1 << 30);
-  return;
-}
-
-// #region agent log
-console.error(JSON.stringify({ sessionId: '59fcd2', hypothesisId: 'G', location: 'hostinger-boot', message: 'no server found', data: { nextDir, candidates }, timestamp: Date.now() }));
-// #endregion
-process.exit(1);
-`;
-}
-
-function bootSourceCjs(app) {
-  return `'use strict';
+function writeOutputEntry(nextDir, app) {
+  const scriptsDir = path.join(nextDir, 'scripts');
+  mkdirSync(scriptsDir, { recursive: true });
+  cpSync(bootLibSource, path.join(scriptsDir, 'hostinger-boot-lib.mjs'));
+  writeFileSync(
+    path.join(scriptsDir, `hostinger-serve-${app}.mjs`),
+    `import { bootHostingerApp } from './hostinger-boot-lib.mjs';\nbootHostingerApp('${app}');\n`,
+  );
+  writeFileSync(
+    path.join(nextDir, 'server.js'),
+    `'use strict';
 const { createRequire } = require('node:module');
 const { existsSync, readFileSync } = require('node:fs');
 const path = require('node:path');
 
 const nextDir = __dirname;
-const requireFromApp = createRequire(__filename);
+const requireApp = createRequire(__filename);
 const metaPath = path.join(nextDir, 'hostinger-server.json');
 const meta = existsSync(metaPath) ? JSON.parse(readFileSync(metaPath, 'utf8')) : null;
 const candidates = [
@@ -75,44 +44,20 @@ const port = process.env.PORT || '3000';
 process.env.PORT = port;
 process.env.HOSTNAME = process.env.HOSTNAME || '0.0.0.0';
 
-// #region agent log
-console.error(JSON.stringify({ sessionId: '59fcd2', hypothesisId: 'G', location: 'hostinger-server.js', message: 'boot start', data: { nextDir, port, candidates }, timestamp: Date.now() }));
-// #endregion
+console.error(JSON.stringify({ sessionId: '59fcd2', hypothesisId: 'H', location: 'server.js', message: 'boot start', data: { nextDir, port, candidates }, timestamp: Date.now() }));
 
 for (const serverPath of candidates) {
   if (!existsSync(serverPath)) continue;
-  // #region agent log
-  console.error(JSON.stringify({ sessionId: '59fcd2', hypothesisId: 'G', location: 'hostinger-server.js', message: 'requiring server in-process', data: { serverPath, cwd: path.dirname(serverPath), port }, timestamp: Date.now() }));
-  // #endregion
+  console.error(JSON.stringify({ sessionId: '59fcd2', hypothesisId: 'H', location: 'server.js', message: 'starting', data: { serverPath, port }, timestamp: Date.now() }));
   process.chdir(path.dirname(serverPath));
-  requireFromApp(serverPath);
+  requireApp(serverPath);
   setInterval(function keepAlive() {}, 0x7fffffff);
   return;
 }
-
-// #region agent log
-console.error(JSON.stringify({ sessionId: '59fcd2', hypothesisId: 'G', location: 'hostinger-server.js', message: 'no server found', data: { nextDir, candidates }, timestamp: Date.now() }));
-// #endregion
+console.error(JSON.stringify({ sessionId: '59fcd2', hypothesisId: 'H', location: 'server.js', message: 'no server found', data: { nextDir, candidates }, timestamp: Date.now() }));
 process.exit(1);
-`;
-}
-
-function writeBootArtifacts(nextDir, app, serverPath) {
-  const esm = bootSourceEsm(app);
-  const cjs = bootSourceCjs(app);
-
-  const outputs = [
-    path.join(nextDir, 'hostinger-boot.mjs'),
-    path.join(nextDir, 'server.js'),
-    path.join(nextDir, 'scripts', `hostinger-serve-${app}.mjs`),
-  ];
-
-  mkdirSync(path.join(nextDir, 'scripts'), { recursive: true });
-  writeFileSync(outputs[0], esm);
-  writeFileSync(outputs[1], cjs);
-  writeFileSync(outputs[2], esm);
-
-  return outputs;
+`,
+  );
 }
 
 export function runHostingerPostbuild(app) {
@@ -145,11 +90,20 @@ export function runHostingerPostbuild(app) {
     cpSync(publicSrc, publicDest, { recursive: true });
   }
 
-  const bootPaths = writeBootArtifacts(nextDir, app, serverPath);
-  const meta = { app, serverPath, bootPaths, nextDir };
+  writeOutputEntry(nextDir, app);
+  const meta = {
+    app,
+    serverPath,
+    nextDir,
+    entryOptions: [
+      `standalone/apps/${app}/server.js`,
+      'server.js',
+      `scripts/hostinger-serve-${app}.mjs`,
+    ],
+  };
   writeFileSync(path.join(nextDir, 'hostinger-server.json'), JSON.stringify(meta, null, 2));
   console.error(`[hostinger-postbuild] ${app} ready: ${serverPath}`);
-  console.error(`[hostinger-postbuild] ${app} entry options: standalone/apps/${app}/server.js | server.js | scripts/hostinger-serve-${app}.mjs`);
+  console.error(`[hostinger-postbuild] ${app} entry options: ${meta.entryOptions.join(' | ')}`);
   return meta;
 }
 

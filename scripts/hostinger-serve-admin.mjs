@@ -1,3 +1,3 @@
-import { startHostingerApp } from './hostinger-serve-lib.mjs';
+import { bootHostingerApp } from './hostinger-boot-lib.mjs';
 
-startHostingerApp('admin');
+bootHostingerApp('admin');
