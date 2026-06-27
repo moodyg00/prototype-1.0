@@ -1,5 +1,5 @@
 import { createRequire } from 'node:module';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -8,7 +8,7 @@ const requireMod = createRequire(import.meta.url);
 function debugLog(message, data) {
   const payload = {
     sessionId: '59fcd2',
-    hypothesisId: 'H',
+    hypothesisId: 'I',
     location: 'hostinger-boot-lib.mjs',
     message,
     data,
@@ -32,49 +32,26 @@ function findNextDir(fromDir, app) {
     path.join(fromDir, '..', '..', 'apps', app, '.next'),
   ];
   for (const dir of candidates) {
-    if (existsSync(path.join(dir, 'standalone'))) return dir;
-  }
-  return null;
-}
-
-function resolveServerPath(nextDir, app) {
-  const metaPath = path.join(nextDir, 'hostinger-server.json');
-  if (existsSync(metaPath)) {
-    const meta = JSON.parse(readFileSync(metaPath, 'utf8'));
-    if (meta.serverPath && existsSync(meta.serverPath)) return meta.serverPath;
-  }
-  const candidates = [
-    path.join(nextDir, 'standalone/apps', app, 'server.js'),
-    path.join(nextDir, 'standalone/server.js'),
-  ];
-  for (const serverPath of candidates) {
-    if (existsSync(serverPath)) return serverPath;
+    if (existsSync(path.join(dir, 'server.js')) && existsSync(path.join(dir, 'standalone'))) {
+      return dir;
+    }
   }
   return null;
 }
 
 export function bootHostingerApp(app) {
   const fromDir = path.dirname(fileURLToPath(import.meta.url));
-  const port = process.env.PORT ?? '3000';
-  process.env.PORT = port;
+  process.env.PORT = process.env.PORT ?? '3000';
   process.env.HOSTNAME = process.env.HOSTNAME ?? '0.0.0.0';
 
   const nextDir = findNextDir(fromDir, app);
-  debugLog('bootHostingerApp', { app, port, fromDir, nextDir, cwd: process.cwd() });
+  debugLog('bootHostingerApp', { app, fromDir, nextDir, cwd: process.cwd(), port: process.env.PORT });
 
   if (!nextDir) {
-    console.error(`[hostinger-boot] cannot find .next/standalone for ${app} from ${fromDir}`);
+    console.error(`[hostinger-boot] no .next output for ${app} (from ${fromDir})`);
     process.exit(1);
   }
 
-  const serverPath = resolveServerPath(nextDir, app);
-  if (!serverPath) {
-    console.error(`[hostinger-boot] cannot find standalone server.js for ${app} under ${nextDir}`);
-    process.exit(1);
-  }
-
-  debugLog('starting standalone in-process', { serverPath, port, cwd: path.dirname(serverPath) });
-  process.chdir(path.dirname(serverPath));
-  requireMod(serverPath);
-  setInterval(() => {}, 1 << 30);
+  debugLog('requiring server.js', { serverJs: path.join(nextDir, 'server.js') });
+  requireMod(path.join(nextDir, 'server.js'));
 }
