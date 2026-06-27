@@ -7,8 +7,12 @@ const STORE_DIR = path.join(process.cwd(), 'logs', 'secure');
 const CREDS_FILE = path.join(STORE_DIR, 'credentials.enc');
 const SESSIONS_DIR = path.join(STORE_DIR, 'sessions');
 
-if (!fs.existsSync(STORE_DIR)) fs.mkdirSync(STORE_DIR, { recursive: true });
-if (!fs.existsSync(SESSIONS_DIR)) fs.mkdirSync(SESSIONS_DIR, { recursive: true });
+try {
+  if (!fs.existsSync(STORE_DIR)) fs.mkdirSync(STORE_DIR, { recursive: true });
+  if (!fs.existsSync(SESSIONS_DIR)) fs.mkdirSync(SESSIONS_DIR, { recursive: true });
+} catch {
+  // Non-fatal: read-only fs on some hosting platforms
+}
 
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 12;

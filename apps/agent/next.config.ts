@@ -8,7 +8,7 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   transpilePackages: ['@prototype/auth', '@prototype/db'],
-  serverExternalPackages: ['@prisma/client', 'pg'],
+  serverExternalPackages: ['@prisma/client', 'pg', 'playwright', 'playwright-core'],
 };
 
 export default nextConfig;
