@@ -18,7 +18,7 @@ export function WorkspaceEditorModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/55 p-4">
+    <div className="overlay-layer fixed inset-0 z-[60] flex items-center justify-center bg-black/55 p-4">
       <div className="w-full max-w-md rounded-xl border border-white/10 bg-[#111113] p-5 shadow-2xl">
         <h2 className="text-sm font-semibold text-zinc-100">New workspace</h2>
         <p className="mt-1 text-xs text-zinc-500">

@@ -24,10 +24,25 @@ body {
 }
 
 .header {
-  height: 52px;
+  height: 56px;
   border-bottom: 1px solid rgba(255,255,255,0.08);
   background: rgba(9, 9, 11, 0.95);
   backdrop-filter: blur(12px);
+}
+
+.canvas-layer {
+  z-index: 1;
+}
+
+.pinned-chrome-layer {
+  z-index: 30;
+}
+
+.chrome-header {
+  z-index: 40;
+}
+
+.overlay-layer {
   z-index: 50;
 }
 

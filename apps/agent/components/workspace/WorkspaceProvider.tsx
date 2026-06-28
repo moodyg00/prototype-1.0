@@ -22,6 +22,7 @@ import {
   saveSession,
   type LayoutSession,
 } from '@/lib/layout-store';
+import { screenToCanvasWorld } from '@/lib/canvas-coords';
 import { createFloatingPanel, defaultPanelId, type PanelInstance } from '@/lib/panels';
 import { getTool, type ToolId } from '@/lib/tools';
 import { computeInsets, type ViewportInsets } from '@/lib/chrome-layout';
@@ -61,6 +62,8 @@ interface WorkspaceContextValue {
   resizePanel: (id: string, w: number, h: number) => void;
   getActiveBarTool: (barId: string) => ToolId | null;
   headerHeight: number;
+  registerCanvasViewport: (node: HTMLDivElement | null) => void;
+  screenToCanvasWorld: (screenX: number, screenY: number) => { x: number; y: number };
 }
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
@@ -98,6 +101,7 @@ export function WorkspaceProvider({
   const maxZ = useRef(BASE_Z);
   const activeLayoutIdRef = useRef(activeLayoutId);
   const sessionRef = useRef(session);
+  const canvasViewportRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     activeLayoutIdRef.current = activeLayoutId;
@@ -176,6 +180,15 @@ export function WorkspaceProvider({
 
   const setCanvasTransform = useCallback((canvas: LayoutSession['canvas']) => {
     setSession((prev) => ({ ...prev, canvas }));
+  }, []);
+
+  const registerCanvasViewport = useCallback((node: HTMLDivElement | null) => {
+    canvasViewportRef.current = node;
+  }, []);
+
+  const screenToCanvasWorldFn = useCallback((screenX: number, screenY: number) => {
+    const rect = canvasViewportRef.current?.getBoundingClientRect() ?? null;
+    return screenToCanvasWorld(screenX, screenY, rect, sessionRef.current.canvas);
   }, []);
 
   const focusPanel = useCallback((id: string) => {
@@ -395,6 +408,8 @@ export function WorkspaceProvider({
     resizePanel,
     getActiveBarTool,
     headerHeight,
+    registerCanvasViewport,
+    screenToCanvasWorld: screenToCanvasWorldFn,
   };
 
   return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>;

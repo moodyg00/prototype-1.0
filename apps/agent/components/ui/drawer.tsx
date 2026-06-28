@@ -38,7 +38,7 @@ export function DrawerBackdrop({
 }: DrawerPrimitive.Backdrop.Props): ReactElement {
   return (
     <DrawerPrimitive.Backdrop
-      className={cn('fixed inset-0 z-[40] bg-black/45 backdrop-blur-[2px]', className)}
+      className={cn('overlay-layer fixed inset-0 bg-black/45 backdrop-blur-[2px]', className)}
       {...props}
     />
   );
@@ -54,7 +54,7 @@ export function DrawerPopup({
   return (
     <DrawerPortal>
       <DrawerBackdrop />
-      <DrawerPrimitive.Viewport className="fixed inset-0 z-[41] pointer-events-none">
+      <DrawerPrimitive.Viewport className="overlay-layer fixed inset-0 pointer-events-none">
         <DrawerPrimitive.Popup
           className={cn(
             'pointer-events-auto absolute flex flex-col bg-[#111113] text-zinc-100 outline-none border-white/10 shadow-2xl',

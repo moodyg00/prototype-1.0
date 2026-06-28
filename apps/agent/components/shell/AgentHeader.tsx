@@ -5,7 +5,7 @@ import { WorkspaceSwitcher } from '@/components/workspace/WorkspaceSwitcher';
 
 export function AgentHeader() {
   return (
-    <header className="header flex h-14 shrink-0 items-center gap-4 px-4">
+    <header className="header chrome-header relative z-[40] flex h-14 shrink-0 items-center gap-4 px-4">
       <div className="flex items-center gap-3">
         <div className="flex h-8 w-8 items-center justify-center rounded-md bg-white text-xs font-bold tracking-tighter text-zinc-950">
           Ag

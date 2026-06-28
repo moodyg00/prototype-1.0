@@ -18,7 +18,6 @@ export function PanelContainerView({ container }: { container: PanelContainerCon
 
   const style: React.CSSProperties = {
     position: 'fixed',
-    zIndex: 22,
     background: '#0d0d0f',
   };
 

@@ -9,6 +9,7 @@ import { getTool } from '@/lib/tools';
 
 interface WorkspacePanelProps {
   panel: PanelInstance;
+  scale: number;
   onFocus: (id: string) => void;
   onClose: (id: string) => void;
   onMinimize: (id: string) => void;
@@ -17,20 +18,26 @@ interface WorkspacePanelProps {
 }
 
 export function WorkspacePanel({
-  panel, onFocus, onClose, onMinimize, onResize, onMove,
+  panel,
+  scale,
+  onFocus,
+  onClose,
+  onMinimize,
+  onResize,
+  onMove,
 }: WorkspacePanelProps) {
   const tool = getTool(panel.toolId);
   const Icon = tool.icon;
 
   const handleDragStop = useCallback(
     (_: unknown, d: { x: number; y: number }) => onMove(panel.id, d.x, d.y),
-    [panel.id, onMove]
+    [panel.id, onMove],
   );
 
   const handleResizeStop = useCallback(
     (_e: unknown, _dir: unknown, ref: HTMLElement) =>
       onResize(panel.id, ref.offsetWidth, ref.offsetHeight),
-    [panel.id, onResize]
+    [panel.id, onResize],
   );
 
   return (
@@ -39,12 +46,14 @@ export function WorkspacePanel({
       size={{ width: panel.w, height: panel.minimized ? 40 : panel.h }}
       minWidth={320}
       minHeight={panel.minimized ? 40 : 240}
+      scale={scale}
       dragHandleClassName="panel-drag-handle"
       onDragStop={handleDragStop}
       onResizeStop={handleResizeStop}
       onMouseDown={() => onFocus(panel.id)}
-      style={{ zIndex: 30 + panel.zIndex, position: 'absolute' }}
+      style={{ zIndex: panel.zIndex, position: 'absolute' }}
       enableResizing={!panel.minimized}
+      cancel=".panel-btn"
     >
       <div className="panel-shell" style={{ height: '100%' }}>
         <div className="panel-titlebar panel-drag-handle">

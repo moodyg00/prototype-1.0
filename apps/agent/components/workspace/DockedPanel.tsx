@@ -17,7 +17,7 @@ export function DockedPanel({
   barSide: PinSide;
   toolId: ToolId;
 }) {
-  const { detachBarPanel, handleBarToolClick, activeLayout, headerHeight } = useWorkspace();
+  const { detachBarPanel, handleBarToolClick, activeLayout, headerHeight, screenToCanvasWorld } = useWorkspace();
   const tool = getTool(toolId);
   const Icon = tool.icon;
   const dragRef = useRef<{ x: number; y: number; active: boolean }>({ x: 0, y: 0, active: false });
@@ -26,7 +26,6 @@ export function DockedPanel({
 
   const style: React.CSSProperties = {
     position: 'fixed',
-    zIndex: 25,
     background: '#111113',
     border: '1px solid rgba(255,255,255,0.1)',
     borderRadius: 10,
@@ -66,10 +65,11 @@ export function DockedPanel({
         dragRef.current.active = false;
         setDragging(false);
         event.currentTarget.releasePointerCapture(event.pointerId);
-        detachBarPanel(barId, toolId, event.clientX - 160, event.clientY - 20);
+        const world = screenToCanvasWorld(event.clientX, event.clientY);
+        detachBarPanel(barId, toolId, world.x - 160, world.y - 20);
       }
     },
-    [barId, toolId, detachBarPanel],
+    [barId, toolId, detachBarPanel, screenToCanvasWorld],
   );
 
   const onPointerUp = useCallback((event: React.PointerEvent<HTMLDivElement>) => {

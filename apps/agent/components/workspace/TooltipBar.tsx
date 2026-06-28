@@ -16,7 +16,6 @@ export function TooltipBar({ bar }: { bar: TooltipBarConfig }) {
 
   const style: React.CSSProperties = {
     position: 'fixed',
-    zIndex: 22,
   };
 
   if (bar.side === 'top' || bar.side === 'bottom') {

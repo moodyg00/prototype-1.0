@@ -1,6 +1,5 @@
 'use client';
 
-import { WorkspacePanel } from '@/components/WorkspacePanel';
 import { CanvasViewport } from '@/components/workspace/CanvasViewport';
 import { DockedPanel } from '@/components/workspace/DockedPanel';
 import { FooterDrawer } from '@/components/workspace/FooterDrawer';
@@ -9,17 +8,7 @@ import { TooltipBar } from '@/components/workspace/TooltipBar';
 import { useWorkspace } from '@/components/workspace/WorkspaceProvider';
 
 export function ViewportShell() {
-  const {
-    activeLayout,
-    hydrated,
-    floatingPanels,
-    getActiveBarTool,
-    focusPanel,
-    closePanel,
-    minimizePanel,
-    movePanel,
-    resizePanel,
-  } = useWorkspace();
+  const { activeLayout, hydrated, getActiveBarTool } = useWorkspace();
 
   if (!hydrated) {
     return <div className="viewport-shell flex-1 bg-[#09090b]" />;
@@ -29,33 +18,33 @@ export function ViewportShell() {
     <div className="viewport-shell relative flex-1 overflow-hidden bg-[#09090b]">
       <CanvasViewport />
 
-      {activeLayout.tooltipBars.map((bar) => (
-        <TooltipBar key={bar.id} bar={bar} />
-      ))}
+      <div className="pinned-chrome-layer pointer-events-none absolute inset-0 z-[30]">
+        {activeLayout.tooltipBars.map((bar) => (
+          <div key={bar.id} className="pointer-events-auto">
+            <TooltipBar bar={bar} />
+          </div>
+        ))}
 
-      {activeLayout.tooltipBars.map((bar) => {
-        const activeTool = getActiveBarTool(bar.id);
-        if (!activeTool) return null;
-        return <DockedPanel key={`${bar.id}-${activeTool}`} barId={bar.id} barSide={bar.side} toolId={activeTool} />;
-      })}
+        {activeLayout.tooltipBars.map((bar) => {
+          const activeTool = getActiveBarTool(bar.id);
+          if (!activeTool) return null;
+          return (
+            <div key={`${bar.id}-${activeTool}`} className="pointer-events-auto">
+              <DockedPanel barId={bar.id} barSide={bar.side} toolId={activeTool} />
+            </div>
+          );
+        })}
 
-      {activeLayout.panelContainers.map((container) => (
-        <PanelContainerView key={container.id} container={container} />
-      ))}
+        {activeLayout.panelContainers.map((container) => (
+          <div key={container.id} className="pointer-events-auto">
+            <PanelContainerView container={container} />
+          </div>
+        ))}
 
-      {floatingPanels.map((panel) => (
-        <WorkspacePanel
-          key={panel.id}
-          panel={panel}
-          onFocus={focusPanel}
-          onClose={closePanel}
-          onMinimize={minimizePanel}
-          onMove={movePanel}
-          onResize={resizePanel}
-        />
-      ))}
-
-      <FooterDrawer />
+        <div className="pointer-events-auto">
+          <FooterDrawer />
+        </div>
+      </div>
     </div>
   );
 }

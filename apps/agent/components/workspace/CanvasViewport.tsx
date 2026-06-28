@@ -1,10 +1,23 @@
 'use client';
 
 import { useCallback, useEffect, useRef } from 'react';
+import { WorkspacePanel } from '@/components/WorkspacePanel';
 import { useWorkspace } from '@/components/workspace/WorkspaceProvider';
+import { zoomCanvasAtPointer } from '@/lib/canvas-coords';
 
 export function CanvasViewport() {
-  const { session, setCanvasTransform, insets } = useWorkspace();
+  const {
+    session,
+    setCanvasTransform,
+    insets,
+    floatingPanels,
+    focusPanel,
+    closePanel,
+    minimizePanel,
+    movePanel,
+    resizePanel,
+    registerCanvasViewport,
+  } = useWorkspace();
   const ref = useRef<HTMLDivElement>(null);
   const panRef = useRef<{ active: boolean; x: number; y: number; originX: number; originY: number }>({
     active: false,
@@ -14,12 +27,20 @@ export function CanvasViewport() {
     originY: 0,
   });
 
+  useEffect(() => {
+    registerCanvasViewport(ref.current);
+    return () => registerCanvasViewport(null);
+  }, [registerCanvasViewport]);
+
   const onWheel = useCallback(
     (event: WheelEvent) => {
       event.preventDefault();
-      const delta = event.deltaY > 0 ? 0.92 : 1.08;
-      const nextScale = Math.min(2.5, Math.max(0.35, session.canvas.scale * delta));
-      setCanvasTransform({ ...session.canvas, scale: nextScale });
+      const node = ref.current;
+      if (!node) return;
+      const rect = node.getBoundingClientRect();
+      setCanvasTransform(
+        zoomCanvasAtPointer(session.canvas, event.clientX, event.clientY, rect, event.deltaY),
+      );
     },
     [session.canvas, setCanvasTransform],
   );
@@ -29,7 +50,9 @@ export function CanvasViewport() {
     if (!node) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.code === 'Space') panRef.current.active = true;
+      if (event.code === 'Space' && !(event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement)) {
+        panRef.current.active = true;
+      }
     };
     const handleKeyUp = (event: KeyboardEvent) => {
       if (event.code === 'Space') panRef.current.active = false;
@@ -47,6 +70,7 @@ export function CanvasViewport() {
   }, [onWheel]);
 
   const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.target !== event.currentTarget) return;
     const spacePan = panRef.current.active;
     const middlePan = event.button === 1;
     if (!spacePan && !middlePan) return;
@@ -81,27 +105,39 @@ export function CanvasViewport() {
   return (
     <div
       ref={ref}
-      className="canvas-viewport absolute overflow-hidden"
+      className="canvas-viewport canvas-layer absolute overflow-hidden"
       style={{
         top: insets.top,
         left: insets.left,
         right: insets.right,
         bottom: insets.bottom,
-        zIndex: 1,
       }}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
     >
       <div
-        className="canvas-world h-[4000px] w-[6000px]"
+        className="canvas-world relative h-[6000px] w-[8000px]"
         style={{
           transform: `translate(${session.canvas.x}px, ${session.canvas.y}px) scale(${session.canvas.scale})`,
           transformOrigin: '0 0',
           backgroundImage: 'radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px)',
           backgroundSize: '24px 24px',
         }}
-      />
+      >
+        {floatingPanels.map((panel) => (
+          <WorkspacePanel
+            key={panel.id}
+            panel={panel}
+            scale={session.canvas.scale}
+            onFocus={focusPanel}
+            onClose={closePanel}
+            onMinimize={minimizePanel}
+            onMove={movePanel}
+            onResize={resizePanel}
+          />
+        ))}
+      </div>
     </div>
   );
 }
