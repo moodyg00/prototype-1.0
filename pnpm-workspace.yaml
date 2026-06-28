@@ -9,7 +9,11 @@ minimumReleaseAge: 0
 # pnpm 11 blocks lifecycle scripts unless explicitly allowed (strictDepBuilds).
 allowBuilds:
   "@prisma/engines": true
+  # ssh2 ships a pure-JS implementation; the optional native cpu-features build
+  # is skipped so installs stay portable (Hostinger CI included).
+  cpu-features: false
   esbuild: true
   prisma: true
   sharp: true
+  ssh2: false
   unrs-resolver: true

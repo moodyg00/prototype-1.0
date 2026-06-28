@@ -9,6 +9,7 @@
     "dev:admin": "pnpm --filter @prototype/admin dev",
     "dev:agent": "pnpm --filter @prototype/agent dev",
     "dev:worker": "pnpm --filter @prototype/worker dev",
+    "dev:public-dev": "pnpm --filter @prototype/public-dev dev",
     "dev:public": "npx --yes serve apps/public-site/dev -p 8080",
     "dev:public:live": "npx --yes serve apps/public-site/live -p 8081",
     "docker:up": "docker compose -f docker/docker-compose.yml up -d",
