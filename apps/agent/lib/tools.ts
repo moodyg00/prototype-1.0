@@ -1,6 +1,20 @@
-import { Bot, Video, Brain, Image as ImageIcon, FileText, BarChart3, Smartphone, Globe, Terminal, Users, GitBranch, Activity } from 'lucide-react';
+import {
+  Activity,
+  BarChart3,
+  Bot,
+  Brain,
+  FileText,
+  GitBranch,
+  Globe,
+  Image as ImageIcon,
+  Smartphone,
+  Terminal,
+  Users,
+  Video,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 
-export type WorkspaceId =
+export type ToolId =
   | 'team'
   | 'workflow'
   | 'langsmith'
@@ -16,19 +30,17 @@ export type WorkspaceId =
   | 'mobile'
   | 'website';
 
-export interface WorkspaceDef {
-  id: WorkspaceId;
+export interface ToolDef {
+  id: ToolId;
   label: string;
-  icon: React.ComponentType<{ size?: number; className?: string }>;
+  icon: LucideIcon;
   description: string;
   source: string;
   status: 'built' | 'pending';
   defaultSize: { w: number; h: number };
 }
 
-export const DEFAULT_WORKSPACE_ID: WorkspaceId = 'visual-browser';
-
-export const WORKSPACES: WorkspaceDef[] = [
+export const TOOLS: ToolDef[] = [
   { id: 'team', label: 'Team', icon: Users, description: 'Executive meeting interface', source: 'core', status: 'built', defaultSize: { w: 1180, h: 760 } },
   { id: 'workflow', label: 'Workflow', icon: GitBranch, description: 'Native workflow graph builder with LangGraph export', source: 'core', status: 'built', defaultSize: { w: 1180, h: 760 } },
   { id: 'langsmith', label: 'LangSmith', icon: Activity, description: 'Trace dashboard and run analysis', source: 'langchain', status: 'built', defaultSize: { w: 1180, h: 760 } },
@@ -45,6 +57,8 @@ export const WORKSPACES: WorkspaceDef[] = [
   { id: 'website', label: 'Website', icon: Globe, description: 'Website management', source: '', status: 'pending', defaultSize: { w: 560, h: 380 } },
 ];
 
-export function getWorkspace(workspaceId: WorkspaceId) {
-  return WORKSPACES.find((workspace) => workspace.id === workspaceId) ?? WORKSPACES[0];
+export const ALL_TOOL_IDS: ToolId[] = TOOLS.map((tool) => tool.id);
+
+export function getTool(toolId: ToolId): ToolDef {
+  return TOOLS.find((tool) => tool.id === toolId) ?? TOOLS[0];
 }

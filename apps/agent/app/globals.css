@@ -200,14 +200,20 @@ body {
   letter-spacing: 0.5px;
 }
 
-/* Workspace canvas */
-.workspace-canvas {
+/* Workspace viewport */
+.viewport-shell {
   position: relative;
   flex: 1;
   overflow: hidden;
   background: #09090b;
-  background-image: radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px);
-  background-size: 24px 24px;
+}
+
+.canvas-viewport {
+  cursor: default;
+}
+
+.canvas-viewport:active {
+  cursor: grabbing;
 }
 
 .panel-shell {
