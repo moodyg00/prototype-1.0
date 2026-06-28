@@ -2,7 +2,7 @@
 
 import { useCallback, useRef, useState } from 'react';
 import { X } from 'lucide-react';
-import { getDockedPanelRect } from '@/lib/chrome-layout';
+import { chromeRectToStyle, getDockedPanelRect } from '@/lib/chrome-layout';
 import { PanelContent } from '@/components/PanelContent';
 import { DETACH_THRESHOLD, useWorkspace } from '@/components/workspace/WorkspaceProvider';
 import { getTool, type ToolId } from '@/lib/tools';
@@ -17,38 +17,12 @@ export function DockedPanel({
   barSide: PinSide;
   toolId: ToolId;
 }) {
-  const { detachBarPanel, handleBarToolClick, activeLayout, headerHeight, screenToCanvasWorld } = useWorkspace();
+  const { detachBarPanel, handleBarToolClick, activeLayout, screenToCanvasWorld } = useWorkspace();
   const tool = getTool(toolId);
   const Icon = tool.icon;
   const dragRef = useRef<{ x: number; y: number; active: boolean }>({ x: 0, y: 0, active: false });
   const [dragging, setDragging] = useState(false);
-  const rect = getDockedPanelRect(activeLayout, headerHeight, barSide);
-
-  const style: React.CSSProperties = {
-    position: 'fixed',
-    background: '#111113',
-    border: '1px solid rgba(255,255,255,0.1)',
-    borderRadius: 10,
-    overflow: 'hidden',
-    display: 'flex',
-    flexDirection: 'column',
-    boxShadow: '0 8px 40px rgba(0,0,0,0.45)',
-  };
-
-  if ('width' in rect && rect.width) {
-    style.width = rect.width;
-    style.top = rect.top;
-    style.bottom = rect.bottom;
-    if ('left' in rect) style.left = rect.left;
-    if ('right' in rect) style.right = rect.right;
-  }
-  if ('height' in rect && rect.height) {
-    style.height = rect.height;
-    style.left = rect.left;
-    style.right = rect.right;
-    if ('top' in rect) style.top = rect.top;
-    if ('bottom' in rect) style.bottom = rect.bottom;
-  }
+  const rect = getDockedPanelRect(activeLayout, barSide);
 
   const onPointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     dragRef.current = { x: event.clientX, y: event.clientY, active: true };
@@ -81,7 +55,19 @@ export function DockedPanel({
   }, []);
 
   return (
-    <div style={style} className={dragging ? 'opacity-90' : undefined}>
+    <div
+      style={{
+        ...chromeRectToStyle(rect),
+        background: '#111113',
+        border: '1px solid rgba(255,255,255,0.1)',
+        borderRadius: 10,
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+        boxShadow: '0 8px 40px rgba(0,0,0,0.45)',
+      }}
+      className={dragging ? 'opacity-90' : undefined}
+    >
       <div
         className="panel-titlebar panel-drag-handle cursor-grab active:cursor-grabbing"
         onPointerDown={onPointerDown}

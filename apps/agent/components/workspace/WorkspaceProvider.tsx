@@ -25,7 +25,7 @@ import {
 import { screenToCanvasWorld } from '@/lib/canvas-coords';
 import { createFloatingPanel, defaultPanelId, type PanelInstance } from '@/lib/panels';
 import { getTool, type ToolId } from '@/lib/tools';
-import { computeInsets, type ViewportInsets } from '@/lib/chrome-layout';
+import { computeChromeMetrics, type ChromeMetrics } from '@/lib/chrome-layout';
 import {
   createBlankWorkspace,
   DOCKED_PANEL_SIZE,
@@ -41,7 +41,7 @@ interface WorkspaceContextValue {
   activeLayoutId: string;
   session: LayoutSession;
   hydrated: boolean;
-  insets: ViewportInsets;
+  chromeMetrics: ChromeMetrics;
   switchWorkspace: (workspaceId: string) => void;
   createWorkspace: (name: string, description?: string) => void;
   resetActiveWorkspace: () => void;
@@ -116,9 +116,12 @@ export function WorkspaceProvider({
     [layouts, activeLayoutId],
   );
 
-  const insets = useMemo(
-    () => (activeLayout ? computeInsets(activeLayout, headerHeight) : { top: headerHeight, left: 0, right: 0, bottom: 0 }),
-    [activeLayout, headerHeight],
+  const chromeMetrics = useMemo(
+    () =>
+      activeLayout
+        ? computeChromeMetrics(activeLayout)
+        : { leftWidth: 0, rightWidth: 0, topHeight: 0, bottomHeight: 0 },
+    [activeLayout],
   );
 
   useEffect(() => {
@@ -387,7 +390,7 @@ export function WorkspaceProvider({
     activeLayoutId,
     session,
     hydrated,
-    insets,
+    chromeMetrics,
     switchWorkspace,
     createWorkspace,
     resetActiveWorkspace,
@@ -416,4 +419,4 @@ export function WorkspaceProvider({
 }
 
 export { DETACH_THRESHOLD };
-export type { ViewportInsets };
+export type { ChromeMetrics };

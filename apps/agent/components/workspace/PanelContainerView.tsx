@@ -1,7 +1,7 @@
 'use client';
 
 import { X } from 'lucide-react';
-import { getContainerRect } from '@/lib/chrome-layout';
+import { chromeRectToStyle, getContainerRect } from '@/lib/chrome-layout';
 import { PanelContent } from '@/components/PanelContent';
 import { ToolPicker } from '@/components/workspace/ToolPicker';
 import { useWorkspace } from '@/components/workspace/WorkspaceProvider';
@@ -10,38 +10,23 @@ import type { PanelContainerConfig } from '@/lib/workspace-layout';
 import { cn } from '@/lib/utils';
 
 export function PanelContainerView({ container }: { container: PanelContainerConfig }) {
-  const { getContainerPanels, closeContainerPanel, addPanelToContainer, activeLayout, headerHeight } = useWorkspace();
+  const { getContainerPanels, closeContainerPanel, addPanelToContainer, activeLayout } = useWorkspace();
   const panels = getContainerPanels(container.id);
   const isVerticalStack = container.side === 'left' || container.side === 'right';
-  const rect = getContainerRect(activeLayout, headerHeight, container.id);
+  const rect = getContainerRect(activeLayout, container.id);
   if (!rect) return null;
 
-  const style: React.CSSProperties = {
-    position: 'fixed',
-    background: '#0d0d0f',
-  };
-
-  if ('width' in rect) {
-    style.width = rect.width;
-    style.top = rect.top;
-    style.bottom = rect.bottom;
-    if ('left' in rect) style.left = rect.left;
-    if ('right' in rect) style.right = rect.right;
-    style.borderLeft = container.side === 'right' ? '1px solid rgba(255,255,255,0.1)' : undefined;
-    style.borderRight = container.side === 'left' ? '1px solid rgba(255,255,255,0.1)' : undefined;
-  }
-  if ('height' in rect) {
-    style.height = rect.height;
-    style.left = rect.left;
-    style.right = rect.right;
-    if ('top' in rect) style.top = rect.top;
-    if ('bottom' in rect) style.bottom = rect.bottom;
-    style.borderTop = container.side === 'bottom' ? '1px solid rgba(255,255,255,0.1)' : undefined;
-    style.borderBottom = container.side === 'top' ? '1px solid rgba(255,255,255,0.1)' : undefined;
-  }
-
   return (
-    <div style={style} className="panel-container flex min-h-0 flex-col">
+    <div
+      style={chromeRectToStyle(rect)}
+      className={cn(
+        'panel-container flex min-h-0 flex-col bg-[#0d0d0f]',
+        container.side === 'left' && 'border-r border-white/10',
+        container.side === 'right' && 'border-l border-white/10',
+        container.side === 'top' && 'border-b border-white/10',
+        container.side === 'bottom' && 'border-t border-white/10',
+      )}
+    >
       <div className="flex items-center justify-between border-b border-white/8 px-3 py-2">
         <span className="text-[10px] font-medium uppercase tracking-[0.16em] text-zinc-500">Panels</span>
         <ToolPicker

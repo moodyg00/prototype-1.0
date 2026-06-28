@@ -15,15 +15,15 @@ import { useWorkspace } from '@/components/workspace/WorkspaceProvider';
 import { getTool } from '@/lib/tools';
 
 export function FooterDrawer() {
-  const { session, setDrawerOpen, activeLayout, insets } = useWorkspace();
+  const { session, setDrawerOpen, activeLayout, chromeMetrics } = useWorkspace();
   const tools = activeLayout.drawerTools;
 
   return (
     <>
       <button
         type="button"
-        className="footer-drawer-trigger fixed left-1/2 flex h-7 w-10 -translate-x-1/2 items-center justify-center rounded-t-md border border-b-0 border-white/12 bg-[#111113] text-zinc-400 hover:text-zinc-100"
-        style={{ bottom: insets.bottom }}
+        className="footer-drawer-trigger absolute left-1/2 flex h-7 w-10 -translate-x-1/2 items-center justify-center rounded-t-md border border-b-0 border-white/12 bg-[#111113] text-zinc-400 hover:text-zinc-100"
+        style={{ bottom: chromeMetrics.bottomHeight }}
         onClick={() => setDrawerOpen(true)}
         aria-label="Open drawer"
       >

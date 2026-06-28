@@ -18,7 +18,7 @@ export function ViewportShell() {
     <div className="viewport-shell relative flex-1 overflow-hidden bg-[#09090b]">
       <CanvasViewport />
 
-      <div className="pinned-chrome-layer pointer-events-none absolute inset-0 z-[30]">
+      <div className="pinned-chrome-layer pointer-events-none absolute inset-0 z-[30] overflow-hidden">
         {activeLayout.tooltipBars.map((bar) => (
           <div key={bar.id} className="pointer-events-auto">
             <TooltipBar bar={bar} />

@@ -1,6 +1,6 @@
 'use client';
 
-import { getBarRect } from '@/lib/chrome-layout';
+import { chromeRectToStyle, getBarRect } from '@/lib/chrome-layout';
 import { getTool } from '@/lib/tools';
 import type { TooltipBarConfig } from '@/lib/workspace-layout';
 import { ToolPicker } from '@/components/workspace/ToolPicker';
@@ -8,29 +8,12 @@ import { useWorkspace } from '@/components/workspace/WorkspaceProvider';
 import { cn } from '@/lib/utils';
 
 export function TooltipBar({ bar }: { bar: TooltipBarConfig }) {
-  const { getBarTools, getActiveBarTool, handleBarToolClick, addToolToBar, activeLayout, headerHeight } = useWorkspace();
+  const { getBarTools, getActiveBarTool, handleBarToolClick, addToolToBar, activeLayout } = useWorkspace();
   const tools = getBarTools(bar.id);
   const activeTool = getActiveBarTool(bar.id);
   const isVertical = bar.side === 'left' || bar.side === 'right';
-  const rect = getBarRect(activeLayout, headerHeight, bar.side);
-
-  const style: React.CSSProperties = {
-    position: 'fixed',
-  };
-
-  if (bar.side === 'top' || bar.side === 'bottom') {
-    style.left = rect.left;
-    style.right = rect.right;
-    style.height = rect.height;
-    if (bar.side === 'top') style.top = rect.top;
-    if (bar.side === 'bottom') style.bottom = rect.bottom;
-  } else {
-    style.top = rect.top;
-    style.bottom = rect.bottom;
-    style.width = rect.width;
-    if (bar.side === 'left') style.left = rect.left;
-    if (bar.side === 'right') style.right = rect.right;
-  }
+  const rect = getBarRect(activeLayout, bar.id);
+  if (!rect) return null;
 
   return (
     <div
@@ -42,7 +25,7 @@ export function TooltipBar({ bar }: { bar: TooltipBarConfig }) {
         bar.side === 'left' && 'border-r',
         bar.side === 'right' && 'border-l',
       )}
-      style={style}
+      style={chromeRectToStyle(rect)}
     >
       <div className={cn('flex gap-1', isVertical ? 'flex-col items-center' : 'flex-row items-center overflow-x-auto')}>
         {tools.map((toolId) => {

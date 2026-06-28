@@ -224,9 +224,10 @@ body {
 }
 
 .canvas-viewport {
-  cursor: default;
+  cursor: grab;
 }
 
+.canvas-viewport.is-panning,
 .canvas-viewport:active {
   cursor: grabbing;
 }

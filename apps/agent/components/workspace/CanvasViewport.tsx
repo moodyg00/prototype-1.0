@@ -1,15 +1,20 @@
 'use client';
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { WorkspacePanel } from '@/components/WorkspacePanel';
 import { useWorkspace } from '@/components/workspace/WorkspaceProvider';
 import { zoomCanvasAtPointer } from '@/lib/canvas-coords';
+import { cn } from '@/lib/utils';
+
+function canStartPan(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  return target.classList.contains('canvas-viewport') || target.classList.contains('canvas-world');
+}
 
 export function CanvasViewport() {
   const {
     session,
     setCanvasTransform,
-    insets,
     floatingPanels,
     focusPanel,
     closePanel,
@@ -19,6 +24,8 @@ export function CanvasViewport() {
     registerCanvasViewport,
   } = useWorkspace();
   const ref = useRef<HTMLDivElement>(null);
+  const worldRef = useRef<HTMLDivElement>(null);
+  const [panning, setPanning] = useState(false);
   const panRef = useRef<{ active: boolean; x: number; y: number; originX: number; originY: number }>({
     active: false,
     x: 0,
@@ -48,32 +55,12 @@ export function CanvasViewport() {
   useEffect(() => {
     const node = ref.current;
     if (!node) return;
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.code === 'Space' && !(event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement)) {
-        panRef.current.active = true;
-      }
-    };
-    const handleKeyUp = (event: KeyboardEvent) => {
-      if (event.code === 'Space') panRef.current.active = false;
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
     node.addEventListener('wheel', onWheel, { passive: false });
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-      node.removeEventListener('wheel', onWheel);
-    };
+    return () => node.removeEventListener('wheel', onWheel);
   }, [onWheel]);
 
   const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (event.target !== event.currentTarget) return;
-    const spacePan = panRef.current.active;
-    const middlePan = event.button === 1;
-    if (!spacePan && !middlePan) return;
+    if (event.button !== 0 || !canStartPan(event.target)) return;
     panRef.current = {
       active: true,
       x: event.clientX,
@@ -81,6 +68,7 @@ export function CanvasViewport() {
       originX: session.canvas.x,
       originY: session.canvas.y,
     };
+    setPanning(true);
     event.currentTarget.setPointerCapture(event.pointerId);
   };
 
@@ -97,6 +85,7 @@ export function CanvasViewport() {
 
   const onPointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
     panRef.current.active = false;
+    setPanning(false);
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
@@ -105,18 +94,13 @@ export function CanvasViewport() {
   return (
     <div
       ref={ref}
-      className="canvas-viewport canvas-layer absolute overflow-hidden"
-      style={{
-        top: insets.top,
-        left: insets.left,
-        right: insets.right,
-        bottom: insets.bottom,
-      }}
+      className={cn('canvas-viewport canvas-layer absolute inset-0 overflow-hidden', panning && 'is-panning')}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
     >
       <div
+        ref={worldRef}
         className="canvas-world relative h-[6000px] w-[8000px]"
         style={{
           transform: `translate(${session.canvas.x}px, ${session.canvas.y}px) scale(${session.canvas.scale})`,

@@ -1,182 +1,226 @@
+import type { CSSProperties } from 'react';
 import { PANEL_CONTAINER_WIDTH, TOOLBAR_SIZE, type PinSide, type WorkspaceLayout } from './workspace-layout';
 
-export interface ViewportInsets {
-  top: number;
-  left: number;
-  right: number;
-  bottom: number;
+export interface ChromeMetrics {
+  leftWidth: number;
+  rightWidth: number;
+  topHeight: number;
+  bottomHeight: number;
 }
 
-function sideThickness(layout: WorkspaceLayout, side: PinSide, excludeBars = false, excludeContainers = false): number {
-  let total = 0;
-  if (!excludeBars) {
-    total += layout.tooltipBars.filter((bar) => bar.side === side).length * TOOLBAR_SIZE;
-  }
-  if (!excludeContainers) {
-    for (const container of layout.panelContainers) {
-      if (container.side === side) total += container.width;
-    }
-  }
-  return total;
+export interface ChromeRect {
+  top?: number;
+  left?: number;
+  right?: number;
+  bottom?: number;
+  width?: number;
+  height?: number;
 }
 
-export function computeInsets(layout: WorkspaceLayout, headerHeight: number): ViewportInsets {
-  return {
-    top: headerHeight + sideThickness(layout, 'top'),
-    left: sideThickness(layout, 'left'),
-    right: sideThickness(layout, 'right'),
-    bottom: sideThickness(layout, 'bottom'),
-  };
-}
-
-export function getBarRect(layout: WorkspaceLayout, headerHeight: number, side: PinSide) {
-  const topContainers = layout.panelContainers
-    .filter((container) => container.side === 'top')
-    .reduce((sum, container) => sum + container.width, 0);
-  const bottomContainers = layout.panelContainers
-    .filter((container) => container.side === 'bottom')
-    .reduce((sum, container) => sum + container.width, 0);
+export function computeChromeMetrics(layout: WorkspaceLayout): ChromeMetrics {
+  const leftBars = layout.tooltipBars.filter((bar) => bar.side === 'left').length * TOOLBAR_SIZE;
   const leftContainers = layout.panelContainers
     .filter((container) => container.side === 'left')
     .reduce((sum, container) => sum + container.width, 0);
+
   const rightContainers = layout.panelContainers
     .filter((container) => container.side === 'right')
     .reduce((sum, container) => sum + container.width, 0);
+  const rightBars = layout.tooltipBars.filter((bar) => bar.side === 'right').length * TOOLBAR_SIZE;
 
-  const hasTopBar = layout.tooltipBars.some((bar) => bar.side === 'top');
-  const hasBottomBar = layout.tooltipBars.some((bar) => bar.side === 'bottom');
-  const hasLeftBar = layout.tooltipBars.some((bar) => bar.side === 'left');
-  const hasRightBar = layout.tooltipBars.some((bar) => bar.side === 'right');
+  const topBars = layout.tooltipBars.filter((bar) => bar.side === 'top').length * TOOLBAR_SIZE;
+  const topContainers = layout.panelContainers
+    .filter((container) => container.side === 'top')
+    .reduce((sum, container) => sum + container.width, 0);
 
-  if (side === 'top') {
+  const bottomBars = layout.tooltipBars.filter((bar) => bar.side === 'bottom').length * TOOLBAR_SIZE;
+  const bottomContainers = layout.panelContainers
+    .filter((container) => container.side === 'bottom')
+    .reduce((sum, container) => sum + container.width, 0);
+
+  return {
+    leftWidth: leftBars + leftContainers,
+    rightWidth: rightBars + rightContainers,
+    topHeight: topBars + topContainers,
+    bottomHeight: bottomBars + bottomContainers,
+  };
+}
+
+function leftBarsWidth(layout: WorkspaceLayout): number {
+  return layout.tooltipBars.filter((bar) => bar.side === 'left').length * TOOLBAR_SIZE;
+}
+
+function rightContainersWidth(layout: WorkspaceLayout): number {
+  return layout.panelContainers
+    .filter((container) => container.side === 'right')
+    .reduce((sum, container) => sum + container.width, 0);
+}
+
+function topBarsHeight(layout: WorkspaceLayout): number {
+  return layout.tooltipBars.filter((bar) => bar.side === 'top').length * TOOLBAR_SIZE;
+}
+
+function bottomBarsHeight(layout: WorkspaceLayout): number {
+  return layout.tooltipBars.filter((bar) => bar.side === 'bottom').length * TOOLBAR_SIZE;
+}
+
+export function getBarRect(layout: WorkspaceLayout, barId: string): ChromeRect | null {
+  const bar = layout.tooltipBars.find((item) => item.id === barId);
+  if (!bar) return null;
+
+  const metrics = computeChromeMetrics(layout);
+
+  if (bar.side === 'left') {
+    const leftBars = layout.tooltipBars.filter((item) => item.side === 'left');
+    const index = leftBars.findIndex((item) => item.id === barId);
     return {
-      top: headerHeight + topContainers,
-      left: (hasLeftBar ? TOOLBAR_SIZE : 0) + leftContainers,
-      right: rightContainers + (hasRightBar ? TOOLBAR_SIZE : 0),
-      height: TOOLBAR_SIZE,
-    };
-  }
-
-  if (side === 'bottom') {
-    return {
-      bottom: bottomContainers + (hasBottomBar ? 0 : 0),
-      left: (hasLeftBar ? TOOLBAR_SIZE : 0) + leftContainers,
-      right: rightContainers + (hasRightBar ? TOOLBAR_SIZE : 0),
-      height: TOOLBAR_SIZE,
-    };
-  }
-
-  if (side === 'left') {
-    return {
-      top: headerHeight + topContainers + (hasTopBar ? TOOLBAR_SIZE : 0),
-      left: leftContainers,
-      bottom: bottomContainers + (hasBottomBar ? TOOLBAR_SIZE : 0),
+      top: 0,
+      bottom: 0,
+      left: index * TOOLBAR_SIZE,
       width: TOOLBAR_SIZE,
     };
   }
 
+  if (bar.side === 'right') {
+    const rightBars = layout.tooltipBars.filter((item) => item.side === 'right');
+    const index = rightBars.findIndex((item) => item.id === barId);
+    return {
+      top: 0,
+      bottom: 0,
+      right: rightContainersWidth(layout) + index * TOOLBAR_SIZE,
+      width: TOOLBAR_SIZE,
+    };
+  }
+
+  if (bar.side === 'top') {
+    const topBars = layout.tooltipBars.filter((item) => item.side === 'top');
+    const index = topBars.findIndex((item) => item.id === barId);
+    const topContainers = layout.panelContainers
+      .filter((container) => container.side === 'top')
+      .reduce((sum, container) => sum + container.width, 0);
+    return {
+      top: topContainers + index * TOOLBAR_SIZE,
+      left: metrics.leftWidth,
+      right: metrics.rightWidth,
+      height: TOOLBAR_SIZE,
+    };
+  }
+
+  const bottomBars = layout.tooltipBars.filter((item) => item.side === 'bottom');
+  const index = bottomBars.findIndex((item) => item.id === barId);
+  const bottomContainers = layout.panelContainers
+    .filter((container) => container.side === 'bottom')
+    .reduce((sum, container) => sum + container.width, 0);
   return {
-    top: headerHeight + topContainers + (hasTopBar ? TOOLBAR_SIZE : 0),
-    right: rightContainers,
-    bottom: bottomContainers + (hasBottomBar ? TOOLBAR_SIZE : 0),
-    width: TOOLBAR_SIZE,
+    bottom: bottomContainers + index * TOOLBAR_SIZE,
+    left: metrics.leftWidth,
+    right: metrics.rightWidth,
+    height: TOOLBAR_SIZE,
   };
 }
 
-export function getContainerRect(layout: WorkspaceLayout, headerHeight: number, containerId: string) {
+export function getContainerRect(layout: WorkspaceLayout, containerId: string): ChromeRect | null {
   const container = layout.panelContainers.find((item) => item.id === containerId);
   if (!container) return null;
 
-  const topContainersBefore = 0;
-  const hasTopBar = layout.tooltipBars.some((bar) => bar.side === 'top');
-  const hasBottomBar = layout.tooltipBars.some((bar) => bar.side === 'bottom');
-  const hasLeftBar = layout.tooltipBars.some((bar) => bar.side === 'left');
-  const hasRightBar = layout.tooltipBars.some((bar) => bar.side === 'right');
-
-  const topStack =
-    layout.panelContainers.filter((item) => item.side === 'top').reduce((sum, item) => sum + item.width, 0);
-  const bottomStack =
-    layout.panelContainers.filter((item) => item.side === 'bottom').reduce((sum, item) => sum + item.width, 0);
-  const leftStack =
-    layout.panelContainers.filter((item) => item.side === 'left').reduce((sum, item) => sum + item.width, 0);
-
-  const width = container.width ?? PANEL_CONTAINER_WIDTH;
-
-  if (container.side === 'right') {
-    return {
-      top: headerHeight + topStack + (hasTopBar ? TOOLBAR_SIZE : 0),
-      right: 0,
-      bottom: bottomStack + (hasBottomBar ? TOOLBAR_SIZE : 0),
-      width,
-    };
-  }
+  const metrics = computeChromeMetrics(layout);
+  const size = container.width ?? PANEL_CONTAINER_WIDTH;
 
   if (container.side === 'left') {
-    return {
-      top: headerHeight + topStack + (hasTopBar ? TOOLBAR_SIZE : 0),
-      left: leftStack - width + (hasLeftBar ? TOOLBAR_SIZE : 0),
-      bottom: bottomStack + (hasBottomBar ? TOOLBAR_SIZE : 0),
-      width,
-    };
+    const leftContainers = layout.panelContainers.filter((item) => item.side === 'left');
+    const index = leftContainers.findIndex((item) => item.id === containerId);
+    let left = leftBarsWidth(layout);
+    for (let i = 0; i < index; i += 1) {
+      left += leftContainers[i].width;
+    }
+    return { top: 0, bottom: 0, left, width: size };
+  }
+
+  if (container.side === 'right') {
+    const rightContainers = layout.panelContainers.filter((item) => item.side === 'right');
+    const index = rightContainers.findIndex((item) => item.id === containerId);
+    let right = 0;
+    for (let i = 0; i < index; i += 1) {
+      right += rightContainers[i].width;
+    }
+    return { top: 0, bottom: 0, right, width: size };
   }
 
   if (container.side === 'top') {
+    const topContainers = layout.panelContainers.filter((item) => item.side === 'top');
+    const index = topContainers.findIndex((item) => item.id === containerId);
+    let top = topBarsHeight(layout);
+    for (let i = 0; i < index; i += 1) {
+      top += topContainers[i].width;
+    }
     return {
-      top: headerHeight + topContainersBefore,
-      left: (hasLeftBar ? TOOLBAR_SIZE : 0) + leftStack,
-      right: layout.panelContainers.filter((item) => item.side === 'right').reduce((sum, item) => sum + item.width, 0) + (hasRightBar ? TOOLBAR_SIZE : 0),
-      height: width,
+      top,
+      left: metrics.leftWidth,
+      right: metrics.rightWidth,
+      height: size,
     };
   }
 
+  const bottomContainers = layout.panelContainers.filter((item) => item.side === 'bottom');
+  const index = bottomContainers.findIndex((item) => item.id === containerId);
+  let bottom = bottomBarsHeight(layout);
+  for (let i = 0; i < index; i += 1) {
+    bottom += bottomContainers[i].width;
+  }
   return {
-    bottom: bottomStack - width,
-    left: (hasLeftBar ? TOOLBAR_SIZE : 0) + leftStack,
-    right: layout.panelContainers.filter((item) => item.side === 'right').reduce((sum, item) => sum + item.width, 0) + (hasRightBar ? TOOLBAR_SIZE : 0),
-    height: width,
+    bottom,
+    left: metrics.leftWidth,
+    right: metrics.rightWidth,
+    height: size,
   };
 }
 
-export function getDockedPanelRect(
-  layout: WorkspaceLayout,
-  headerHeight: number,
-  barSide: PinSide,
-) {
-  const insets = computeInsets(layout, headerHeight);
-  const hasTopBar = layout.tooltipBars.some((bar) => bar.side === 'top');
-  const hasLeftBar = layout.tooltipBars.some((bar) => bar.side === 'left');
+export function getDockedPanelRect(layout: WorkspaceLayout, barSide: PinSide): ChromeRect {
+  const metrics = computeChromeMetrics(layout);
+  const dockedWidth = 320;
 
   if (barSide === 'left') {
     return {
-      top: headerHeight + (hasTopBar ? TOOLBAR_SIZE : 0) + layout.panelContainers.filter((c) => c.side === 'top').reduce((s, c) => s + c.width, 0),
-      left: (hasLeftBar ? TOOLBAR_SIZE : 0) + layout.panelContainers.filter((c) => c.side === 'left').reduce((s, c) => s + c.width, 0),
-      bottom: insets.bottom,
-      width: 320,
+      top: metrics.topHeight,
+      bottom: metrics.bottomHeight,
+      left: metrics.leftWidth,
+      width: dockedWidth,
     };
   }
 
   if (barSide === 'right') {
     return {
-      top: insets.top,
-      right: insets.right,
-      bottom: insets.bottom,
-      width: 320,
+      top: metrics.topHeight,
+      bottom: metrics.bottomHeight,
+      right: metrics.rightWidth,
+      width: dockedWidth,
     };
   }
 
   if (barSide === 'top') {
     return {
-      top: insets.top,
-      left: insets.left,
-      right: insets.right,
-      height: 320,
+      top: metrics.topHeight,
+      left: metrics.leftWidth,
+      right: metrics.rightWidth,
+      height: dockedWidth,
     };
   }
 
   return {
-    bottom: insets.bottom + TOOLBAR_SIZE,
-    left: insets.left,
-    right: insets.right,
-    height: 320,
+    bottom: metrics.bottomHeight,
+    left: metrics.leftWidth,
+    right: metrics.rightWidth,
+    height: dockedWidth,
   };
+}
+
+export function chromeRectToStyle(rect: ChromeRect): CSSProperties {
+  const style: CSSProperties = { position: 'absolute' };
+  if (rect.top !== undefined) style.top = rect.top;
+  if (rect.left !== undefined) style.left = rect.left;
+  if (rect.right !== undefined) style.right = rect.right;
+  if (rect.bottom !== undefined) style.bottom = rect.bottom;
+  if (rect.width !== undefined) style.width = rect.width;
+  if (rect.height !== undefined) style.height = rect.height;
+  return style;
 }
