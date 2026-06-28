@@ -1,20 +1,61 @@
 'use client';
 
-import { Bell, ChevronDown, Search } from 'lucide-react';
+import { FlasksChemistryIcon } from '@prototype/icons';
+import { Bell, ChevronDown, LayoutGrid, Search } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { useWorkspace } from '@/components/workspace/WorkspaceProvider';
 import { WorkspaceSwitcher } from '@/components/workspace/WorkspaceSwitcher';
+import { cn } from '@/lib/utils';
 
 export function AgentHeader() {
+  const { layoutEditMode, setLayoutEditMode, activeLayout } = useWorkspace();
+  const [layoutSavedFlash, setLayoutSavedFlash] = useState(false);
+
+  useEffect(() => {
+    if (!layoutSavedFlash) return;
+    const timer = window.setTimeout(() => setLayoutSavedFlash(false), 2200);
+    return () => window.clearTimeout(timer);
+  }, [layoutSavedFlash]);
+
+  const toggleLayoutEditMode = useCallback(() => {
+    if (layoutEditMode) {
+      setLayoutSavedFlash(true);
+    }
+    setLayoutEditMode(!layoutEditMode);
+  }, [layoutEditMode, setLayoutEditMode]);
+
   return (
     <header className="header chrome-header relative z-[40] flex h-14 shrink-0 items-center gap-4 px-4">
       <div className="flex items-center gap-3">
-        <div className="flex h-8 w-8 items-center justify-center rounded-md bg-white text-xs font-bold tracking-tighter text-zinc-950">
-          Ag
-        </div>
-        <div>
-          <div className="text-sm font-semibold tracking-tight">Agent</div>
-          <div className="-mt-0.5 text-[10px] text-zinc-500">control plane</div>
+        <div className="flex items-center gap-2.5">
+          <FlasksChemistryIcon size={32} className="shrink-0" title="App Lab" />
+          <span className="text-sm font-semibold tracking-tight text-zinc-100">App Lab</span>
         </div>
         <WorkspaceSwitcher />
+        <button
+          type="button"
+          className={cn(
+            'flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs transition-colors',
+            layoutSavedFlash
+              ? 'border-emerald-500/35 bg-emerald-500/10 text-emerald-200'
+              : layoutEditMode
+                ? 'border-amber-500/40 bg-amber-500/15 text-amber-100'
+                : 'border-white/10 text-zinc-400 hover:bg-white/6 hover:text-zinc-200',
+          )}
+          onClick={toggleLayoutEditMode}
+          title={
+            layoutEditMode
+              ? `Changes save automatically to "${activeLayout.name}". Click to finish editing.`
+              : 'Edit bars and panel zones. Changes save to the current workspace as you go.'
+          }
+        >
+          <LayoutGrid className="h-3.5 w-3.5" />
+          {layoutSavedFlash
+            ? 'Saved'
+            : layoutEditMode
+              ? `Editing · ${activeLayout.name}`
+              : 'Edit layout'}
+        </button>
       </div>
 
       <div className="ml-auto flex items-center gap-2">

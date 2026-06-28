@@ -13,6 +13,7 @@ import {
   Video,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import type { ToolSurface } from './tool-surfaces';
 
 export type ToolId =
   | 'team'
@@ -30,6 +31,11 @@ export type ToolId =
   | 'mobile'
   | 'website';
 
+export interface ToolSurfaceHints {
+  preferredOpen?: ToolSurface;
+  floatingDefaultSize?: { w: number; h: number };
+}
+
 export interface ToolDef {
   id: ToolId;
   label: string;
@@ -38,6 +44,7 @@ export interface ToolDef {
   source: string;
   status: 'built' | 'pending';
   defaultSize: { w: number; h: number };
+  surfaceHints?: ToolSurfaceHints;
 }
 
 export const TOOLS: ToolDef[] = [
@@ -50,7 +57,16 @@ export const TOOLS: ToolDef[] = [
   { id: 'photography', label: 'Photography', icon: ImageIcon, description: 'AI image & canvas (Invoke blueprint)', source: 'invoke-ai/InvokeAI', status: 'pending', defaultSize: { w: 640, h: 420 } },
   { id: 'memory', label: 'Agent Memory', icon: Brain, description: 'Layered agent memory (Tencent model)', source: 'TencentCloud/TencentDB-Agent-Memory', status: 'pending', defaultSize: { w: 560, h: 380 } },
   { id: 'agents', label: 'Agents', icon: Brain, description: 'Agent registry and configuration', source: '', status: 'pending', defaultSize: { w: 560, h: 380 } },
-  { id: 'photos', label: 'Photos', icon: ImageIcon, description: 'Self-hosted photo library (Immich blueprint)', source: 'immich-app/immich', status: 'pending', defaultSize: { w: 640, h: 480 } },
+  {
+    id: 'photos',
+    label: 'Photos',
+    icon: ImageIcon,
+    description: 'Self-hosted photo library (Immich blueprint)',
+    source: 'immich-app/immich',
+    status: 'pending',
+    defaultSize: { w: 960, h: 640 },
+    surfaceHints: { preferredOpen: 'container', floatingDefaultSize: { w: 960, h: 640 } },
+  },
   { id: 'documents', label: 'Documents', icon: FileText, description: 'PDF tools (Stirling-PDF blueprint)', source: 'Stirling-Tools/Stirling-PDF', status: 'pending', defaultSize: { w: 560, h: 380 } },
   { id: 'analytics', label: 'Analytics', icon: BarChart3, description: 'Custom analytics (Umami blueprint)', source: 'umami-software/umami', status: 'pending', defaultSize: { w: 720, h: 500 } },
   { id: 'mobile', label: 'Mobile', icon: Smartphone, description: 'Mobile device control via MCP', source: 'mobile-next/mobile-mcp', status: 'pending', defaultSize: { w: 560, h: 400 } },

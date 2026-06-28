@@ -22,13 +22,22 @@ import {
   saveSession,
   type LayoutSession,
 } from '@/lib/layout-store';
-import { screenToCanvasWorld } from '@/lib/canvas-coords';
+import { getVisibleCanvasRect, zoomCanvasAtCenter, screenToCanvasWorld } from '@/lib/canvas-coords';
 import { createFloatingPanel, defaultPanelId, type PanelInstance } from '@/lib/panels';
 import { getTool, type ToolId } from '@/lib/tools';
 import { computeChromeMetrics, type ChromeMetrics } from '@/lib/chrome-layout';
 import {
+  addPanelContainerToLayout,
+  addTooltipBarToLayout,
+  moveChromeToSide,
+  removePanelContainerFromLayout,
+  removeTooltipBarFromLayout,
+  reorderChromeOnSide,
+} from '@/lib/workspace-mutations';
+import {
   createBlankWorkspace,
   DOCKED_PANEL_SIZE,
+  type PinSide,
   type WorkspaceLayout,
 } from '@/lib/workspace-layout';
 
@@ -47,10 +56,17 @@ interface WorkspaceContextValue {
   resetActiveWorkspace: () => void;
   setDrawerOpen: (open: boolean) => void;
   setCanvasTransform: (canvas: LayoutSession['canvas']) => void;
+  canvasZoomLocked: boolean;
+  canvasPanLocked: boolean;
+  toggleCanvasZoomLocked: () => void;
+  toggleCanvasPanLocked: () => void;
+  zoomCanvasIn: () => void;
+  zoomCanvasOut: () => void;
   getBarTools: (barId: string) => ToolId[];
   getContainerPanels: (containerId: string) => ToolId[];
   handleBarToolClick: (barId: string, toolId: ToolId) => void;
   addToolToBar: (barId: string, toolId: ToolId) => void;
+  removeToolFromBar: (barId: string, toolId: ToolId) => void;
   addPanelToContainer: (containerId: string, toolId: ToolId) => void;
   closeContainerPanel: (containerId: string, toolId: ToolId) => void;
   detachBarPanel: (barId: string, toolId: ToolId, x: number, y: number) => void;
@@ -64,6 +80,16 @@ interface WorkspaceContextValue {
   headerHeight: number;
   registerCanvasViewport: (node: HTMLDivElement | null) => void;
   screenToCanvasWorld: (screenX: number, screenY: number) => { x: number; y: number };
+  layoutEditMode: boolean;
+  setLayoutEditMode: (enabled: boolean) => void;
+  addTooltipBar: (side: PinSide) => void;
+  removeTooltipBar: (barId: string) => void;
+  reorderTooltipBar: (barId: string, delta: -1 | 1) => void;
+  moveTooltipBarToSide: (barId: string, side: PinSide) => void;
+  addPanelContainer: (side: PinSide) => void;
+  removePanelContainer: (containerId: string) => void;
+  reorderPanelContainer: (containerId: string, delta: -1 | 1) => void;
+  movePanelContainerToSide: (containerId: string, side: PinSide) => void;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
@@ -98,6 +124,7 @@ export function WorkspaceProvider({
   const [activeLayoutId, setActiveLayoutId] = useState<string>('default');
   const [session, setSession] = useState<LayoutSession>(createDefaultSession(createBlankWorkspace('default', 'Default')));
   const [hydrated, setHydrated] = useState(false);
+  const [layoutEditMode, setLayoutEditMode] = useState(false);
   const maxZ = useRef(BASE_Z);
   const activeLayoutIdRef = useRef(activeLayoutId);
   const sessionRef = useRef(session);
@@ -184,6 +211,49 @@ export function WorkspaceProvider({
   const setCanvasTransform = useCallback((canvas: LayoutSession['canvas']) => {
     setSession((prev) => ({ ...prev, canvas }));
   }, []);
+
+  const persistSession = useCallback(
+    (next: LayoutSession) => {
+      sessionRef.current = next;
+      if (hydrated) {
+        saveSession(activeLayoutIdRef.current, next);
+      }
+      return next;
+    },
+    [hydrated],
+  );
+
+  const toggleCanvasZoomLocked = useCallback(() => {
+    setSession((prev) =>
+      persistSession({ ...prev, canvasZoomLocked: !prev.canvasZoomLocked }),
+    );
+  }, [persistSession]);
+
+  const toggleCanvasPanLocked = useCallback(() => {
+    setSession((prev) =>
+      persistSession({ ...prev, canvasPanLocked: !prev.canvasPanLocked }),
+    );
+  }, [persistSession]);
+
+  const zoomCanvas = useCallback(
+    (direction: 'in' | 'out') => {
+      const node = canvasViewportRef.current;
+      if (!node) return;
+      const viewportRect = node.getBoundingClientRect();
+      const visibleRect = getVisibleCanvasRect(viewportRect, chromeMetrics);
+      setSession((prev) => {
+        if (prev.canvasZoomLocked) return prev;
+        return {
+          ...prev,
+          canvas: zoomCanvasAtCenter(prev.canvas, viewportRect, direction, visibleRect),
+        };
+      });
+    },
+    [chromeMetrics],
+  );
+
+  const zoomCanvasIn = useCallback(() => zoomCanvas('in'), [zoomCanvas]);
+  const zoomCanvasOut = useCallback(() => zoomCanvas('out'), [zoomCanvas]);
 
   const registerCanvasViewport = useCallback((node: HTMLDivElement | null) => {
     canvasViewportRef.current = node;
@@ -360,6 +430,49 @@ export function WorkspaceProvider({
     }));
   }, []);
 
+  const removeToolFromBar = useCallback((barId: string, toolId: ToolId) => {
+    const layoutId = activeLayoutIdRef.current;
+
+    setSession((prev) => {
+      const nextBarActive = { ...prev.barActiveTools };
+      if (nextBarActive[barId] === toolId) {
+        nextBarActive[barId] = null;
+      }
+
+      return {
+        ...prev,
+        floatingPanels: prev.floatingPanels.filter(
+          (panel) => !(panel.barId === barId && panel.toolId === toolId),
+        ),
+        barActiveTools: nextBarActive,
+        runtimeBarTools: {
+          ...prev.runtimeBarTools,
+          [barId]: (prev.runtimeBarTools[barId] ?? []).filter((id) => id !== toolId),
+        },
+        barDetachedTools: {
+          ...prev.barDetachedTools,
+          [barId]: (prev.barDetachedTools[barId] ?? []).filter((id) => id !== toolId),
+        },
+      };
+    });
+
+    setLayouts((prevLayouts) => {
+      const nextLayouts = prevLayouts.map((layout) => {
+        if (layout.id !== layoutId) return layout;
+        return {
+          ...layout,
+          tooltipBars: layout.tooltipBars.map((bar) =>
+            bar.id === barId
+              ? { ...bar, tools: bar.tools.filter((id) => id !== toolId) }
+              : bar,
+          ),
+        };
+      });
+      saveLayouts(nextLayouts);
+      return nextLayouts;
+    });
+  }, []);
+
   const addPanelToContainer = useCallback((containerId: string, toolId: ToolId) => {
     setSession((prev) => ({
       ...prev,
@@ -384,6 +497,101 @@ export function WorkspaceProvider({
     }));
   }, []);
 
+  const updateActiveLayout = useCallback((updater: (layout: WorkspaceLayout) => WorkspaceLayout) => {
+    const layoutId = activeLayoutIdRef.current;
+    setLayouts((prevLayouts) => {
+      const nextLayouts = prevLayouts.map((layout) =>
+        layout.id === layoutId ? updater(layout) : layout,
+      );
+      saveLayouts(nextLayouts);
+      return nextLayouts;
+    });
+  }, []);
+
+  const addTooltipBar = useCallback(
+    (side: PinSide) => updateActiveLayout((layout) => addTooltipBarToLayout(layout, side)),
+    [updateActiveLayout],
+  );
+
+  const removeTooltipBar = useCallback((barId: string) => {
+    updateActiveLayout((layout) => removeTooltipBarFromLayout(layout, barId));
+    setSession((prev) => {
+      const barActiveTools = { ...prev.barActiveTools };
+      delete barActiveTools[barId];
+      const runtimeBarTools = { ...prev.runtimeBarTools };
+      delete runtimeBarTools[barId];
+      const barDetachedTools = { ...prev.barDetachedTools };
+      delete barDetachedTools[barId];
+      return {
+        ...prev,
+        barActiveTools,
+        runtimeBarTools,
+        barDetachedTools,
+        floatingPanels: prev.floatingPanels.filter((panel) => panel.barId !== barId),
+      };
+    });
+  }, [updateActiveLayout]);
+
+  const reorderTooltipBar = useCallback(
+    (barId: string, delta: -1 | 1) => {
+      updateActiveLayout((layout) => ({
+        ...layout,
+        tooltipBars: reorderChromeOnSide(layout.tooltipBars, barId, delta),
+      }));
+    },
+    [updateActiveLayout],
+  );
+
+  const moveTooltipBarToSide = useCallback(
+    (barId: string, side: PinSide) => {
+      updateActiveLayout((layout) => ({
+        ...layout,
+        tooltipBars: moveChromeToSide(layout.tooltipBars, barId, side),
+      }));
+    },
+    [updateActiveLayout],
+  );
+
+  const addPanelContainer = useCallback(
+    (side: PinSide) => updateActiveLayout((layout) => addPanelContainerToLayout(layout, side)),
+    [updateActiveLayout],
+  );
+
+  const removePanelContainer = useCallback((containerId: string) => {
+    updateActiveLayout((layout) => removePanelContainerFromLayout(layout, containerId));
+    setSession((prev) => {
+      const containerOpenPanels = { ...prev.containerOpenPanels };
+      delete containerOpenPanels[containerId];
+      const runtimeContainerPanels = { ...prev.runtimeContainerPanels };
+      delete runtimeContainerPanels[containerId];
+      return {
+        ...prev,
+        containerOpenPanels,
+        runtimeContainerPanels,
+      };
+    });
+  }, [updateActiveLayout]);
+
+  const reorderPanelContainer = useCallback(
+    (containerId: string, delta: -1 | 1) => {
+      updateActiveLayout((layout) => ({
+        ...layout,
+        panelContainers: reorderChromeOnSide(layout.panelContainers, containerId, delta),
+      }));
+    },
+    [updateActiveLayout],
+  );
+
+  const movePanelContainerToSide = useCallback(
+    (containerId: string, side: PinSide) => {
+      updateActiveLayout((layout) => ({
+        ...layout,
+        panelContainers: moveChromeToSide(layout.panelContainers, containerId, side),
+      }));
+    },
+    [updateActiveLayout],
+  );
+
   const value: WorkspaceContextValue = {
     layouts,
     activeLayout: activeLayout ?? createBlankWorkspace('default', 'Default'),
@@ -396,10 +604,17 @@ export function WorkspaceProvider({
     resetActiveWorkspace,
     setDrawerOpen,
     setCanvasTransform,
+    canvasZoomLocked: session.canvasZoomLocked,
+    canvasPanLocked: session.canvasPanLocked,
+    toggleCanvasZoomLocked,
+    toggleCanvasPanLocked,
+    zoomCanvasIn,
+    zoomCanvasOut,
     getBarTools,
     getContainerPanels,
     handleBarToolClick,
     addToolToBar,
+    removeToolFromBar,
     addPanelToContainer,
     closeContainerPanel,
     detachBarPanel,
@@ -413,6 +628,16 @@ export function WorkspaceProvider({
     headerHeight,
     registerCanvasViewport,
     screenToCanvasWorld: screenToCanvasWorldFn,
+    layoutEditMode,
+    setLayoutEditMode,
+    addTooltipBar,
+    removeTooltipBar,
+    reorderTooltipBar,
+    moveTooltipBarToSide,
+    addPanelContainer,
+    removePanelContainer,
+    reorderPanelContainer,
+    movePanelContainerToSide,
   };
 
   return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>;

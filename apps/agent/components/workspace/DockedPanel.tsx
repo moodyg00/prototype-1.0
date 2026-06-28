@@ -3,7 +3,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { chromeRectToStyle, getDockedPanelRect } from '@/lib/chrome-layout';
-import { PanelContent } from '@/components/PanelContent';
+import { ToolViewHost } from '@/components/tools/ToolViewHost';
 import { DETACH_THRESHOLD, useWorkspace } from '@/components/workspace/WorkspaceProvider';
 import { getTool, type ToolId } from '@/lib/tools';
 import type { PinSide } from '@/lib/workspace-layout';
@@ -88,7 +88,7 @@ export function DockedPanel({
         </button>
       </div>
       <div className="panel-body min-h-0 flex-1">
-        <PanelContent toolId={toolId} />
+        <ToolViewHost toolId={toolId} surface="docked" barId={barId} />
       </div>
     </div>
   );

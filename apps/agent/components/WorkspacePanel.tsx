@@ -3,7 +3,7 @@
 import React, { useCallback } from 'react';
 import { Rnd } from 'react-rnd';
 import { Minus, X } from 'lucide-react';
-import { PanelContent } from '@/components/PanelContent';
+import { ToolViewHost } from '@/components/tools/ToolViewHost';
 import { PanelInstance } from '@/lib/panels';
 import { getTool } from '@/lib/tools';
 
@@ -82,7 +82,7 @@ export function WorkspacePanel({
         </div>
         {!panel.minimized ? (
           <div className="panel-body">
-            <PanelContent toolId={panel.toolId} />
+            <ToolViewHost toolId={panel.toolId} surface="floating" instanceId={panel.id} />
           </div>
         ) : null}
       </div>

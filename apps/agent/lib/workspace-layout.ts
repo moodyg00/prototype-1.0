@@ -35,7 +35,7 @@ export interface WorkspaceLayout {
 }
 
 export const DEFAULT_WORKSPACE_ID = 'default';
-export const PANEL_CONTAINER_WIDTH = 300;
+export const PANEL_CONTAINER_WIDTH = 400;
 export const TOOLBAR_SIZE = 40;
 export const DOCKED_PANEL_SIZE = 320;
 

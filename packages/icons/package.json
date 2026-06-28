@@ -1,0 +1,23 @@
+{
+  "name": "@prototype/icons",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./assets/*": "./assets/*"
+  },
+  "scripts": {
+    "build": "echo \"no build step\"",
+    "generate": "node scripts/generate-icons.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.2",
+    "react": "^19.1.0",
+    "typescript": "^5.8.3"
+  }
+}

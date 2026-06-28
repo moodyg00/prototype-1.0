@@ -1,14 +1,24 @@
 'use client';
 
+import { X } from 'lucide-react';
 import { chromeRectToStyle, getBarRect } from '@/lib/chrome-layout';
 import { getTool } from '@/lib/tools';
 import type { TooltipBarConfig } from '@/lib/workspace-layout';
+import { ChromeItemMenu } from '@/components/workspace/ChromeItemMenu';
 import { ToolPicker } from '@/components/workspace/ToolPicker';
 import { useWorkspace } from '@/components/workspace/WorkspaceProvider';
 import { cn } from '@/lib/utils';
 
 export function TooltipBar({ bar }: { bar: TooltipBarConfig }) {
-  const { getBarTools, getActiveBarTool, handleBarToolClick, addToolToBar, activeLayout } = useWorkspace();
+  const {
+    getBarTools,
+    getActiveBarTool,
+    handleBarToolClick,
+    addToolToBar,
+    removeToolFromBar,
+    activeLayout,
+    layoutEditMode,
+  } = useWorkspace();
   const tools = getBarTools(bar.id);
   const activeTool = getActiveBarTool(bar.id);
   const isVertical = bar.side === 'left' || bar.side === 'right';
@@ -19,6 +29,7 @@ export function TooltipBar({ bar }: { bar: TooltipBarConfig }) {
     <div
       className={cn(
         'tooltip-bar flex border-white/10 bg-[#0d0d0f]/95 backdrop-blur-sm',
+        layoutEditMode && 'ring-1 ring-inset ring-amber-500/30',
         isVertical ? 'flex-col items-center py-2' : 'flex-row items-center px-2',
         bar.side === 'top' && 'border-b',
         bar.side === 'bottom' && 'border-t',
@@ -27,25 +38,60 @@ export function TooltipBar({ bar }: { bar: TooltipBarConfig }) {
       )}
       style={chromeRectToStyle(rect)}
     >
-      <div className={cn('flex gap-1', isVertical ? 'flex-col items-center' : 'flex-row items-center overflow-x-auto')}>
+      <div
+        className={cn(
+          'flex shrink-0 gap-0.5',
+          isVertical ? 'flex-col items-center' : 'flex-row items-center',
+        )}
+      >
+        <ToolPicker
+          existing={tools}
+          align="start"
+          onSelect={(toolId) => addToolToBar(bar.id, toolId)}
+        />
+        {layoutEditMode ? (
+          <ChromeItemMenu kind="bar" itemId={bar.id} side={bar.side} />
+        ) : null}
+      </div>
+
+      <div
+        className={cn(
+          'flex min-w-0 gap-1',
+          isVertical
+            ? 'flex-col items-center overflow-y-auto'
+            : 'flex-row items-center overflow-x-auto',
+        )}
+      >
         {tools.map((toolId) => {
           const tool = getTool(toolId);
           const Icon = tool.icon;
           const active = activeTool === toolId;
           return (
-            <button
-              key={toolId}
-              type="button"
-              title={tool.label}
-              className={cn(
-                'group relative flex h-8 w-8 shrink-0 items-center justify-center rounded-md border transition-colors',
-                active
-                  ? 'border-blue-500/50 bg-blue-500/15 text-blue-200'
-                  : 'border-transparent text-zinc-400 hover:border-white/10 hover:bg-white/6 hover:text-zinc-100',
-              )}
-              onClick={() => handleBarToolClick(bar.id, toolId)}
-            >
-              <Icon className="h-4 w-4" />
+            <div key={toolId} className="group relative shrink-0">
+              <button
+                type="button"
+                title={tool.label}
+                className={cn(
+                  'flex h-8 w-8 items-center justify-center rounded-md border transition-colors',
+                  active
+                    ? 'border-blue-500/50 bg-blue-500/15 text-blue-200'
+                    : 'border-transparent text-zinc-400 hover:border-white/10 hover:bg-white/6 hover:text-zinc-100',
+                )}
+                onClick={() => handleBarToolClick(bar.id, toolId)}
+              >
+                <Icon className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                title={`Remove ${tool.label}`}
+                className="absolute -right-1 -top-1 z-10 hidden h-3.5 w-3.5 items-center justify-center rounded-full border border-white/15 bg-[#1a1a1d] text-zinc-400 hover:border-red-500/40 hover:bg-red-500/20 hover:text-red-200 group-hover:flex"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  removeToolFromBar(bar.id, toolId);
+                }}
+              >
+                <X className="h-2 w-2" />
+              </button>
               <span
                 className={
                   isVertical
@@ -55,12 +101,9 @@ export function TooltipBar({ bar }: { bar: TooltipBarConfig }) {
               >
                 {tool.label}
               </span>
-            </button>
+            </div>
           );
         })}
-      </div>
-      <div className={cn(isVertical ? 'mt-auto' : 'ml-2 shrink-0')}>
-        <ToolPicker existing={tools} onSelect={(toolId) => addToolToBar(bar.id, toolId)} />
       </div>
     </div>
   );

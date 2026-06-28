@@ -1,7 +1,7 @@
 'use client';
 
 import { ChevronUp } from 'lucide-react';
-import { PanelContent } from '@/components/PanelContent';
+import { ToolViewHost } from '@/components/tools/ToolViewHost';
 import {
   Drawer,
   DrawerCloseButton,
@@ -50,7 +50,7 @@ export function FooterDrawer() {
                     <div key={toolId} className="rounded-lg border border-white/10 bg-[#0d0d0f] p-3">
                       <div className="mb-2 text-xs font-medium text-zinc-300">{tool.label}</div>
                       <div className="h-48 overflow-hidden rounded border border-white/8">
-                        <PanelContent toolId={toolId} />
+                        <ToolViewHost toolId={toolId} surface="drawer" />
                       </div>
                     </div>
                   );

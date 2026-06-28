@@ -2,10 +2,24 @@ import { createFloatingPanel, type PanelInstance } from './panels';
 import {
   createDefaultWorkspace,
   DEFAULT_WORKSPACE_ID,
+  PANEL_CONTAINER_WIDTH,
   seedLayouts,
   type WorkspaceId,
   type WorkspaceLayout,
 } from './workspace-layout';
+
+function migrateLayout(layout: WorkspaceLayout): WorkspaceLayout {
+  return {
+    ...layout,
+    panelContainers: layout.panelContainers.map((container) => ({
+      ...container,
+      width:
+        container.width === undefined || container.width === 300
+          ? PANEL_CONTAINER_WIDTH
+          : container.width,
+    })),
+  };
+}
 
 const LAYOUTS_KEY = 'agent-workspace-layouts';
 const ACTIVE_KEY = 'agent-active-workspace';
@@ -23,6 +37,41 @@ export interface LayoutSession {
   runtimeContainerPanels: Record<string, string[]>;
   drawerOpen: boolean;
   canvas: { x: number; y: number; scale: number };
+  canvasZoomLocked: boolean;
+  canvasPanLocked: boolean;
+}
+
+type PersistedSession = Partial<LayoutSession> & { canvasLocked?: boolean };
+
+function resolveCanvasLockFlags(parsed: PersistedSession): {
+  canvasZoomLocked: boolean;
+  canvasPanLocked: boolean;
+} {
+  const legacyLocked = parsed.canvasLocked === true;
+  return {
+    canvasZoomLocked:
+      parsed.canvasZoomLocked === true ||
+      (parsed.canvasZoomLocked === undefined && legacyLocked),
+    canvasPanLocked:
+      parsed.canvasPanLocked === true ||
+      (parsed.canvasPanLocked === undefined && legacyLocked),
+  };
+}
+
+function getLayoutCanvasDefaults(): LayoutSession['canvas'] {
+  return { x: 0, y: 0, scale: 1 };
+}
+
+function mergePersistedSession(layout: WorkspaceLayout, parsed: PersistedSession): LayoutSession {
+  const defaults = createDefaultSession(layout);
+  const lockFlags = resolveCanvasLockFlags(parsed);
+  return {
+    ...defaults,
+    ...parsed,
+    canvas: parsed.canvas ?? defaults.canvas,
+    canvasZoomLocked: lockFlags.canvasZoomLocked,
+    canvasPanLocked: lockFlags.canvasPanLocked,
+  };
 }
 
 function isBrowser(): boolean {
@@ -54,7 +103,9 @@ export function createDefaultSession(layout: WorkspaceLayout): LayoutSession {
     runtimeBarTools: {},
     runtimeContainerPanels: {},
     drawerOpen: false,
-    canvas: { x: 0, y: 0, scale: 1 },
+    canvas: getLayoutCanvasDefaults(),
+    canvasZoomLocked: false,
+    canvasPanLocked: false,
   };
 }
 
@@ -67,14 +118,16 @@ export function loadLayouts(): WorkspaceLayout[] {
       saveLayouts(seeded);
       return seeded;
     }
-    const parsed = JSON.parse(raw) as WorkspaceLayout[];
+    const parsed = (JSON.parse(raw) as WorkspaceLayout[]).map(migrateLayout);
     if (!Array.isArray(parsed) || parsed.length === 0) {
       const seeded = seedLayouts();
       saveLayouts(seeded);
       return seeded;
     }
     const hasDefault = parsed.some((layout) => layout.id === DEFAULT_WORKSPACE_ID);
-    return hasDefault ? parsed : [createDefaultWorkspace(), ...parsed];
+    const layouts = hasDefault ? parsed : [createDefaultWorkspace(), ...parsed];
+    saveLayouts(layouts);
+    return layouts;
   } catch {
     const seeded = seedLayouts();
     saveLayouts(seeded);
@@ -102,12 +155,8 @@ export function loadSession(workspaceId: WorkspaceId, layout: WorkspaceLayout): 
   try {
     const raw = localStorage.getItem(sessionKey(workspaceId));
     if (!raw) return createDefaultSession(layout);
-    const parsed = JSON.parse(raw) as LayoutSession;
-    return {
-      ...createDefaultSession(layout),
-      ...parsed,
-      canvas: parsed.canvas ?? { x: 0, y: 0, scale: 1 },
-    };
+    const parsed = JSON.parse(raw) as PersistedSession;
+    return mergePersistedSession(layout, parsed);
   } catch {
     return createDefaultSession(layout);
   }

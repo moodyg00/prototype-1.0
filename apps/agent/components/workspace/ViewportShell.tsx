@@ -1,22 +1,40 @@
 'use client';
 
+import { CanvasControls } from '@/components/workspace/CanvasControls';
 import { CanvasViewport } from '@/components/workspace/CanvasViewport';
+import { ChromeEdgeAdders } from '@/components/workspace/ChromeEdgeAdders';
 import { DockedPanel } from '@/components/workspace/DockedPanel';
 import { FooterDrawer } from '@/components/workspace/FooterDrawer';
 import { PanelContainerView } from '@/components/workspace/PanelContainerView';
 import { TooltipBar } from '@/components/workspace/TooltipBar';
 import { useWorkspace } from '@/components/workspace/WorkspaceProvider';
+import { cn } from '@/lib/utils';
 
 export function ViewportShell() {
-  const { activeLayout, hydrated, getActiveBarTool } = useWorkspace();
+  const { activeLayout, hydrated, getActiveBarTool, layoutEditMode } = useWorkspace();
 
   if (!hydrated) {
     return <div className="viewport-shell flex-1 bg-[#09090b]" />;
   }
 
   return (
-    <div className="viewport-shell relative flex-1 overflow-hidden bg-[#09090b]">
+    <div
+      className={cn(
+        'viewport-shell relative flex-1 overflow-hidden bg-[#09090b]',
+        layoutEditMode && 'is-layout-edit',
+      )}
+    >
       <CanvasViewport />
+
+      <div className="pointer-events-none absolute inset-0 z-[28]">
+        <CanvasControls />
+      </div>
+
+      {layoutEditMode ? (
+        <div className="pointer-events-none absolute inset-0 z-[32]">
+          <ChromeEdgeAdders />
+        </div>
+      ) : null}
 
       <div className="pinned-chrome-layer pointer-events-none absolute inset-0 z-[30] overflow-hidden">
         {activeLayout.tooltipBars.map((bar) => (

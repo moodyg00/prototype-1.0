@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import { useWorkspace } from '@/components/workspace/WorkspaceProvider';
 
@@ -14,13 +15,40 @@ export function WorkspaceEditorModal({
   const { createWorkspace } = useWorkspace();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [mounted, setMounted] = useState(false);
 
-  if (!open) return null;
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
-  return (
-    <div className="overlay-layer fixed inset-0 z-[60] flex items-center justify-center bg-black/55 p-4">
-      <div className="w-full max-w-md rounded-xl border border-white/10 bg-[#111113] p-5 shadow-2xl">
-        <h2 className="text-sm font-semibold text-zinc-100">New workspace</h2>
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onOpenChange(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [open, onOpenChange]);
+
+  if (!open || !mounted) return null;
+
+  return createPortal(
+    <div className="overlay-layer fixed inset-0 z-[90] flex items-center justify-center overflow-y-auto bg-black/55 p-4 sm:p-6">
+      <button
+        type="button"
+        className="absolute inset-0"
+        aria-label="Close new workspace dialog"
+        onClick={() => onOpenChange(false)}
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="new-workspace-title"
+        className="relative my-auto w-full max-w-md rounded-xl border border-white/10 bg-[#111113] p-5 shadow-2xl"
+      >
+        <h2 id="new-workspace-title" className="text-sm font-semibold text-zinc-100">
+          New workspace
+        </h2>
         <p className="mt-1 text-xs text-zinc-500">
           Create a blank layout. Pin bars, containers, and tools from the live UI.
         </p>
@@ -33,6 +61,7 @@ export function WorkspaceEditorModal({
               value={name}
               onChange={(event) => setName(event.target.value)}
               placeholder="Ops desk"
+              autoFocus
             />
           </label>
           <label className="block space-y-1">
@@ -64,6 +93,7 @@ export function WorkspaceEditorModal({
           </Button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

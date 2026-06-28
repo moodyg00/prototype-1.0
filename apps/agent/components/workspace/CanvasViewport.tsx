@@ -1,9 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { WorkspacePanel } from '@/components/WorkspacePanel';
 import { useWorkspace } from '@/components/workspace/WorkspaceProvider';
-import { zoomCanvasAtPointer } from '@/lib/canvas-coords';
 import { cn } from '@/lib/utils';
 
 function canStartPan(target: EventTarget | null): boolean {
@@ -14,6 +13,7 @@ function canStartPan(target: EventTarget | null): boolean {
 export function CanvasViewport() {
   const {
     session,
+    canvasPanLocked,
     setCanvasTransform,
     floatingPanels,
     focusPanel,
@@ -39,28 +39,8 @@ export function CanvasViewport() {
     return () => registerCanvasViewport(null);
   }, [registerCanvasViewport]);
 
-  const onWheel = useCallback(
-    (event: WheelEvent) => {
-      event.preventDefault();
-      const node = ref.current;
-      if (!node) return;
-      const rect = node.getBoundingClientRect();
-      setCanvasTransform(
-        zoomCanvasAtPointer(session.canvas, event.clientX, event.clientY, rect, event.deltaY),
-      );
-    },
-    [session.canvas, setCanvasTransform],
-  );
-
-  useEffect(() => {
-    const node = ref.current;
-    if (!node) return;
-    node.addEventListener('wheel', onWheel, { passive: false });
-    return () => node.removeEventListener('wheel', onWheel);
-  }, [onWheel]);
-
   const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (event.button !== 0 || !canStartPan(event.target)) return;
+    if (canvasPanLocked || event.button !== 0 || !canStartPan(event.target)) return;
     panRef.current = {
       active: true,
       x: event.clientX,
@@ -94,7 +74,11 @@ export function CanvasViewport() {
   return (
     <div
       ref={ref}
-      className={cn('canvas-viewport canvas-layer absolute inset-0 overflow-hidden', panning && 'is-panning')}
+      className={cn(
+        'canvas-viewport canvas-layer absolute inset-0 overflow-hidden',
+        panning && 'is-panning',
+        canvasPanLocked && 'is-pan-locked cursor-default',
+      )}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
