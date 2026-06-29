@@ -141,6 +141,26 @@ export const NODE_CATALOG: NodeTypeDefinition[] = [
     langGraphKind: 'tool',
   },
 
+  {
+    type: 'tool.browser',
+    label: 'Browser Agent',
+    category: 'tool',
+    description: 'Runs the visual browser agent (Playwright + xAI vision) on a task — navigation, login, extraction, and bounded reasoning loop — and returns its final answer.',
+    color: '#0ea5e9',
+    icon: 'Globe',
+    handles: [
+      { id: 'in', direction: 'input', dataType: 'any', label: 'Task' },
+      { id: 'out', direction: 'output', dataType: 'string', label: 'Result' },
+    ],
+    properties: [
+      { key: 'task', label: 'Task (optional, overrides input)', type: 'textarea',
+        placeholder: 'Leave blank to use the workflow input as the task.', group: 'Task' },
+      { key: 'model', label: 'Model', type: 'string', default: 'grok-4.3', group: 'Model' },
+      { key: 'maxSteps', label: 'Max Steps', type: 'number', default: 30, group: 'Config' },
+    ],
+    langGraphKind: 'tool',
+  },
+
   // ── Transform ───────────────────────────────────────────────────────────────
   {
     type: 'transform.extract',

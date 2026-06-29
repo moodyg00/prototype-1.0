@@ -140,9 +140,48 @@ function buildPassthroughNode() {
   return async (): Promise<Partial<GraphState>> => ({});
 }
 
+// Browser agent tool node. Reuses the existing BrowserOperator singleton exactly
+// (Playwright + xAI vision reasoner loop: navigation, login, extraction, bounded
+// loop, secure credential injection). The whole agent loop is encapsulated as a
+// single graph tool node so its behavior is faithful to the standalone operator.
+// BrowserOperator is imported dynamically so its server-only / Playwright deps are
+// only loaded when a workflow actually contains a browser node.
+function buildBrowserToolNode(node: LangGraphNodeIR) {
+  return async (state: GraphState): Promise<Partial<GraphState>> => {
+    const task =
+      (typeof node.properties.task === 'string' && node.properties.task.trim()) ||
+      state.input ||
+      '';
+    if (!task) {
+      return { output: `Browser agent "${node.label}" skipped: no task provided.` };
+    }
+
+    const { getBrowserOperator } = await import('../operators/BrowserOperator');
+    const model =
+      typeof node.properties.model === 'string' && node.properties.model
+        ? (node.properties.model as string)
+        : undefined;
+    const maxSteps =
+      typeof node.properties.maxSteps === 'number' ? (node.properties.maxSteps as number) : undefined;
+
+    const op = getBrowserOperator(model ? { model } : undefined);
+    await op.runTask(task, maxSteps ? { maxSteps } : undefined);
+
+    const answer = op.getFinalAnswer() || 'Browser agent finished without a final answer.';
+    return {
+      messages: [new AIMessage(answer)],
+      output: answer,
+      memory: { ...(state.memory ?? {}), [node.id]: { task, finalAnswer: answer } },
+    };
+  };
+}
+
 function nodeExecutor(node: LangGraphNodeIR) {
+  if (node.nodeType === 'tool.browser') return buildBrowserToolNode(node);
   if (node.model) return buildLlmNode(node);
-  if (node.kind === 'tool' && node.properties.url !== undefined) return buildHttpToolNode(node);
+  if (node.kind === 'tool' && (node.nodeType === 'tool.http' || node.properties.url !== undefined)) {
+    return buildHttpToolNode(node);
+  }
   return buildPassthroughNode();
 }
 

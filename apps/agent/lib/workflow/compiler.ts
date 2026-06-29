@@ -110,6 +110,7 @@ function compileNode(node: WorkflowNode): LangGraphNodeIR {
   const ir: LangGraphNodeIR = {
     id: node.id,
     kind,
+    nodeType: node.data.typeId,
     label: node.data.label,
     stateInputKeys: ['messages', 'input'],
     stateOutputKeys: ['messages', 'output'],
@@ -121,7 +122,7 @@ function compileNode(node: WorkflowNode): LangGraphNodeIR {
     ir.systemPrompt = (props.systemPrompt as string) || '';
   }
 
-  if (node.data.typeId === 'tool.http' || node.data.typeId === 'tool.code') {
+  if (node.data.typeId === 'tool.http' || node.data.typeId === 'tool.code' || node.data.typeId === 'tool.browser') {
     ir.kind = 'tool';
     ir.toolRef = node.id;
   }

@@ -229,7 +229,7 @@ export class BrowserOperator implements Operator {
     this.view = { ...this.view, ...patch };
   }
 
-  async runTask(prompt: string): Promise<void> {
+  async runTask(prompt: string, opts?: { maxSteps?: number }): Promise<void> {
     if (this.running) this.stop();
     if (!prompt.trim()) {
       this.emit(makeEvent('error', 'Empty task.'));
@@ -279,7 +279,7 @@ export class BrowserOperator implements Operator {
       await this.page!.setViewportSize(this.config.viewport!).catch(() => {});
       await this.delay(400);
 
-      const maxSteps = 30;
+      const maxSteps = opts?.maxSteps && opts.maxSteps > 0 ? opts.maxSteps : 30;
       let step = 0;
 
       while (step < maxSteps && this.running && !this.abortController.signal.aborted) {

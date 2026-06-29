@@ -122,6 +122,8 @@ export interface LangGraphStateField {
 export interface LangGraphNodeIR {
   id: string;
   kind: 'node' | 'conditional' | 'tool' | 'interrupt' | 'subgraph';
+  /** Original catalog type id (e.g. 'tool.browser'); lets the runtime dispatch the right executor. */
+  nodeType?: string;
   label: string;
   stateInputKeys: string[];
   stateOutputKeys: string[];

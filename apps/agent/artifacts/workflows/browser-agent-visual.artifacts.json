@@ -1,0 +1,293 @@
+{
+  "workflowId": "cmqz8nkia0000pcacctgtqrn5",
+  "version": 2,
+  "exportedAt": "2026-06-29T13:13:31.906Z",
+  "productionJson": {
+    "id": "cmqz8nkia0000pcacctgtqrn5",
+    "kind": "langgraph",
+    "name": "Browser Agent Visual",
+    "edges": [
+      {
+        "id": "e1",
+        "source": "trigger",
+        "target": "approve",
+        "sourceHandle": "out",
+        "targetHandle": "in"
+      },
+      {
+        "id": "e2",
+        "source": "approve",
+        "target": "browser",
+        "sourceHandle": "out",
+        "targetHandle": "in"
+      },
+      {
+        "id": "e3",
+        "source": "browser",
+        "target": "respond",
+        "sourceHandle": "out",
+        "targetHandle": "in"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "trigger",
+        "data": {
+          "icon": "Play",
+          "color": "#6366f1",
+          "label": "Task Input",
+          "typeId": "trigger.manual",
+          "handles": [
+            {
+              "id": "out",
+              "label": "Output",
+              "dataType": "any",
+              "direction": "output"
+            }
+          ],
+          "category": "trigger",
+          "properties": {
+            "payload": "{}"
+          }
+        },
+        "type": "workflowNode",
+        "position": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": "approve",
+        "data": {
+          "icon": "Pause",
+          "color": "#d97706",
+          "label": "Human Approval / Login Gate",
+          "typeId": "langgraph.interrupt",
+          "handles": [
+            {
+              "id": "in",
+              "label": "State",
+              "dataType": "any",
+              "direction": "input"
+            },
+            {
+              "id": "out",
+              "label": "Resumed",
+              "dataType": "any",
+              "direction": "output"
+            }
+          ],
+          "category": "langgraph",
+          "properties": {
+            "prompt": "Approve the browser task before the agent acts. If the target site requires login, save the credentials in Secure Logins first, then resume."
+          }
+        },
+        "type": "workflowNode",
+        "position": {
+          "x": 280,
+          "y": 0
+        }
+      },
+      {
+        "id": "browser",
+        "data": {
+          "icon": "Globe",
+          "color": "#0ea5e9",
+          "label": "Browser Agent Loop",
+          "typeId": "tool.browser",
+          "handles": [
+            {
+              "id": "in",
+              "label": "Task",
+              "dataType": "any",
+              "direction": "input"
+            },
+            {
+              "id": "out",
+              "label": "Result",
+              "dataType": "string",
+              "direction": "output"
+            }
+          ],
+          "category": "tool",
+          "properties": {
+            "task": "",
+            "model": "grok-4.3",
+            "maxSteps": 30
+          }
+        },
+        "type": "workflowNode",
+        "position": {
+          "x": 560,
+          "y": 0
+        }
+      },
+      {
+        "id": "respond",
+        "data": {
+          "icon": "Send",
+          "color": "#64748b",
+          "label": "Final Answer",
+          "typeId": "output.respond",
+          "handles": [
+            {
+              "id": "in",
+              "label": "Body",
+              "dataType": "any",
+              "direction": "input"
+            }
+          ],
+          "category": "output",
+          "properties": {
+            "statusCode": 200,
+            "contentType": "application/json"
+          }
+        },
+        "type": "workflowNode",
+        "position": {
+          "x": 840,
+          "y": 0
+        }
+      }
+    ],
+    "version": 2,
+    "metadata": {
+      "tags": [
+        "migration",
+        "browser",
+        "visual"
+      ],
+      "envVars": [],
+      "triggers": [
+        {
+          "kind": "manual",
+          "config": {}
+        }
+      ],
+      "createdAt": "2026-06-29T13:13:23.484Z",
+      "timeoutMs": 300000,
+      "updatedAt": "2026-06-29T13:13:27.535Z",
+      "maxRetries": 0,
+      "errorPolicy": "stop",
+      "executionMode": "sequential"
+    },
+    "description": "Visual LangGraph port of the Playwright + xAI vision browser agent. trigger -> human approval (interrupt) -> browser agent loop -> respond."
+  },
+  "langGraphIr": {
+    "workflowId": "cmqz8nkia0000pcacctgtqrn5",
+    "workflowName": "Browser Agent Visual",
+    "stateSchema": [
+      {
+        "key": "messages",
+        "type": "BaseMessage[]",
+        "reducer": "append",
+        "description": "Conversation message history"
+      },
+      {
+        "key": "input",
+        "type": "string",
+        "reducer": "replace",
+        "description": "Current input to process"
+      },
+      {
+        "key": "output",
+        "type": "string",
+        "reducer": "replace",
+        "description": "Final output value"
+      }
+    ],
+    "entryPoint": "trigger",
+    "nodes": [
+      {
+        "id": "trigger",
+        "kind": "node",
+        "nodeType": "trigger.manual",
+        "label": "Task Input",
+        "stateInputKeys": [
+          "messages",
+          "input"
+        ],
+        "stateOutputKeys": [
+          "messages",
+          "output"
+        ],
+        "properties": {
+          "payload": "{}"
+        }
+      },
+      {
+        "id": "approve",
+        "kind": "interrupt",
+        "nodeType": "langgraph.interrupt",
+        "label": "Human Approval / Login Gate",
+        "stateInputKeys": [
+          "messages",
+          "input"
+        ],
+        "stateOutputKeys": [
+          "messages",
+          "output"
+        ],
+        "properties": {
+          "prompt": "Approve the browser task before the agent acts. If the target site requires login, save the credentials in Secure Logins first, then resume."
+        }
+      },
+      {
+        "id": "browser",
+        "kind": "tool",
+        "nodeType": "tool.browser",
+        "label": "Browser Agent Loop",
+        "stateInputKeys": [
+          "messages",
+          "input"
+        ],
+        "stateOutputKeys": [
+          "messages",
+          "output"
+        ],
+        "properties": {
+          "task": "",
+          "model": "grok-4.3",
+          "maxSteps": 30
+        },
+        "toolRef": "browser"
+      },
+      {
+        "id": "respond",
+        "kind": "node",
+        "nodeType": "output.respond",
+        "label": "Final Answer",
+        "stateInputKeys": [
+          "messages",
+          "input"
+        ],
+        "stateOutputKeys": [
+          "messages",
+          "output"
+        ],
+        "properties": {
+          "statusCode": 200,
+          "contentType": "application/json"
+        }
+      }
+    ],
+    "edges": [
+      {
+        "from": "trigger",
+        "to": "approve"
+      },
+      {
+        "from": "approve",
+        "to": "browser"
+      },
+      {
+        "from": "browser",
+        "to": "respond"
+      }
+    ],
+    "interruptBefore": [
+      "approve"
+    ]
+  },
+  "typescriptScaffold": "import { StateGraph, START, END, Annotation, interrupt } from '@langchain/langgraph';\nimport { ChatOpenAI } from '@langchain/openai';\nimport { BaseMessage, SystemMessage } from '@langchain/core/messages';\nimport { tool } from '@langchain/core/tools';\nimport { z } from 'zod';\n\n// Auto-generated from workflow: Browser Agent Visual\n// Workflow ID: cmqz8nkia0000pcacctgtqrn5\n// Generated: 2026-06-29T13:13:31.906Z\n\n\nconst StateAnnotation = Annotation.Root({\n  messages: Annotation<BaseMessage[]>({ reducer: (a: any, b: any) => [...(a || []), ...(Array.isArray(b) ? b : [b])] }),\n  input: Annotation<string>(null),\n  output: Annotation<string>(null),\n});\n\n\n// Tool: Browser Agent Loop\nasync function browser_tool(input: unknown) {\n  // TODO: implement tool logic for \"Browser Agent Loop\"\n  throw new Error('Tool \"Browser Agent Loop\" not implemented');\n}\nconst browser = tool(browser_tool, {\n  name: 'browser',\n  description: 'Browser Agent Loop',\n  schema: z.object({ input: z.unknown() }),\n});\n\nasync function trigger(state: typeof StateAnnotation.State) {\n  // TODO: implement node \"Task Input\"\n  return {};\n}\n\nasync function approve(state: typeof StateAnnotation.State) {\n  interrupt(\"Approve the browser task before the agent acts. If the target site requires login, save the credentials in Secure Logins first, then resume.\");\n  return {};\n}\n\nasync function respond(state: typeof StateAnnotation.State) {\n  // TODO: implement node \"Final Answer\"\n  return {};\n}\nconst builder = new StateGraph(StateAnnotation);\n\nbuilder.addNode('trigger', trigger);\nbuilder.addNode('approve', approve);\nbuilder.addNode('respond', respond);\nbuilder.addNode('tools', new ToolNode([browser]));\n\n// Entry point\nbuilder.addEdge(START, 'trigger');\nbuilder.addEdge('trigger', 'approve');\nbuilder.addEdge('approve', 'browser');\nbuilder.addEdge('browser', 'respond');\n\n// Export\nexport const graph = builder.compile({\n  interruptBefore: [\"approve\"],\n});\nexport type WorkflowState = typeof StateAnnotation.State;"
+}
