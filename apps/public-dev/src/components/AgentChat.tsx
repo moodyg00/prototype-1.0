@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Bot, Loader2, Send, Wrench } from 'lucide-react';
+import { PaneZoomControls } from './PaneZoomControls';
+import { usePaneZoom, usePaneZoomShortcuts } from '@/src/lib/usePaneZoom';
 
 type ToolEvent = { tool: string; summary: string };
 
@@ -24,6 +26,9 @@ export function AgentChat({
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const paneRef = useRef<HTMLDivElement>(null);
+  const agentZoom = usePaneZoom('agent', 14);
+  usePaneZoomShortcuts(paneRef, agentZoom);
 
   useEffect(() => {
     setMessages([]);
@@ -64,13 +69,29 @@ export function AgentChat({
   };
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex items-center gap-2 border-b border-[var(--color-border)] px-3 py-2 text-xs uppercase tracking-wide text-[var(--color-muted)]">
-        <Bot size={14} className="text-[var(--color-accent)]" /> Agent
+    <div ref={paneRef} className="flex h-full flex-col">
+      <div className="flex items-center justify-between gap-2 border-b border-[var(--color-border)] px-3 py-2 text-xs uppercase tracking-wide text-[var(--color-muted)]">
+        <span className="flex items-center gap-2">
+          <Bot size={14} className="text-[var(--color-accent)]" /> Agent
+        </span>
+        <PaneZoomControls
+          value={agentZoom.size}
+          defaultValue={agentZoom.defaultSize}
+          min={agentZoom.min}
+          max={agentZoom.max}
+          onZoomIn={agentZoom.zoomIn}
+          onZoomOut={agentZoom.zoomOut}
+          onReset={agentZoom.reset}
+          title="Agent chat font size"
+        />
       </div>
-      <div ref={scrollRef} className="min-h-0 flex-1 space-y-3 overflow-auto p-3 text-sm">
+      <div
+        ref={scrollRef}
+        className="min-h-0 flex-1 space-y-3 overflow-auto p-3"
+        style={{ fontSize: `${agentZoom.size}px` }}
+      >
         {messages.length === 0 && (
-          <p className="text-xs text-[var(--color-muted)]">
+          <p className="text-[0.85em] text-[var(--color-muted)]">
             Ask the agent to edit files in <strong>{slug ?? 'this project'}</strong>. It can read,
             write, and delete files scoped to this project only. It will never deploy without your
             confirmation.
@@ -91,7 +112,7 @@ export function AgentChat({
               {m.tools && m.tools.length > 0 && (
                 <div className="mt-2 space-y-1 border-t border-[var(--color-border)] pt-2">
                   {m.tools.map((t, j) => (
-                    <div key={j} className="flex items-center gap-1 text-xs text-[var(--color-muted)]">
+                    <div key={j} className="flex items-center gap-1 text-[0.85em] text-[var(--color-muted)]">
                       <Wrench size={11} /> <span className="font-mono">{t.tool}</span> — {t.summary}
                     </div>
                   ))}
@@ -101,12 +122,12 @@ export function AgentChat({
           </div>
         ))}
         {busy && (
-          <div className="flex items-center gap-2 text-xs text-[var(--color-muted)]">
+          <div className="flex items-center gap-2 text-[0.85em] text-[var(--color-muted)]">
             <Loader2 size={13} className="animate-spin" /> thinking…
           </div>
         )}
       </div>
-      <div className="border-t border-[var(--color-border)] p-2">
+      <div className="border-t border-[var(--color-border)] p-2" style={{ fontSize: `${agentZoom.size}px` }}>
         <div className="flex items-end gap-2">
           <textarea
             value={input}
@@ -120,7 +141,7 @@ export function AgentChat({
             placeholder={slug ? 'Edit this project…' : 'Select a project'}
             disabled={!slug || busy}
             rows={2}
-            className="min-h-0 flex-1 resize-none rounded-md border border-[var(--color-border)] bg-[var(--color-panel-2)] px-2 py-1.5 text-sm outline-none focus:border-[var(--color-accent)] disabled:opacity-50"
+            className="min-h-0 flex-1 resize-none rounded-md border border-[var(--color-border)] bg-[var(--color-panel-2)] px-2 py-1.5 outline-none focus:border-[var(--color-accent)] disabled:opacity-50"
           />
           <button
             onClick={send}

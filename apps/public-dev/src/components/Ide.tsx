@@ -23,7 +23,10 @@ import { FileTree } from './FileTree';
 import { AgentChat } from './AgentChat';
 import { DeployModal } from './DeployModal';
 import { NewProjectModal } from './NewProjectModal';
+import { NewEntryModal } from './NewEntryModal';
 import { ProjectSettingsModal } from './ProjectSettingsModal';
+import { PaneZoomControls } from './PaneZoomControls';
+import { usePaneZoom, usePaneZoomShortcuts } from '@/src/lib/usePaneZoom';
 
 const PREVIEW_TAB = '__preview__';
 
@@ -108,9 +111,14 @@ export function Ide({ initialProjects }: { initialProjects: ProjectMeta[] }) {
   const [showDeploy, setShowDeploy] = useState(false);
   const [showNewProject, setShowNewProject] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [newEntryKind, setNewEntryKind] = useState<'file' | 'dir' | null>(null);
 
   const filesRef = useRef(files);
   filesRef.current = files;
+
+  const editorPaneRef = useRef<HTMLElement>(null);
+  const editorZoom = usePaneZoom('editor', 13);
+  usePaneZoomShortcuts(editorPaneRef, editorZoom);
 
   const activeFile = active !== PREVIEW_TAB ? files[active] : undefined;
   const activeIsText = activeFile?.kind === 'text' || (activeFile?.kind === 'image' && activeFile.asText);
@@ -256,25 +264,21 @@ export function Ide({ initialProjects }: { initialProjects: ProjectMeta[] }) {
     [flash],
   );
 
-  const newEntry = useCallback(
-    async (kind: 'file' | 'dir') => {
-      if (!slug) return;
-      const path = window.prompt(kind === 'file' ? 'New file path (e.g. about.html)' : 'New folder path (e.g. images)');
-      if (!path) return;
+  const createEntry = useCallback(
+    async (path: string) => {
+      if (!slug || !newEntryKind) throw new Error('No project selected');
       const res = await fetch(`/api/projects/${slug}/files`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path, kind }),
+        body: JSON.stringify({ path, kind: newEntryKind }),
       });
       const data = await res.json();
-      if (!res.ok) {
-        flash(data.error || 'Create failed');
-        return;
-      }
+      if (!res.ok) throw new Error(data.error || 'Create failed');
       await refreshTree(slug);
-      if (kind === 'file') openFile(path);
+      if (newEntryKind === 'file') openFile(data.path ?? path);
+      flash(`Created ${data.path ?? path}`);
     },
-    [slug, refreshTree, openFile, flash],
+    [slug, newEntryKind, refreshTree, openFile, flash],
   );
 
   const deleteEntry = useCallback(
@@ -371,13 +375,31 @@ export function Ide({ initialProjects }: { initialProjects: ProjectMeta[] }) {
           <div className="flex items-center justify-between border-b border-[var(--color-border)] px-3 py-2 text-xs uppercase tracking-wide text-[var(--color-muted)]">
             <span>Files</span>
             <div className="flex items-center gap-1">
-              <button title="New file" onClick={() => newEntry('file')} className="hover:text-[var(--color-fg)]">
+              <button
+                type="button"
+                title="New file"
+                disabled={!slug}
+                onClick={() => setNewEntryKind('file')}
+                className="hover:text-[var(--color-fg)] disabled:opacity-40"
+              >
                 <FilePlus2 size={14} />
               </button>
-              <button title="New folder" onClick={() => newEntry('dir')} className="hover:text-[var(--color-fg)]">
+              <button
+                type="button"
+                title="New folder"
+                disabled={!slug}
+                onClick={() => setNewEntryKind('dir')}
+                className="hover:text-[var(--color-fg)] disabled:opacity-40"
+              >
                 <FolderPlus size={14} />
               </button>
-              <button title="Refresh" onClick={() => slug && refreshTree(slug)} className="hover:text-[var(--color-fg)]">
+              <button
+                type="button"
+                title="Refresh"
+                disabled={!slug}
+                onClick={() => slug && refreshTree(slug)}
+                className="hover:text-[var(--color-fg)] disabled:opacity-40"
+              >
                 <RefreshCw size={13} />
               </button>
             </div>
@@ -388,7 +410,7 @@ export function Ide({ initialProjects }: { initialProjects: ProjectMeta[] }) {
         </aside>
 
         {/* Center: tab bar + content */}
-        <main className="flex min-w-0 flex-1 flex-col">
+        <main ref={editorPaneRef} className="flex min-w-0 flex-1 flex-col">
           {/* Tab strip */}
           <div className="flex items-stretch overflow-x-auto border-b border-[var(--color-border)] bg-[var(--color-panel)] text-sm">
             {/* Preview tab (pinned) */}
@@ -437,15 +459,27 @@ export function Ide({ initialProjects }: { initialProjects: ProjectMeta[] }) {
               );
             })}
             {/* Save button at far right of strip */}
+            <div className="ml-auto flex shrink-0 items-center gap-2 px-2">
+              <PaneZoomControls
+                value={editorZoom.size}
+                defaultValue={editorZoom.defaultSize}
+                min={editorZoom.min}
+                max={editorZoom.max}
+                onZoomIn={editorZoom.zoomIn}
+                onZoomOut={editorZoom.zoomOut}
+                onReset={editorZoom.reset}
+                title="Editor font size"
+              />
             {active !== PREVIEW_TAB && (
               <button
                 onClick={save}
                 disabled={!dirty || saving}
-                className="ml-auto flex shrink-0 items-center gap-1 px-3 py-2 text-xs text-[var(--color-muted)] hover:text-[var(--color-fg)] disabled:opacity-40"
+                className="flex shrink-0 items-center gap-1 px-1 py-2 text-xs text-[var(--color-muted)] hover:text-[var(--color-fg)] disabled:opacity-40"
               >
                 {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />} Save
               </button>
             )}
+            </div>
           </div>
 
           {/* Content area */}
@@ -479,7 +513,7 @@ export function Ide({ initialProjects }: { initialProjects: ProjectMeta[] }) {
                   onChange={(v) => onEditorChange(active, v ?? '')}
                   loading={<div className="p-4 text-sm text-[var(--color-muted)]">Loading editor…</div>}
                   options={{
-                    fontSize: 13,
+                    fontSize: editorZoom.size,
                     minimap: { enabled: false },
                     scrollBeyondLastLine: false,
                     tabSize: 2,
@@ -520,6 +554,13 @@ export function Ide({ initialProjects }: { initialProjects: ProjectMeta[] }) {
       )}
       {showSettings && slug && (
         <ProjectSettingsModal slug={slug} onClose={() => setShowSettings(false)} onSaved={handleProjectSaved} />
+      )}
+      {newEntryKind && slug && (
+        <NewEntryModal
+          kind={newEntryKind}
+          onClose={() => setNewEntryKind(null)}
+          onCreate={createEntry}
+        />
       )}
     </div>
   );

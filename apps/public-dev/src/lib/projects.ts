@@ -297,12 +297,23 @@ export async function createFile(
   relPath: string,
   kind: 'file' | 'dir',
 ): Promise<void> {
-  const abs = resolveInProject(slug, relPath);
+  const trimmed = relPath.trim().replace(/\\/g, '/').replace(/^\/+/, '').replace(/\/+$/, '');
+  if (!trimmed || trimmed === '.' || trimmed === '..') {
+    throw new Error('Invalid path');
+  }
+  const abs = resolveInProject(slug, trimmed);
+  const root = getProjectRoot(slug);
+  if (abs === root) {
+    throw new Error(kind === 'dir' ? 'Cannot create project root folder' : 'Cannot create a file at project root without a name');
+  }
+  if (existsSync(abs)) {
+    throw new Error(kind === 'dir' ? 'Folder already exists' : 'File already exists');
+  }
   if (kind === 'dir') {
     await fs.mkdir(abs, { recursive: true });
   } else {
     await fs.mkdir(path.dirname(abs), { recursive: true });
-    if (!existsSync(abs)) await fs.writeFile(abs, '', 'utf8');
+    await fs.writeFile(abs, '', 'utf8');
   }
   await touchProject(slug);
 }

@@ -29,9 +29,13 @@ export async function POST(req: Request, { params }: Ctx) {
   if (!parsed.success) {
     return NextResponse.json({ error: 'Invalid input' }, { status: 400 });
   }
+  const relPath = parsed.data.path.trim().replace(/\\/g, '/').replace(/^\/+/, '').replace(/\/+$/, '');
+  if (!relPath || relPath.includes('..')) {
+    return NextResponse.json({ error: 'Invalid path' }, { status: 400 });
+  }
   try {
-    await createFile(slug, parsed.data.path, parsed.data.kind);
-    return NextResponse.json({ ok: true }, { status: 201 });
+    await createFile(slug, relPath, parsed.data.kind);
+    return NextResponse.json({ ok: true, path: relPath }, { status: 201 });
   } catch (err) {
     return NextResponse.json({ error: (err as Error).message }, { status: 400 });
   }
