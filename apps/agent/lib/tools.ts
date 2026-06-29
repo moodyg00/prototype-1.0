@@ -7,6 +7,7 @@ import {
   GitBranch,
   Globe,
   Image as ImageIcon,
+  Play,
   Smartphone,
   Terminal,
   Users,
@@ -18,6 +19,7 @@ import type { ToolSurface } from './tool-surfaces';
 export type ToolId =
   | 'team'
   | 'workflow'
+  | 'runner'
   | 'langsmith'
   | 'visual-browser'
   | 'pure-browser'
@@ -50,6 +52,7 @@ export interface ToolDef {
 export const TOOLS: ToolDef[] = [
   { id: 'team', label: 'Team', icon: Users, description: 'Executive meeting interface', source: 'core', status: 'built', defaultSize: { w: 1180, h: 760 } },
   { id: 'workflow', label: 'Workflow', icon: GitBranch, description: 'Native workflow graph builder with LangGraph export', source: 'core', status: 'built', defaultSize: { w: 1180, h: 760 } },
+  { id: 'runner', label: 'Runner', icon: Play, description: 'Execute LangGraph workflows with live state & human-in-the-loop', source: 'core', status: 'built', defaultSize: { w: 1000, h: 680 } },
   { id: 'langsmith', label: 'LangSmith', icon: Activity, description: 'Trace dashboard and run analysis', source: 'langchain', status: 'built', defaultSize: { w: 1180, h: 760 } },
   { id: 'pure-browser', label: 'Pure Browser', icon: Terminal, description: 'Fast CDP browser — accessibility tree, no vision cost', source: 'core', status: 'built', defaultSize: { w: 900, h: 600 } },
   { id: 'visual-browser', label: 'Visual Browser', icon: Bot, description: 'Visual-first browser operator', source: 'core', status: 'built', defaultSize: { w: 1100, h: 700 } },

@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Node, Edge } from '@xyflow/react';
-import { Download, Plus, RefreshCw, Save, Workflow } from 'lucide-react';
+import { Download, Play, Plus, RefreshCw, Save, Workflow } from 'lucide-react';
 import { WorkflowCanvas } from '../workflow/WorkflowCanvas';
 import { NodePalette } from '../workflow/NodePalette';
 import { NodeInspector } from '../workflow/NodeInspector';
-import type { WorkflowNodeData, WorkflowDefinition } from '../../lib/workflow/types';
+import { RunnerPanel } from './RunnerPanel';
+import type { WorkflowNodeData, WorkflowDefinition, WorkflowKind } from '../../lib/workflow/types';
 
 type WorkflowSummary = {
   id: string;
@@ -22,7 +23,7 @@ function emptyDefinition(name: string): Omit<WorkflowDefinition, 'id'> {
   return {
     name,
     description: '',
-    kind: 'standard',
+    kind: 'langgraph',
     version: 1,
     nodes: [],
     edges: [],
@@ -52,6 +53,10 @@ export function WorkflowPanel() {
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [status, setStatus] = useState<string>('');
+  const [kind, setKind] = useState<WorkflowKind>('langgraph');
+  const [activeTab, setActiveTab] = useState<'build' | 'run'>('build');
+  const kindRef = useRef(kind);
+  kindRef.current = kind;
 
   const selectedNode = useMemo(
     () => nodes.find(n => n.id === selectedNodeId) ?? null,
@@ -97,7 +102,7 @@ export function WorkflowPanel() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name,
-          kind: 'standard',
+          kind: kindRef.current,
           nodes: seed.nodes,
           edges: seed.edges,
         }),
@@ -232,6 +237,30 @@ export function WorkflowPanel() {
             <option key={w.id} value={w.id}>{w.name}</option>
           ))}
         </select>
+        <select
+          value={kind}
+          onChange={e => setKind(e.target.value as WorkflowKind)}
+          className="ml-1 bg-white/5 border border-white/10 text-xs text-zinc-300 rounded px-2 py-1"
+          title="Kind for new workflows"
+        >
+          <option value="langgraph">langgraph</option>
+          <option value="standard">standard</option>
+        </select>
+        <div className="ml-2 flex items-center rounded-md border border-white/10 bg-white/5 p-0.5">
+          <button
+            onClick={() => setActiveTab('build')}
+            className={`text-[11px] px-2 py-0.5 rounded ${activeTab === 'build' ? 'bg-white/10 text-zinc-100' : 'text-zinc-400'}`}
+          >
+            Build
+          </button>
+          <button
+            onClick={() => setActiveTab('run')}
+            disabled={!workflowId}
+            className={`flex items-center gap-1 text-[11px] px-2 py-0.5 rounded ${activeTab === 'run' ? 'bg-white/10 text-zinc-100' : 'text-zinc-400'}`}
+          >
+            <Play size={10} /> Run
+          </button>
+        </div>
         <div className="flex-1" />
         {status && <span className="text-[10px] text-zinc-500">{status}</span>}
         <button onClick={refreshWorkflows} className="btn btn-ghost !p-1.5" title="Refresh">
@@ -248,6 +277,11 @@ export function WorkflowPanel() {
         </button>
       </div>
 
+      {activeTab === 'run' && workflowId ? (
+        <div className="flex-1 min-h-0">
+          <RunnerPanel workflowId={workflowId} workflowName={workflowName} lockWorkflow />
+        </div>
+      ) : (
       <div className="flex-1 min-h-0 flex">
         <div className="w-64 min-w-64">
           <NodePalette />
@@ -280,6 +314,7 @@ export function WorkflowPanel() {
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }

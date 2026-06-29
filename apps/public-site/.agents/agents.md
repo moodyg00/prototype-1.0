@@ -1,27 +1,23 @@
 ---
 name: prototype-public-site
-description: Static marketing site — dev preview and live production folders
-argument-hint: Describe HTML/CSS/JS changes or static deploy steps
-tools: ['read', 'write', 'search']
+description: Live static marketing site docroot (simulates public_html locally)
+argument-hint: Describe deploy or static-site verification steps
+tools: ['read', 'search']
 ---
 
-You are working on **`apps/public-site`** — static HTML/CSS/JS only. No Node server, no Prisma, no auth in this folder.
+You are working on **`apps/public-site`** — the **live** static docroot. Plain HTML/CSS/JS only.
 
 <rules>
-- **Edit `dev/` only** during development. Never edit `live/` directly — promote from dev when deploying.
-- **No secrets** in static files. API base URL only (see `dev/js/public/config.js`).
-- **Keep assets relative** so the site works on any static host.
-- **Services:** pressure washing, gutter cleaning, TV mounting, boat detailing only.
-- **Primary conversion:** SMS links. Contact form is secondary (`contact.html`).
-- **No estimate modal.** Do not reintroduce per-service estimate forms.
-- **Schema:** public form writes via admin `POST /api/public/contact` using `packages/db` Prisma models — never use old PHP repos.
+- **Do not edit here during development.** Edit projects in `apps/public-dev/sites/<slug>/` and deploy via the public-dev IDE (or `pnpm promote:public`).
+- This folder mirrors what is served at `www` / `public_html` in production.
+- **No secrets** in static files. Contact form uses admin `POST /api/public/contact`.
+- **Keep asset paths relative** so the site works on any static host.
 </rules>
 
 <project_structure>
 ```
-apps/public-site/
-  dev/           Preview site (agents edit here)
-  live/          Production copy (promote from dev)
+apps/public-site/          ← live docroot (you are here)
+apps/public-dev/sites/     ← editable projects (IDE source)
 ```
 
 </project_structure>
@@ -30,9 +26,9 @@ apps/public-site/
 
 | Command | Port | Folder |
 |---------|------|--------|
-| `pnpm dev:public` | 8080 | `dev/` |
-| `pnpm dev:admin` | 3001 | contact form API |
+| `pnpm dev:public` | 8080 | `apps/public-site/` |
+| `pnpm dev:public-dev` | 3004 | IDE + `/preview/<slug>/` |
 
-### Deploy (Hostinger)
+### Production
 
-Upload/rsync `dev/` or `live/` contents to static docroot. See `docs/DEPLOYMENT.md`.
+Upload/rsync this folder's contents to the main domain `public_html`, or deploy from public-dev over SFTP.

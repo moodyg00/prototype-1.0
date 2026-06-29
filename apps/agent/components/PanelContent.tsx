@@ -4,6 +4,7 @@ import { BrowserPanel } from '@/components/panels/BrowserPanel';
 import { LangSmithPanel } from '@/components/panels/LangSmithPanel';
 import { PlaceholderPanel } from '@/components/panels/PlaceholderPanel';
 import { PureBrowserPanel } from '@/components/panels/PureBrowserPanel';
+import { RunnerPanel } from '@/components/panels/RunnerPanel';
 import { TeamPanel } from '@/components/panels/TeamPanel';
 import { WorkflowPanel } from '@/components/panels/WorkflowPanel';
 import { getRegisteredToolView } from '@/lib/tool-views';
@@ -13,6 +14,7 @@ import { getTool, type ToolId } from '@/lib/tools';
 function LegacyToolView({ toolId }: { toolId: ToolId }) {
   if (toolId === 'team') return <TeamPanel />;
   if (toolId === 'workflow') return <WorkflowPanel />;
+  if (toolId === 'runner') return <RunnerPanel />;
   if (toolId === 'langsmith') return <LangSmithPanel />;
   if (toolId === 'pure-browser') return <PureBrowserPanel />;
   if (toolId === 'visual-browser') return <BrowserPanel />;

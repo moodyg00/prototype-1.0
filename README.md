@@ -9,8 +9,8 @@ Moody Home Service monorepo — admin, agent workspace, background worker, and s
 | Admin | `@prototype/admin` | 3001 | Business ops UI (accounting, billing, banking, CRM, settings) |
 | Agent | `@prototype/agent` | 3002 | Agent workspace — browser automation, workflows, AI operators |
 | Worker | `@prototype/worker` | 3003 | HTTP cron job runner (proxies to admin `/api/cron/*`) |
-| Public Dev | `@prototype/public-dev` | 3004 | Static-site IDE — edit & deploy `/sites/<slug>` projects over SSH/SFTP |
-| Public site | — | 8080 / 8081 | Static HTML in `apps/public-site/dev` and `live` (legacy — being migrated to `/sites/`) |
+| Public Dev | `@prototype/public-dev` | 3004 | Static-site IDE — edit `sites/<slug>/`, preview + deploy |
+| Public site | — | 8080 | Live docroot simulation (`apps/public-site/` → `public_html` in prod) |
 
 ## Packages
 
@@ -48,13 +48,13 @@ See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for Hostinger setup, env vars, DNS,
 | `pnpm dev:admin` | Admin on :3001 |
 | `pnpm dev:agent` | Agent on :3002 |
 | `pnpm dev:worker` | Worker on :3003 |
-| `pnpm dev:public-dev` | Static-site IDE on :3004 (edit/deploy `/sites/<slug>`) |
-| `pnpm dev:public` | Static dev site on :8080 |
-| `pnpm dev:public:live` | Static live preview on :8081 |
-| `pnpm promote:public` | Copy `dev/` → `live/` |
+| `pnpm dev:public-dev` | Static-site IDE on :3004 |
+| `pnpm dev:public` | Serve live docroot on :8080 (`apps/public-site/`) |
+| `pnpm promote:public` | Copy `sites/home-services` → `apps/public-site/` (CLI alternative to IDE deploy) |
 | `pnpm build` | Turbo build all apps/packages |
 | `pnpm hostinger:admin` | Production build for Hostinger admin deploy |
 | `pnpm hostinger:agent` | Production build for Hostinger agent deploy |
+| `pnpm hostinger:public-dev` | Production build for Hostinger public-dev deploy |
 | `pnpm hostinger:worker` | Install-only prep for Hostinger worker deploy |
 
 ## Database

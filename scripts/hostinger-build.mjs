@@ -21,6 +21,9 @@ if (app === 'agent') {
 } else if (app === 'admin') {
   pnpm(['--filter', '@prototype/admin', 'build']);
   runHostingerPostbuild('admin');
+} else if (app === 'public-dev') {
+  pnpm(['--filter', '@prototype/public-dev', 'build']);
+  runHostingerPostbuild('public-dev');
 } else if (app === 'worker') {
   // worker has no next build
   process.exit(0);

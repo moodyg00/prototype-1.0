@@ -3,13 +3,19 @@ import { existsSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import SftpClient from 'ssh2-sftp-client';
-import { getProjectRoot, getSitesRoot, isValidSlug, type ProjectMeta } from '@/src/lib/projects';
+import {
+  getDefaultLiveDocroot,
+  getProjectRoot,
+  getPublicDevRoot,
+  isValidSlug,
+  type ProjectMeta,
+} from '@/src/lib/projects';
 import type { DeployFileChange, DeployOverrides, DeployPlan, DeployResult } from '@/src/lib/types';
 
 /**
- * SSH/SFTP deployer. Pushes a project's static files to a remote docroot using
- * key-based auth. Config is target-driven; v1 ships a single "live" target read
- * from DEPLOY_LIVE_* env vars.
+ * Deployer: copies a project's static files to a docroot.
+ * - host=local → filesystem copy to apps/public-site/ (dev simulation of public_html)
+ * - host=<remote> → SSH/SFTP upload to production docroot
  */
 
 export type DeployTargetConfig = {
@@ -20,6 +26,7 @@ export type DeployTargetConfig = {
   privateKeyPath: string;
   passphrase?: string;
   docroot: string;
+  local: boolean;
 };
 
 const DEFAULT_IGNORES = ['.git', 'node_modules', '.DS_Store', '.project.json', '.deploy-ignore'];
@@ -29,34 +36,51 @@ function expandHome(p: string): string {
   return p;
 }
 
+function resolveDocroot(overrides?: DeployOverrides): string {
+  const raw = overrides?.docroot?.trim() || process.env.DEPLOY_LIVE_DOCROOT?.trim();
+  if (raw) return path.resolve(expandHome(raw));
+  return getDefaultLiveDocroot();
+}
+
 export function getDeployConfig(target = 'live', overrides?: DeployOverrides): DeployTargetConfig {
   if (target !== 'live') {
     throw new Error(`Unknown deploy target "${target}". Only "live" is configured.`);
   }
-  // Per-project overrides take precedence over the target's env config.
-  const host = (overrides?.host?.trim() || process.env.DEPLOY_LIVE_HOST?.trim()) || '';
-  const username = (overrides?.user?.trim() || process.env.DEPLOY_LIVE_USER?.trim()) || '';
-  const docroot = (overrides?.docroot?.trim() || process.env.DEPLOY_LIVE_DOCROOT?.trim()) || '';
+
+  const hostRaw = overrides?.host?.trim() || process.env.DEPLOY_LIVE_HOST?.trim() || 'local';
+  const docroot = resolveDocroot(overrides);
+
+  if (hostRaw === 'local') {
+    return {
+      target,
+      host: 'local',
+      port: 0,
+      username: '',
+      privateKeyPath: '',
+      docroot,
+      local: true,
+    };
+  }
+
+  const username = overrides?.user?.trim() || process.env.DEPLOY_LIVE_USER?.trim() || '';
   const keyPath = overrides?.sshKeyPath?.trim() || process.env.DEPLOY_LIVE_SSH_KEY?.trim() || '~/.ssh/id_ed25519';
-  const privateKeyPath = expandHome(keyPath);
-  const port = overrides?.port || Number(process.env.DEPLOY_LIVE_PORT || 22);
   const missing: string[] = [];
-  if (!host) missing.push('host (DEPLOY_LIVE_HOST)');
   if (!username) missing.push('user (DEPLOY_LIVE_USER)');
-  if (!docroot) missing.push('docroot (DEPLOY_LIVE_DOCROOT)');
   if (missing.length) {
     throw new Error(
-      `Deploy target "live" is not configured. Missing: ${missing.join(', ')}. Set these in the project's Settings or in apps/public-dev/.env.local.`,
+      `Remote deploy is not configured. Missing: ${missing.join(', ')}. Use host "local" for filesystem deploy to apps/public-site/, or set SSH credentials.`,
     );
   }
+
   return {
     target,
-    host,
-    port,
+    host: hostRaw,
+    port: overrides?.port || Number(process.env.DEPLOY_LIVE_PORT || 22),
     username,
-    privateKeyPath,
+    privateKeyPath: expandHome(keyPath),
     passphrase: process.env.DEPLOY_LIVE_SSH_PASSPHRASE?.trim() || undefined,
     docroot,
+    local: false,
   };
 }
 
@@ -79,7 +103,6 @@ async function loadIgnore(slug: string): Promise<IgnoreMatcher> {
   const regexes = patterns.map((p) => {
     const clean = p.replace(/\/$/, '');
     const escaped = clean.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '[^/]*');
-    // Match the pattern itself or anything beneath it (for directory patterns).
     return new RegExp(`^${escaped}(?:/.*)?$`);
   });
   return (rel: string) => regexes.some((re) => re.test(rel));
@@ -144,6 +167,63 @@ export async function buildDeployPlan(
   };
 }
 
+function deployMetaDir(): string {
+  return path.join(getPublicDevRoot(), '.deploy');
+}
+
+function backupDir(slug: string, stamp: string): string {
+  return path.join(deployMetaDir(), 'backups', slug, stamp);
+}
+
+async function copyDirRecursive(source: string, target: string): Promise<number> {
+  await fs.mkdir(target, { recursive: true });
+  let count = 0;
+  const entries = await fs.readdir(source, { withFileTypes: true });
+  for (const entry of entries) {
+    const from = path.join(source, entry.name);
+    const to = path.join(target, entry.name);
+    if (entry.isDirectory()) {
+      count += await copyDirRecursive(from, to);
+    } else if (entry.isFile()) {
+      await fs.copyFile(from, to);
+      count += 1;
+    }
+  }
+  return count;
+}
+
+async function backupLocal(docroot: string, slug: string): Promise<string> {
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const local = backupDir(slug, stamp);
+  if (existsSync(docroot)) {
+    await copyDirRecursive(docroot, local);
+  } else {
+    await fs.mkdir(local, { recursive: true });
+  }
+  return local;
+}
+
+async function deployLocal(plan: DeployPlan, projectRoot: string, docroot: string): Promise<{ uploaded: number; bytes: number }> {
+  await fs.mkdir(docroot, { recursive: true });
+  let uploaded = 0;
+  let bytes = 0;
+  for (const change of plan.files) {
+    if (change.action === 'create-dir') {
+      await fs.mkdir(path.join(docroot, change.path.replace(/\/$/, '')), { recursive: true });
+    }
+  }
+  for (const change of plan.files) {
+    if (change.action === 'upload') {
+      const dest = path.join(docroot, change.path);
+      await fs.mkdir(path.dirname(dest), { recursive: true });
+      await fs.copyFile(path.join(projectRoot, change.path), dest);
+      uploaded += 1;
+      bytes += change.size ?? 0;
+    }
+  }
+  return { uploaded, bytes };
+}
+
 async function loadPrivateKey(config: DeployTargetConfig): Promise<Buffer> {
   if (!existsSync(config.privateKeyPath)) {
     throw new Error(
@@ -166,12 +246,20 @@ async function connect(config: DeployTargetConfig): Promise<SftpClient> {
   return sftp;
 }
 
-/** Verify connectivity + that the remote docroot exists/is reachable. */
 export async function testConnection(
   target = 'live',
   overrides?: DeployOverrides,
 ): Promise<{ ok: boolean; docrootExists: boolean; host: string; docroot: string }> {
   const config = getDeployConfig(target, overrides);
+  if (config.local) {
+    const exists = existsSync(config.docroot);
+    return {
+      ok: true,
+      docrootExists: exists,
+      host: 'local',
+      docroot: config.docroot,
+    };
+  }
   const sftp = await connect(config);
   try {
     const type = await sftp.exists(config.docroot);
@@ -179,10 +267,6 @@ export async function testConnection(
   } finally {
     await sftp.end();
   }
-}
-
-function backupDir(slug: string, stamp: string): string {
-  return path.join(getSitesRoot(), '..', 'apps', 'public-dev', '.deploy', 'backups', slug, stamp);
 }
 
 async function backupRemote(sftp: SftpClient, config: DeployTargetConfig, slug: string): Promise<string> {
@@ -205,38 +289,45 @@ export async function executeDeploy(
   const config = getDeployConfig(target, options.overrides);
   const plan = await buildDeployPlan(slug, target, options.overrides);
   const root = getProjectRoot(slug);
-  const sftp = await connect(config);
 
   let backupPath: string | undefined;
   let uploaded = 0;
   let bytes = 0;
 
-  try {
+  if (config.local) {
     if (options.backup) {
-      backupPath = await backupRemote(sftp, config, slug);
+      backupPath = await backupLocal(config.docroot, slug);
     }
-
-    await sftp.mkdir(config.docroot, true).catch(() => {});
-
-    for (const change of plan.files) {
-      if (change.action === 'create-dir') {
-        const remote = `${config.docroot}/${change.path.replace(/\/$/, '')}`;
-        await sftp.mkdir(remote, true).catch(() => {});
+    const result = await deployLocal(plan, root, config.docroot);
+    uploaded = result.uploaded;
+    bytes = result.bytes;
+  } else {
+    const sftp = await connect(config);
+    try {
+      if (options.backup) {
+        backupPath = await backupRemote(sftp, config, slug);
       }
-    }
-    for (const change of plan.files) {
-      if (change.action === 'upload') {
-        const localAbs = path.join(root, change.path);
-        const remote = `${config.docroot}/${change.path}`;
-        const remoteParent = path.posix.dirname(remote);
-        await sftp.mkdir(remoteParent, true).catch(() => {});
-        await sftp.put(localAbs, remote);
-        uploaded += 1;
-        bytes += change.size ?? 0;
+      await sftp.mkdir(config.docroot, true).catch(() => {});
+      for (const change of plan.files) {
+        if (change.action === 'create-dir') {
+          const remote = `${config.docroot}/${change.path.replace(/\/$/, '')}`;
+          await sftp.mkdir(remote, true).catch(() => {});
+        }
       }
+      for (const change of plan.files) {
+        if (change.action === 'upload') {
+          const localAbs = path.join(root, change.path);
+          const remote = `${config.docroot}/${change.path}`;
+          const remoteParent = path.posix.dirname(remote);
+          await sftp.mkdir(remoteParent, true).catch(() => {});
+          await sftp.put(localAbs, remote);
+          uploaded += 1;
+          bytes += change.size ?? 0;
+        }
+      }
+    } finally {
+      await sftp.end();
     }
-  } finally {
-    await sftp.end();
   }
 
   const result: DeployResult = {
@@ -261,7 +352,7 @@ export type AuditEntry = {
 };
 
 function auditLogPath(): string {
-  return path.join(getSitesRoot(), '..', 'apps', 'public-dev', '.deploy', 'audit.log');
+  return path.join(deployMetaDir(), 'audit.log');
 }
 
 export async function appendAuditLog(entry: AuditEntry): Promise<void> {
@@ -290,7 +381,7 @@ export async function readAuditLog(slug?: string, limit = 50): Promise<AuditEntr
 }
 
 export async function listBackups(slug: string): Promise<{ stamp: string; path: string }[]> {
-  const dir = path.join(getSitesRoot(), '..', 'apps', 'public-dev', '.deploy', 'backups', slug);
+  const dir = path.join(deployMetaDir(), 'backups', slug);
   if (!existsSync(dir)) return [];
   const entries = await fs.readdir(dir, { withFileTypes: true });
   return entries
@@ -299,7 +390,6 @@ export async function listBackups(slug: string): Promise<{ stamp: string; path: 
     .sort((a, b) => b.stamp.localeCompare(a.stamp));
 }
 
-/** Re-upload a previously captured backup to the remote docroot. */
 export async function rollback(
   slug: string,
   target: string,
@@ -308,16 +398,23 @@ export async function rollback(
 ): Promise<DeployResult> {
   const startedAt = new Date().toISOString();
   const config = getDeployConfig(target, overrides);
-  const local = path.join(getSitesRoot(), '..', 'apps', 'public-dev', '.deploy', 'backups', slug, stamp);
+  const local = path.join(deployMetaDir(), 'backups', slug, stamp);
   if (!existsSync(local)) throw new Error(`Backup not found: ${stamp}`);
-  const sftp = await connect(config);
+
   let uploaded = 0;
-  try {
-    await sftp.mkdir(config.docroot, true).catch(() => {});
-    uploaded = await uploadDirCount(sftp, local, config.docroot);
-  } finally {
-    await sftp.end();
+  if (config.local) {
+    await fs.mkdir(config.docroot, { recursive: true });
+    uploaded = await copyDirRecursive(local, config.docroot);
+  } else {
+    const sftp = await connect(config);
+    try {
+      await sftp.mkdir(config.docroot, true).catch(() => {});
+      uploaded = await uploadDirCount(sftp, local, config.docroot);
+    } finally {
+      await sftp.end();
+    }
   }
+
   const result: DeployResult = {
     uploaded,
     bytes: 0,

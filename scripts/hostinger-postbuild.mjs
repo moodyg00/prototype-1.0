@@ -72,6 +72,16 @@ export function runHostingerPostbuild(app) {
     cpSync(publicSrc, publicDest, { recursive: true });
   }
 
+  // public-dev: ship editable site projects alongside the standalone server
+  if (app === 'public-dev') {
+    const sitesSrc = path.join(appDir, 'sites');
+    const sitesDest = path.join(serverDir, 'sites');
+    if (existsSync(sitesSrc)) {
+      cpSync(sitesSrc, sitesDest, { recursive: true });
+      console.error(`[hostinger-postbuild] copied sites/ → ${sitesDest}`);
+    }
+  }
+
   writeServerJs(nextDir, app);
   writeOutputEntry(nextDir, app);
   writeFileSync(
@@ -84,8 +94,8 @@ export function runHostingerPostbuild(app) {
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const app = process.argv[2];
-  if (app !== 'admin' && app !== 'agent') {
-    console.error('Usage: node scripts/hostinger-postbuild.mjs <admin|agent>');
+  if (app !== 'admin' && app !== 'agent' && app !== 'public-dev') {
+    console.error('Usage: node scripts/hostinger-postbuild.mjs <admin|agent|public-dev>');
     process.exit(1);
   }
   runHostingerPostbuild(app);

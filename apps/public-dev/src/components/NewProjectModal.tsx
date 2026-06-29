@@ -79,7 +79,7 @@ export function NewProjectModal({
           </label>
           <label className="block">
             <span className="mb-1 block text-xs text-[var(--color-muted)]">
-              URL slug <span className="font-mono">/sites/{slug || '…'}</span>
+              URL slug <span className="font-mono">sites/{slug || '…'}</span>
             </span>
             <input
               value={slug}

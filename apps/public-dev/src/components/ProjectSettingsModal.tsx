@@ -189,17 +189,17 @@ export function ProjectSettingsModal({
                   </select>
                 </label>
                 <p className="rounded-md border border-[var(--color-border)] bg-[var(--color-panel-2)] p-2 text-xs text-[var(--color-muted)]">
-                  Leave a field blank to inherit from the server env (<code>DEPLOY_LIVE_*</code>). Values here
-                  override the env for this project only. The SSH key <strong>passphrase</strong> is read from env
-                  (<code>DEPLOY_LIVE_SSH_PASSPHRASE</code>) and never stored in the project.
+                  Use host <strong>local</strong> to deploy to <code>apps/public-site/</code> (filesystem).
+                  For production SFTP, set host, user, and docroot (<code>public_html</code>). Blank fields
+                  inherit from <code>DEPLOY_LIVE_*</code> env. Passphrase stays in env only.
                 </p>
                 <div className="grid grid-cols-2 gap-3">
-                  {field('Host', deploy.host, (v) => setDeploy((d) => ({ ...d, host: v })), 'inherit from env')}
+                  {field('Host', deploy.host, (v) => setDeploy((d) => ({ ...d, host: v })), 'local')}
                   {field('Port', deploy.port, (v) => setDeploy((d) => ({ ...d, port: v })), '22')}
                 </div>
                 {field('SSH user', deploy.user, (v) => setDeploy((d) => ({ ...d, user: v })), 'inherit from env')}
                 {field('Private key path', deploy.sshKeyPath, (v) => setDeploy((d) => ({ ...d, sshKeyPath: v })), '~/.ssh/id_ed25519', true)}
-                {field('Remote docroot', deploy.docroot, (v) => setDeploy((d) => ({ ...d, docroot: v })), '/home/user/public_html', true)}
+                {field('Remote docroot', deploy.docroot, (v) => setDeploy((d) => ({ ...d, docroot: v })), 'default: apps/public-site', true)}
 
                 <div className="flex items-center gap-2">
                   <button

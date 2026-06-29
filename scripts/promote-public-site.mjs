@@ -1,23 +1,27 @@
 #!/usr/bin/env node
 /**
- * Copy dev static site → live static site (local promote workflow).
- * Usage: node scripts/promote-public-site.mjs [--dry-run]
+ * Copy a public-dev site project → apps/public-site/ (local live docroot simulation).
+ * Usage: node scripts/promote-public-site.mjs [slug] [--dry-run]
+ * Default slug: home-services
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const devDir = path.join(root, 'apps/public-site/dev');
-const liveDir = path.join(root, 'apps/public-site/live');
+const args = process.argv.slice(2).filter((a) => a !== '--dry-run');
+const slug = args[0] || 'home-services';
 const dryRun = process.argv.includes('--dry-run');
+const source = path.join(root, 'apps/public-dev/sites', slug);
+const target = path.join(root, 'apps/public-site');
 
-async function copyRecursive(source, target) {
-  await fs.mkdir(target, { recursive: true });
-  const entries = await fs.readdir(source, { withFileTypes: true });
+async function copyRecursive(sourceDir, targetDir) {
+  await fs.mkdir(targetDir, { recursive: true });
+  const entries = await fs.readdir(sourceDir, { withFileTypes: true });
   for (const entry of entries) {
-    const from = path.join(source, entry.name);
-    const to = path.join(target, entry.name);
+    if (entry.name === '.project.json' || entry.name === '.deploy-ignore') continue;
+    const from = path.join(sourceDir, entry.name);
+    const to = path.join(targetDir, entry.name);
     if (entry.isDirectory()) {
       await copyRecursive(from, to);
     } else if (entry.isFile()) {
@@ -32,9 +36,9 @@ async function copyRecursive(source, target) {
 }
 
 async function main() {
-  await fs.access(devDir);
-  await copyRecursive(devDir, liveDir);
-  console.log(dryRun ? 'Dry run complete.' : 'Promoted dev → live.');
+  await fs.access(source);
+  await copyRecursive(source, target);
+  console.log(dryRun ? 'Dry run complete.' : `Promoted sites/${slug} → apps/public-site/.`);
 }
 
 main().catch((error) => {

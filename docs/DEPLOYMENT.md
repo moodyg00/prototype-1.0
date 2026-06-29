@@ -127,14 +127,18 @@ Sign in on either app → shared cookie in production → open the other app wit
 ## Static site workflow
 
 ```bash
-# Edit apps/public-site/dev/
+# Edit in public-dev IDE (sites/home-services/)
+pnpm dev:public-dev
+
+# Deploy from IDE (host=local) → apps/public-site/
+# Or CLI:
+pnpm promote:public
+
+# Verify live docroot locally
 pnpm dev:public
-pnpm promote:public      # dev/ → live/
-pnpm dev:public:live     # verify live/
-git push                 # optional history
 ```
 
-Hostinger: upload/rsync `dev/` and `live/` to subdomain docroots. No Node build.
+**Production:** `apps/public-site/` maps to `public_html` on www. Edit on `dev.yourdomain.com` (public-dev Node app), deploy via SFTP.
 
 ## Hostinger subdomains & DNS
 
@@ -142,8 +146,8 @@ Use **separate hPanel websites** (Add website per hostname). Do **not** use Doma
 
 | Host | hPanel website type |
 |------|---------------------|
-| `yourdomain.com` | Custom PHP/HTML → upload `public-site/live/` |
-| `dev.yourdomain.com` | Custom PHP/HTML → upload `public-site/dev/` |
+| `yourdomain.com` | Custom PHP/HTML → `apps/public-site/` (public_html) |
+| `dev.yourdomain.com` | Node.js Web App → `@prototype/public-dev` |
 | `admin.yourdomain.com` | Node.js Web App |
 | `agent.yourdomain.com` | Node.js Web App |
 | `worker.yourdomain.com` | Node.js Web App |
@@ -231,8 +235,8 @@ Health check: `GET https://worker.yourdomain.com/health`
 
 | Host | Source folder |
 |------|---------------|
-| `dev.yourdomain.com` | `apps/public-site/dev/` |
-| `yourdomain.com` | `apps/public-site/live/` |
+| `dev.yourdomain.com` | Node app: `@prototype/public-dev` |
+| `yourdomain.com` | `apps/public-site/` → `public_html` |
 
 Deploy via FTP, File Manager, or git pull + copy. No build step.
 
@@ -264,7 +268,7 @@ Same code. Replace hPanel Node apps with nginx + systemd. Postgres moves on-box.
 
 - [ ] Supabase Postgres project + migrations applied
 - [ ] Deploy admin, agent, worker Node apps from GitHub
-- [ ] Upload `public-site/dev` + `live`
+- [ ] Deploy `apps/public-site/` to www docroot (or use IDE SFTP deploy)
 - [ ] `AUTH_REQUIRED=true`, `AUTH_COOKIE_DOMAIN`, `AUTH_SECRET` on admin + agent
 - [ ] `CRON_SECRET` in admin Settings → Business **and** worker env
 - [ ] hPanel cron → worker `/jobs/bank-sync`

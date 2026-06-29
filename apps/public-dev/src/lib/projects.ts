@@ -1,13 +1,13 @@
 import fs from 'node:fs/promises';
 import { existsSync } from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import type { FileNode, ProjectMeta } from './types';
 
 /**
  * All file access in this app is scoped to a single project directory under
- * the repo-level /sites folder. Every path that comes from the UI or the agent
- * MUST pass through {@link resolveInProject} so it can never escape the project
- * root (no `..`, no absolute paths, no symlink games).
+ * apps/public-dev/sites/. Every path from the UI or the agent MUST pass through
+ * {@link resolveInProject} so it can never escape the project root.
  */
 
 export type { FileNode, ProjectMeta } from './types';
@@ -16,9 +16,9 @@ const SLUG_RE = /^[a-z0-9][a-z0-9-]{0,62}$/;
 const META_FILE = '.project.json';
 const IGNORED_ENTRIES = new Set(['.git', 'node_modules', '.DS_Store']);
 
-function findRepoRoot(start: string): string {
+export function findRepoRoot(start = process.cwd()): string {
   let dir = start;
-  for (let i = 0; i < 8; i += 1) {
+  for (let i = 0; i < 10; i += 1) {
     if (existsSync(path.join(dir, 'pnpm-workspace.yaml'))) return dir;
     const parent = path.dirname(dir);
     if (parent === dir) break;
@@ -27,10 +27,28 @@ function findRepoRoot(start: string): string {
   return start;
 }
 
+/** Root of the @prototype/public-dev package (works in dev + Hostinger standalone). */
+export function getPublicDevRoot(): string {
+  if (process.env.PUBLIC_DEV_ROOT) return path.resolve(process.env.PUBLIC_DEV_ROOT);
+  const cwd = process.cwd();
+  if (existsSync(path.join(cwd, 'sites'))) return cwd;
+  const repoRoot = findRepoRoot(cwd);
+  return path.join(repoRoot, 'apps', 'public-dev');
+}
+
 export function getSitesRoot(): string {
   if (process.env.SITES_DIR) return path.resolve(process.env.SITES_DIR);
-  const repoRoot = findRepoRoot(process.cwd());
-  return path.join(repoRoot, 'sites');
+  return path.join(getPublicDevRoot(), 'sites');
+}
+
+/** Simulated production docroot locally; on Hostinger set DEPLOY_LIVE_DOCROOT to public_html. */
+export function getDefaultLiveDocroot(): string {
+  const raw = process.env.DEPLOY_LIVE_DOCROOT?.trim();
+  if (raw) {
+    if (raw.startsWith('~/') || raw === '~') return path.join(os.homedir(), raw.slice(1));
+    return path.resolve(raw);
+  }
+  return path.join(findRepoRoot(), 'apps', 'public-site');
 }
 
 export function isValidSlug(slug: string): boolean {
