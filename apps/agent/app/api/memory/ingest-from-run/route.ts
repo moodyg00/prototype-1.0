@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
 
-import { MEMORY_WORKFLOW_INGEST_NAME } from '@/lib/memory/constants';
+import { executeMemoryIngest } from '@/lib/memory/execute-ingest';
 import { prisma } from '@/lib/prisma';
-import { runMemoryIngestWorkflow } from '@/lib/memory/run-ingest';
 
 function runToIngestText(run: {
   workflowName: string;
@@ -52,68 +51,29 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Run not found' }, { status: 404 });
   }
 
-  const workflow = await prisma.workflow.findFirst({
-    where: { name: MEMORY_WORKFLOW_INGEST_NAME },
-    select: { id: true, name: true, currentVersion: true },
-  });
-  if (!workflow) {
-    return NextResponse.json({ error: 'Ingest workflow not seeded' }, { status: 404 });
-  }
-
   const text = runToIngestText(run);
   const agentId = body.agentId ?? 'default';
-  const startedAt = Date.now();
-
-  const pending = await prisma.workflowRun.create({
-    data: {
-      workflowId: workflow.id,
-      workflowName: workflow.name,
-      version: workflow.currentVersion,
-      status: 'running',
-      input: `ingest-from-run:${body.runId}`.slice(0, 8000),
-      events: [],
-      state: {},
-    },
-  });
-
-  const input = JSON.stringify({
-    text,
-    scopeKind: body.scopeKind ?? 'agent',
-    scopeId: body.scopeId ?? agentId,
-    sourceKind: 'thought',
-    agentId,
-    workflowRunId: pending.id,
-  });
 
   try {
-    const { result } = await runMemoryIngestWorkflow(input);
-    await prisma.workflowRun.update({
-      where: { id: pending.id },
-      data: {
-        status: 'completed',
-        output: (result.state.output ?? '').slice(0, 8000),
-        threadId: pending.id,
-        durationMs: Date.now() - startedAt,
-        nodeCount: result.events.length,
-        eventCount: result.events.length,
-        tokens: 0,
-        events: result.events as unknown as object,
-        state: result.state as unknown as object,
+    const { workflowRunId, result } = await executeMemoryIngest({
+      runLabel: `ingest-from-run:${body.runId}`,
+      inputPayload: {
+        text,
+        scopeKind: body.scopeKind ?? 'agent',
+        scopeId: body.scopeId ?? agentId,
+        sourceKind: 'thought',
+        agentId,
       },
     });
 
     return NextResponse.json({
       ok: true,
       sourceRunId: body.runId,
-      workflowRunId: pending.id,
+      workflowRunId,
       chunkCount: (result.state.memory as { lastIngest?: { count: number } })?.lastIngest?.count ?? 0,
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Ingest from run failed';
-    await prisma.workflowRun.update({
-      where: { id: pending.id },
-      data: { status: 'error', errorText: message.slice(0, 4000) },
-    });
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

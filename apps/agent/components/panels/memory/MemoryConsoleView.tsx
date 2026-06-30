@@ -4,6 +4,15 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Brain, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
+import {
+  AGENT_NAVIGATE_EVENT,
+  consumePendingMemoryFocus,
+  dispatchAgentNavigate,
+  setPendingRunId,
+  setPendingWorkflowId,
+  type AgentNavigateDetail,
+} from '@/lib/agent-navigation';
+import { ScopeMatrix } from './ScopeMatrix';
 import type { ToolRenderContext } from '@/lib/tool-surfaces';
 import type { ToolId } from '@/lib/tools';
 
@@ -17,16 +26,20 @@ type ChunkRow = {
   partition: string;
   sourceKind: string;
   contentExcerpt: string;
+  workflowRunId: string | null;
   createdAt: string;
 };
 
 type JobRow = {
   id: string;
+  workflowId: string;
   workflowName: string;
   status: string;
   durationMs: number;
   createdAt: string;
 };
+
+type ScopeStat = { scopeKind: string; scopeId: string | null; count: number };
 
 type BindingState = {
   agentId: string;
@@ -43,8 +56,15 @@ export function MemoryConsoleView({
 }) {
   const [tab, setTab] = useState<TabId>('overview');
   const [stats, setStats] = useState<{ documentCount: number; store: string } | null>(null);
+  const [scopeStats, setScopeStats] = useState<ScopeStat[]>([]);
+  const [knownAgents, setKnownAgents] = useState<string[]>([]);
   const [workflows, setWorkflows] = useState<{ ingest: { id: string } | null; recall: { id: string } | null } | null>(null);
   const [ingestText, setIngestText] = useState('');
+  const [ingestScopeKind, setIngestScopeKind] = useState<'global' | 'agent' | 'group'>('global');
+  const [ingestScopeId, setIngestScopeId] = useState('');
+  const [useReviewWorkflow, setUseReviewWorkflow] = useState(false);
+  const [contextPreview, setContextPreview] = useState('');
+  const [selectedChunk, setSelectedChunk] = useState<ChunkRow | null>(null);
   const [recallQuery, setRecallQuery] = useState('');
   const [recallHits, setRecallHits] = useState<Array<{ text: string; score: number }>>([]);
   const [chunks, setChunks] = useState<ChunkRow[]>([]);
@@ -56,12 +76,16 @@ export function MemoryConsoleView({
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const [s, w] = await Promise.all([
+      const [s, w, scopes, agents] = await Promise.all([
         fetch('/api/memory/stats').then((r) => r.json()),
         fetch('/api/memory/workflows').then((r) => r.json()),
+        fetch('/api/memory/scopes').then((r) => r.json()),
+        fetch('/api/memory/agents').then((r) => r.json()),
       ]);
       setStats(s);
       setWorkflows(w);
+      setScopeStats(scopes.scopes ?? []);
+      setKnownAgents(agents.agentIds ?? []);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to load memory stats');
     } finally {
@@ -70,10 +94,11 @@ export function MemoryConsoleView({
   }, []);
 
   const loadCorpus = useCallback(async () => {
-    const res = await fetch('/api/memory/chunks?limit=40');
+    const params = new URLSearchParams({ limit: '40', scopeKind: 'agent', scopeId: agentId });
+    const res = await fetch(`/api/memory/chunks?${params}`);
     const json = await res.json();
     setChunks(json.chunks ?? []);
-  }, []);
+  }, [agentId]);
 
   const loadJobs = useCallback(async () => {
     const res = await fetch('/api/memory/jobs?limit=30');
@@ -89,7 +114,21 @@ export function MemoryConsoleView({
 
   useEffect(() => {
     void refresh();
+    const pending = consumePendingMemoryFocus();
+    if (pending.agentId) setAgentId(pending.agentId);
+    if (pending.tab) setTab(pending.tab);
   }, [refresh]);
+
+  useEffect(() => {
+    const onNav = (ev: Event) => {
+      const detail = (ev as CustomEvent<AgentNavigateDetail>).detail;
+      if (detail?.toolId !== 'memory') return;
+      if (detail.agentId) setAgentId(detail.agentId);
+      if (detail.memoryTab) setTab(detail.memoryTab);
+    };
+    window.addEventListener(AGENT_NAVIGATE_EVENT, onNav);
+    return () => window.removeEventListener(AGENT_NAVIGATE_EVENT, onNav);
+  }, []);
 
   useEffect(() => {
     if (tab === 'corpus') void loadCorpus();
@@ -104,11 +143,29 @@ export function MemoryConsoleView({
       const res = await fetch('/api/memory/ingest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: ingestText, scopeKind: 'global', sourceKind: 'domain' }),
+        body: JSON.stringify({
+          text: ingestText,
+          scopeKind: ingestScopeKind,
+          scopeId: ingestScopeId || agentId,
+          agentId,
+          sourceKind: 'domain',
+          useReviewWorkflow,
+        }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? 'Ingest failed');
-      toast.success(`Ingest completed (run ${json.workflowRunId?.slice(0, 8) ?? '—'})`);
+      if (json.mode === 'langgraph') {
+        toast.message(
+          json.message ??
+            `Review workflow started. Thread ${json.threadId?.slice(0, 8) ?? '—'} — resume in Workflow → Runner.`,
+        );
+        if (json.workflowId) {
+          setPendingWorkflowId(json.workflowId);
+          dispatchAgentNavigate({ toolId: 'workflow', workflowId: json.workflowId });
+        }
+      } else {
+        toast.success(`Ingest completed (run ${json.workflowRunId?.slice(0, 8) ?? '—'})`);
+      }
       setIngestText('');
       await refresh();
       await loadCorpus();
@@ -132,6 +189,11 @@ export function MemoryConsoleView({
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? 'Recall failed');
       setRecallHits(json.hits ?? []);
+      setContextPreview(
+        (json.hits ?? [])
+          .map((h: { text: string; score: number }, i: number) => `### ${i + 1} (${h.score.toFixed(3)})\n${h.text}`)
+          .join('\n\n'),
+      );
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Recall failed');
     } finally {
@@ -214,6 +276,19 @@ export function MemoryConsoleView({
               <div className="text-[10px] uppercase tracking-wider text-zinc-500">Store</div>
               <div className="mt-1 text-sm text-zinc-100">{stats?.store ?? '—'}</div>
               <div className="mt-2 text-zinc-400">Documents: {stats?.documentCount ?? '—'}</div>
+              {scopeStats.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {scopeStats.slice(0, 8).map((s) => (
+                    <span
+                      key={`${s.scopeKind}:${s.scopeId ?? ''}`}
+                      className="rounded border border-white/10 px-2 py-0.5 text-[10px] text-zinc-400"
+                    >
+                      {s.scopeKind}
+                      {s.scopeId ? `:${s.scopeId}` : ''} ({s.count})
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="rounded-lg border border-white/10 bg-black/30 p-3">
               <div className="text-[10px] uppercase tracking-wider text-zinc-500">Workflows</div>
@@ -221,9 +296,33 @@ export function MemoryConsoleView({
                 Ingest: {workflows?.ingest?.id ?? 'not seeded'}
               </p>
               <p className="text-zinc-400">Recall: {workflows?.recall?.id ?? 'not seeded'}</p>
-              <p className="mt-2 text-[10px] text-zinc-600">
-                Open the Workflow panel to edit nodes, export, and redeploy.
-              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {workflows?.ingest?.id && (
+                  <button
+                    type="button"
+                    className="rounded border border-white/10 px-2 py-1 text-[10px] hover:bg-white/5"
+                    onClick={() => {
+                      setPendingWorkflowId(workflows.ingest!.id);
+                      dispatchAgentNavigate({ toolId: 'workflow', workflowId: workflows.ingest!.id });
+                      toast.message('Open the Workflow tool to edit ingest graph');
+                    }}
+                  >
+                    Open ingest workflow
+                  </button>
+                )}
+                {workflows?.recall?.id && (
+                  <button
+                    type="button"
+                    className="rounded border border-white/10 px-2 py-1 text-[10px] hover:bg-white/5"
+                    onClick={() => {
+                      setPendingWorkflowId(workflows.recall!.id);
+                      dispatchAgentNavigate({ toolId: 'workflow', workflowId: workflows.recall!.id });
+                    }}
+                  >
+                    Open recall workflow
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -243,7 +342,11 @@ export function MemoryConsoleView({
                 </thead>
                 <tbody>
                   {chunks.map((c) => (
-                    <tr key={c.id} className="border-t border-white/5">
+                    <tr
+                      key={c.id}
+                      className="border-t border-white/5 cursor-pointer hover:bg-white/5"
+                      onClick={() => setSelectedChunk(c)}
+                    >
                       <td className="py-1.5 pr-2 text-zinc-200">{c.contentExcerpt}</td>
                       <td className="py-1.5 text-zinc-500">
                         {c.scopeKind}
@@ -255,6 +358,42 @@ export function MemoryConsoleView({
                 </tbody>
               </table>
             )}
+            {selectedChunk && (
+              <div className="mt-3 rounded border border-white/10 p-2">
+                <div className="flex justify-between text-[10px] text-zinc-500">
+                  <span>{selectedChunk.id.slice(0, 8)}…</span>
+                  <button type="button" className="text-zinc-400" onClick={() => setSelectedChunk(null)}>
+                    Close
+                  </button>
+                </div>
+                <p className="mt-2 whitespace-pre-wrap text-zinc-200">{selectedChunk.contentExcerpt}</p>
+                {selectedChunk.workflowRunId && (
+                  <button
+                    type="button"
+                    className="mt-2 text-[10px] text-sky-400 hover:underline"
+                    onClick={() => {
+                      setPendingRunId(selectedChunk.workflowRunId!);
+                      dispatchAgentNavigate({ toolId: 'runs', runId: selectedChunk.workflowRunId! });
+                      toast.message('Open the Runs tool to view ingest trace');
+                    }}
+                  >
+                    Ingest run {selectedChunk.workflowRunId.slice(0, 8)}…
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="mt-2 text-[10px] text-red-400 hover:underline"
+                  onClick={async () => {
+                    await fetch(`/api/memory/chunks/${selectedChunk.id}`, { method: 'DELETE' });
+                    setSelectedChunk(null);
+                    await loadCorpus();
+                    toast.success('Chunk deleted');
+                  }}
+                >
+                  Delete chunk
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -263,37 +402,39 @@ export function MemoryConsoleView({
             <label className="block text-zinc-500">
               Agent ID
               <input
+                list="memory-agent-ids"
                 value={agentId}
                 onChange={(e) => setAgentId(e.target.value)}
                 onBlur={() => void loadBinding(agentId)}
                 className="mt-1 w-full rounded border border-white/10 bg-black/40 px-2 py-1"
               />
+              <datalist id="memory-agent-ids">
+                {knownAgents.map((id) => (
+                  <option key={id} value={id} />
+                ))}
+              </datalist>
             </label>
             {binding && (
               <>
-                <textarea
-                  value={JSON.stringify(binding.readScopes, null, 2)}
-                  onChange={(e) => {
-                    try {
-                      const readScopes = JSON.parse(e.target.value) as BindingState['readScopes'];
-                      setBinding({ ...binding, readScopes });
-                    } catch {
-                      /* ignore while typing */
-                    }
-                  }}
-                  className="h-24 w-full rounded border border-white/10 bg-black/40 p-2 font-mono text-[10px]"
+                <label className="block text-zinc-500">
+                  Default partition
+                  <input
+                    value={binding.defaultPartition ?? 'default'}
+                    onChange={(e) => setBinding({ ...binding, defaultPartition: e.target.value })}
+                    className="mt-1 w-full rounded border border-white/10 bg-black/40 px-2 py-1"
+                  />
+                </label>
+                <ScopeMatrix
+                  label="Read scopes"
+                  agentId={agentId}
+                  scopes={binding.readScopes}
+                  onChange={(readScopes) => setBinding({ ...binding, readScopes })}
                 />
-                <textarea
-                  value={JSON.stringify(binding.writeScopes, null, 2)}
-                  onChange={(e) => {
-                    try {
-                      const writeScopes = JSON.parse(e.target.value) as BindingState['writeScopes'];
-                      setBinding({ ...binding, writeScopes });
-                    } catch {
-                      /* ignore */
-                    }
-                  }}
-                  className="h-20 w-full rounded border border-white/10 bg-black/40 p-2 font-mono text-[10px]"
+                <ScopeMatrix
+                  label="Write scopes"
+                  agentId={agentId}
+                  scopes={binding.writeScopes}
+                  onChange={(writeScopes) => setBinding({ ...binding, writeScopes })}
                 />
                 <button
                   type="button"
@@ -313,6 +454,33 @@ export function MemoryConsoleView({
               Runs the seeded <strong className="text-zinc-300">Memory Ingest (linear)</strong> workflow
               (shard → tag → embed → Chroma).
             </p>
+            <div className="flex gap-2">
+              <select
+                value={ingestScopeKind}
+                onChange={(e) => setIngestScopeKind(e.target.value as 'global' | 'agent' | 'group')}
+                className="rounded border border-white/10 bg-black/40 px-2 py-1 text-[11px]"
+              >
+                <option value="global">global</option>
+                <option value="agent">agent</option>
+                <option value="group">group</option>
+              </select>
+              {ingestScopeKind !== 'global' && (
+                <input
+                  value={ingestScopeId}
+                  onChange={(e) => setIngestScopeId(e.target.value)}
+                  placeholder="scope id"
+                  className="flex-1 rounded border border-white/10 bg-black/40 px-2 py-1 text-[11px]"
+                />
+              )}
+            </div>
+            <label className="flex items-center gap-2 text-[11px] text-zinc-500">
+              <input
+                type="checkbox"
+                checked={useReviewWorkflow}
+                onChange={(e) => setUseReviewWorkflow(e.target.checked)}
+              />
+              Use review workflow (run from Workflow → Runner for interrupt)
+            </label>
             <textarea
               value={ingestText}
               onChange={(e) => setIngestText(e.target.value)}
@@ -354,6 +522,11 @@ export function MemoryConsoleView({
                 </li>
               ))}
             </ul>
+            {contextPreview && (
+              <pre className="mt-2 whitespace-pre-wrap rounded border border-white/10 bg-black/30 p-2 text-[10px] text-zinc-400">
+                {contextPreview}
+              </pre>
+            )}
           </div>
         )}
 
@@ -367,6 +540,28 @@ export function MemoryConsoleView({
                   <div className="text-zinc-200">{j.workflowName}</div>
                   <div className="text-[10px] text-zinc-500">
                     {j.status} · {j.durationMs}ms · {new Date(j.createdAt).toLocaleString()}
+                  </div>
+                  <div className="mt-1.5 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      className="text-[10px] text-sky-400 hover:underline"
+                      onClick={() => {
+                        setPendingRunId(j.id);
+                        dispatchAgentNavigate({ toolId: 'runs', runId: j.id });
+                      }}
+                    >
+                      View run
+                    </button>
+                    <button
+                      type="button"
+                      className="text-[10px] text-zinc-400 hover:underline"
+                      onClick={() => {
+                        setPendingWorkflowId(j.workflowId);
+                        dispatchAgentNavigate({ toolId: 'workflow', workflowId: j.workflowId });
+                      }}
+                    >
+                      Open workflow
+                    </button>
                   </div>
                 </div>
               ))

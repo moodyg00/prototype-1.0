@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { MEMORY_WORKFLOW_NAME_PREFIXES } from '@/lib/memory/constants';
 import { prisma } from '../../../lib/prisma';
 
 // Native run/trace listing. Replaces the external LangSmith dashboard with our own
@@ -9,12 +10,20 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const workflowId = url.searchParams.get('workflowId') || undefined;
   const status = url.searchParams.get('status') || undefined;
+  const memoryOnly = url.searchParams.get('memoryOnly') === '1';
   const limit = Math.min(Number(url.searchParams.get('limit') ?? 50) || 50, 200);
 
   try {
     const where = {
       ...(workflowId ? { workflowId } : {}),
       ...(status ? { status } : {}),
+      ...(memoryOnly
+        ? {
+            OR: MEMORY_WORKFLOW_NAME_PREFIXES.map((prefix) => ({
+              workflowName: { startsWith: prefix },
+            })),
+          }
+        : {}),
     };
 
     const runs = await prisma.workflowRun.findMany({

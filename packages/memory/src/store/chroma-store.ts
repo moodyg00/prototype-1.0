@@ -1,7 +1,7 @@
 import { ChromaClient } from 'chromadb';
 import { randomUUID } from 'crypto';
 
-import { StubEmbedder } from '../embed';
+import { getEmbedder } from '../embed';
 import type { MemoryChunkRecord, RecallHit, RecallQuery } from '../types';
 import { scopeKey } from '../types';
 import type { MemoryStore } from './types';
@@ -27,7 +27,9 @@ function chunkToMetadata(chunk: MemoryChunkRecord): Record<string, string | numb
 export class ChromaMemoryStore implements MemoryStore {
   private client: ChromaClient;
   private collectionName: string;
-  private embedder = new StubEmbedder();
+  private get embedder() {
+    return getEmbedder();
+  }
 
   constructor(options: ChromaStoreOptions = {}) {
     const url = options.url ?? process.env.CHROMA_URL ?? 'http://localhost:8000';

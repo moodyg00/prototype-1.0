@@ -1,6 +1,8 @@
 import { tool } from 'ai';
 import { z } from 'zod';
+import { memoryBulkIngestTool } from './bulk-ingest-tool';
 import { memoryService } from './service';
+import { vectorSearchMemories } from './vector-service';
 
 export const memorySearchTool = tool({
   description: 'Search an agent\'s memory for relevant facts, scenes, or persona context.',
@@ -10,8 +12,14 @@ export const memorySearchTool = tool({
     limit: z.number().default(15),
   }),
   execute: async ({ agentId, query, limit }) => {
+    try {
+      const vector = await vectorSearchMemories(agentId, query, limit);
+      if (vector.count > 0) return vector;
+    } catch {
+      // fall back to file-backed events when Chroma/agent env unavailable
+    }
     const results = await memoryService.searchMemories(agentId, query, limit);
-    return { count: results.length, results };
+    return { count: results.length, results, source: 'file_events' as const };
   },
 });
 
@@ -70,6 +78,7 @@ export const memoryUpdateSettingsTool = tool({
 
 export const allMemoryTools = {
   memory_search: memorySearchTool,
+  memory_bulk_ingest: memoryBulkIngestTool,
   memory_log_strategic_event: memoryLogStrategicEventTool,
   memory_get_persona: memoryGetPersonaTool,
   memory_update_persona: memoryUpdatePersonaTool,

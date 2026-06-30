@@ -10,8 +10,8 @@ ALTER COLUMN "content" SET DEFAULT '{"blocks":[]}'::jsonb,
 ALTER COLUMN "loop" SET DEFAULT '{"messages":[]}'::jsonb,
 ALTER COLUMN "requires" SET DEFAULT '{}'::jsonb;
 
--- CreateTable
-CREATE TABLE "WorkflowRun" (
+-- CreateTable (idempotent for dev DBs that already have WorkflowRun)
+CREATE TABLE IF NOT EXISTS "WorkflowRun" (
     "id" TEXT NOT NULL,
     "workflowId" TEXT NOT NULL,
     "workflowName" TEXT NOT NULL,
@@ -32,11 +32,11 @@ CREATE TABLE "WorkflowRun" (
     CONSTRAINT "WorkflowRun_pkey" PRIMARY KEY ("id")
 );
 
--- CreateIndex
-CREATE INDEX "WorkflowRun_workflowId_idx" ON "WorkflowRun"("workflowId");
+CREATE INDEX IF NOT EXISTS "WorkflowRun_workflowId_idx" ON "WorkflowRun"("workflowId");
+CREATE INDEX IF NOT EXISTS "WorkflowRun_createdAt_idx" ON "WorkflowRun"("createdAt");
 
--- CreateIndex
-CREATE INDEX "WorkflowRun_createdAt_idx" ON "WorkflowRun"("createdAt");
-
--- AddForeignKey
-ALTER TABLE "WorkflowRun" ADD CONSTRAINT "WorkflowRun_workflowId_fkey" FOREIGN KEY ("workflowId") REFERENCES "Workflow"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+  ALTER TABLE "WorkflowRun" ADD CONSTRAINT "WorkflowRun_workflowId_fkey" FOREIGN KEY ("workflowId") REFERENCES "Workflow"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;

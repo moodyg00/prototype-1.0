@@ -15,10 +15,14 @@ import {
   buildMemoryChromaRecallNode,
   buildMemoryChromaUpsertNode,
   buildMemoryEmbedNode,
+  buildMemoryInjectNode,
   buildMemoryIngestTriggerNode,
+  buildMemoryRecallContextNode,
   buildMemoryShardNode,
   buildMemoryTagNode,
 } from './memory-executors';
+import { buildIdeChatTriggerNode, type IdeRunState } from './ide-executors';
+import { buildLlmAgentNode } from './ide-agent-node';
 
 // ─── State ──────────────────────────────────────────────────────────────────
 
@@ -34,6 +38,20 @@ const StateAnnotation = Annotation.Root({
   // Cumulative token usage across all model nodes in a run (summed). Powers native
   // run observability without any external tracing service.
   tokens: Annotation<number>({ reducer: (a, b) => (a ?? 0) + (b ?? 0), default: () => 0 }),
+  memoryContext: Annotation<string>({ reducer: (_a, b) => b, default: () => '' }),
+  // IDE agent run context (project slug, side effects, design selection). Seeded
+  // by the trigger.ide_chat node and updated by the IDE agent node as tools run.
+  ide: Annotation<IdeRunState>({
+    reducer: (a, b) => ({ ...(a ?? {}), ...(b ?? {}) }),
+    default: () => ({}),
+  }),
+  // Parsed IDE chat history (replace, not append). Kept separate from `messages`
+  // so the raw JSON payload the run route seeds into `messages` never leaks into
+  // the agent's conversation.
+  ideMessages: Annotation<BaseMessage[]>({
+    reducer: (_a, b) => b ?? [],
+    default: () => [],
+  }),
 });
 
 export type GraphState = typeof StateAnnotation.State;
@@ -59,6 +77,7 @@ export interface SerializedState {
   memory: Record<string, unknown>;
   routeTo?: string;
   tokens: number;
+  ide?: IdeRunState;
 }
 
 export function serializeState(state: Partial<GraphState>): SerializedState {
@@ -69,6 +88,7 @@ export function serializeState(state: Partial<GraphState>): SerializedState {
     memory: state.memory ?? {},
     routeTo: state.routeTo,
     tokens: state.tokens ?? 0,
+    ...(state.ide ? { ide: state.ide } : {}),
   };
 }
 
@@ -227,6 +247,9 @@ function nodeExecutor(node: LangGraphNodeIR) {
   if (node.nodeType === 'memory.embed') return buildMemoryEmbedNode(node);
   if (node.nodeType === 'memory.chroma_upsert') return buildMemoryChromaUpsertNode(node);
   if (node.nodeType === 'memory.chroma_recall') return buildMemoryChromaRecallNode(node);
+  if (node.nodeType === 'memory.recall_context') return buildMemoryRecallContextNode(node);
+  if (node.nodeType === 'transform.memory_inject') return buildMemoryInjectNode(node);
+  if (node.nodeType === 'trigger.ide_chat') return buildIdeChatTriggerNode(node);
   if (node.model) return buildLlmNode(node);
   if (node.kind === 'tool' && (node.nodeType === 'tool.http' || node.properties.url !== undefined)) {
     return buildHttpToolNode(node);
@@ -264,15 +287,40 @@ export function buildGraph(ir: LangGraphIR): BuiltGraph {
     ir.nodes.filter(n => n.kind === 'conditional').map(n => n.id),
   );
 
+  // IDE tool nodes are not standalone graph nodes — they are bound to the
+  // llm.agent node they connect to (via its "tools" input). Collect them per
+  // agent and exclude both the nodes and their edges from the graph proper.
+  const ideToolNodeIds = new Set(
+    ir.nodes.filter(n => n.nodeType?.startsWith('tool.ide.')).map(n => n.id),
+  );
+  const agentToolNodes = new Map<string, LangGraphNodeIR[]>();
+  for (const edge of ir.edges) {
+    if (ideToolNodeIds.has(edge.from)) {
+      const toolNode = ir.nodes.find(n => n.id === edge.from);
+      if (toolNode) {
+        const list = agentToolNodes.get(edge.to) ?? [];
+        list.push(toolNode);
+        agentToolNodes.set(edge.to, list);
+      }
+    }
+  }
+
   for (const node of ir.nodes) {
-    builder.addNode(node.id, nodeExecutor(node));
+    if (ideToolNodeIds.has(node.id)) continue;
+    if (node.nodeType === 'llm.agent') {
+      builder.addNode(node.id, buildLlmAgentNode(node, agentToolNodes.get(node.id) ?? []));
+    } else {
+      builder.addNode(node.id, nodeExecutor(node));
+    }
   }
 
   builder.addEdge(START, ir.entryPoint);
 
-  // Group outgoing edges by source for conditional handling.
+  // Group outgoing edges by source for conditional handling. Edges that touch a
+  // bound IDE tool node are dropped (the binding is handled above).
   const outgoing = new Map<string, typeof ir.edges>();
   for (const edge of ir.edges) {
+    if (ideToolNodeIds.has(edge.from) || ideToolNodeIds.has(edge.to)) continue;
     const group = outgoing.get(edge.from) ?? [];
     group.push(edge);
     outgoing.set(edge.from, group);
@@ -296,6 +344,7 @@ export function buildGraph(ir: LangGraphIR): BuiltGraph {
 
   // Terminal nodes (no outgoing edge) connect to END so the graph can halt.
   for (const node of ir.nodes) {
+    if (ideToolNodeIds.has(node.id)) continue;
     if (!outgoing.has(node.id)) {
       builder.addEdge(node.id, END);
     }

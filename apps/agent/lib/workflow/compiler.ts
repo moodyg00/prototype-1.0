@@ -94,6 +94,23 @@ function deriveStateSchema(nodes: WorkflowNode[]): LangGraphStateField[] {
     fields.push({ key: 'memory', type: 'Record<string, unknown>', reducer: 'replace', description: 'Agent memory context' });
   }
 
+  const hasIde = nodes.some(n => n.data.typeId === 'trigger.ide_chat' || n.data.typeId.startsWith('tool.ide.'));
+  if (hasIde) {
+    fields.push({ key: 'ide', type: 'Record<string, unknown>', reducer: 'replace', description: 'IDE agent run context (slug, side effects, design)' });
+  }
+
+  const hasRecallPipeline = nodes.some(
+    n => n.data.typeId === 'memory.recall_context' || n.data.typeId === 'memory.chroma_recall',
+  );
+  if (hasRecallPipeline) {
+    fields.push({
+      key: 'memoryContext',
+      type: 'string',
+      reducer: 'replace',
+      description: 'Formatted memory injection block',
+    });
+  }
+
   const hasConditional = nodes.some(n => n.data.typeId === 'logic.condition');
   if (hasConditional) {
     fields.push({ key: 'routeTo', type: 'string | undefined', reducer: 'replace', description: 'Conditional routing target' });
@@ -122,7 +139,12 @@ function compileNode(node: WorkflowNode): LangGraphNodeIR {
     ir.systemPrompt = (props.systemPrompt as string) || '';
   }
 
-  if (node.data.typeId === 'tool.http' || node.data.typeId === 'tool.code' || node.data.typeId === 'tool.browser') {
+  if (
+    node.data.typeId === 'tool.http' ||
+    node.data.typeId === 'tool.code' ||
+    node.data.typeId === 'tool.browser' ||
+    node.data.typeId.startsWith('tool.ide.')
+  ) {
     ir.kind = 'tool';
     ir.toolRef = node.id;
   }

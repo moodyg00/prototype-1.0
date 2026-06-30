@@ -15,6 +15,7 @@ import {
   runStandardWorkflow,
   validateStandardWorkflow,
 } from '../../../../../lib/workflow/standard-runtime';
+import { resolveXaiApiKey } from '../../../../../lib/integrations/xai';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -47,9 +48,9 @@ async function recordRun(args: {
   state: ReturnType<typeof serializeState>;
   nodeCount: number;
   errorText?: string;
-}): Promise<void> {
+}): Promise<string | null> {
   try {
-    await prisma.workflowRun.create({
+    const row = await prisma.workflowRun.create({
       data: {
         workflowId: args.workflowId,
         workflowName: args.workflowName,
@@ -67,8 +68,10 @@ async function recordRun(args: {
         state: args.state as unknown as object,
       },
     });
+    return row.id;
   } catch (err) {
     console.error('[workflow/run] Failed to record run:', err);
+    return null;
   }
 }
 
@@ -122,7 +125,7 @@ export async function POST(req: Request, { params }: Params) {
     }
     try {
       const result = await runStandardWorkflow(def, runInput);
-      await recordRun({
+      const runId = await recordRun({
         workflowId: id,
         workflowName,
         version,
@@ -138,6 +141,7 @@ export async function POST(req: Request, { params }: Params) {
         status: 'completed',
         engine: 'langchain-standard',
         threadId,
+        runId,
         events: result.events,
         state: result.state,
         validation,
@@ -162,10 +166,14 @@ export async function POST(req: Request, { params }: Params) {
   }
 
   if (missingLlmKey(ir)) {
-    return NextResponse.json(
-      { error: 'XAI_API_KEY is not configured on the server. Set it to run model nodes.' },
-      { status: 400 },
-    );
+    // Env key is absent — fall back to an active xAI Integration row before failing.
+    const fallbackKey = await resolveXaiApiKey();
+    if (!fallbackKey) {
+      return NextResponse.json(
+        { error: 'No xAI credential configured. Set XAI_API_KEY or add an active xAI integration.' },
+        { status: 400 },
+      );
+    }
   }
 
   const timeoutMs = def.metadata?.timeoutMs && def.metadata.timeoutMs > 0
@@ -213,7 +221,7 @@ export async function POST(req: Request, { params }: Params) {
 
     if (nextNodes.length > 0) {
       const interruptNode = nextNodes[0];
-      await recordRun({
+      const runId = await recordRun({
         workflowId: id, workflowName, version, status: 'interrupted',
         input: runInput, threadId, startedAt, events, state: finalState,
         nodeCount: ir.nodes.length,
@@ -221,6 +229,7 @@ export async function POST(req: Request, { params }: Params) {
       return NextResponse.json({
         status: 'interrupted',
         threadId,
+        runId,
         events,
         state: finalState,
         interrupt: { node: interruptNode, prompt: interruptPrompt(ir, interruptNode) },
@@ -228,7 +237,7 @@ export async function POST(req: Request, { params }: Params) {
       });
     }
 
-    await recordRun({
+    const runId = await recordRun({
       workflowId: id, workflowName, version, status: 'completed',
       input: runInput, threadId, startedAt, events, state: finalState,
       nodeCount: ir.nodes.length,
@@ -236,6 +245,7 @@ export async function POST(req: Request, { params }: Params) {
     return NextResponse.json({
       status: 'completed',
       threadId,
+      runId,
       events,
       state: finalState,
       validation,

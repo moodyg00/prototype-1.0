@@ -40,6 +40,7 @@ import {
   type PinSide,
   type WorkspaceLayout,
 } from '@/lib/workspace-layout';
+import { AGENT_NAVIGATE_EVENT, type AgentNavigateDetail } from '@/lib/agent-navigation';
 
 const BASE_Z = 20;
 const DETACH_THRESHOLD = 20;
@@ -341,6 +342,13 @@ export function WorkspaceProvider({
     [session.barActiveTools],
   );
 
+  const openBarTool = useCallback((barId: string, toolId: ToolId) => {
+    setSession((prev) => ({
+      ...prev,
+      barActiveTools: { ...prev.barActiveTools, [barId]: toolId },
+    }));
+  }, []);
+
   const handleBarToolClick = useCallback((barId: string, toolId: ToolId) => {
     setSession((prev) => {
       const detached = prev.floatingPanels.find(
@@ -370,6 +378,30 @@ export function WorkspaceProvider({
       };
     });
   }, []);
+
+  useEffect(() => {
+    if (!activeLayout) return;
+
+    const openTool = (toolId: ToolId) => {
+      for (const bar of activeLayout.tooltipBars) {
+        const tools = mergeBarTools(activeLayout, sessionRef.current, bar.id);
+        if (tools.includes(toolId)) {
+          openBarTool(bar.id, toolId);
+          return;
+        }
+      }
+      const fallbackBar = activeLayout.tooltipBars[0]?.id ?? 'top';
+      openBarTool(fallbackBar, toolId);
+    };
+
+    const onNav = (ev: Event) => {
+      const detail = (ev as CustomEvent<AgentNavigateDetail>).detail;
+      if (detail?.toolId) openTool(detail.toolId);
+    };
+
+    window.addEventListener(AGENT_NAVIGATE_EVENT, onNav);
+    return () => window.removeEventListener(AGENT_NAVIGATE_EVENT, onNav);
+  }, [activeLayout, openBarTool]);
 
   const detachBarPanel = useCallback(
     (barId: string, toolId: ToolId, x: number, y: number) => {

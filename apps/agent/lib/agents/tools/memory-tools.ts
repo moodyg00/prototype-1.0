@@ -12,6 +12,7 @@ const searchSchema = z.object({
 });
 
 const recallSchema = z.object({
+  query: z.string().min(1).optional(),
   limit: z.number().int().min(1).max(100).optional(),
 });
 
@@ -42,12 +43,22 @@ export const memorySearchTool: AgentTool = {
 
 export const memoryRecallTool: AgentTool = {
   name: 'memory_recall',
-  description: 'Recall recent persisted memory events for this agent.',
+  description: 'Recall vector memory (semantic) or recent event log when no query is given.',
   inputSchema: recallSchema,
   execute: async (ctx, input) => {
     const parsed = recallSchema.parse(input);
+    const binding = await getMemoryBinding(ctx.agentId);
+    if (parsed.query?.trim()) {
+      const hits = await recallMemory({
+        agentId: ctx.agentId,
+        query: parsed.query,
+        topK: parsed.limit ?? 20,
+        binding,
+      });
+      return { count: hits.length, hits, source: 'vector' as const };
+    }
     const events = await agentMemoryService.recallRecent(ctx.agentId, parsed.limit ?? 30);
-    return { count: events.length, events };
+    return { count: events.length, events, source: 'event_log' as const };
   },
 };
 

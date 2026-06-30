@@ -3,7 +3,7 @@ import {
   recallMemory,
   runMemoryIngestPipeline,
   shardToDrafts,
-  StubEmbedder,
+  getEmbedder,
   getMemoryStore,
   type MemoryScope,
   type SourceKind,
@@ -108,7 +108,7 @@ export function buildMemoryEmbedNode(_node: LangGraphNodeIR) {
   return async (state: GraphState): Promise<Partial<GraphState>> => {
     const mem = getMem(state);
     const chunks = (mem.chunks as Array<{ text: string }>) ?? [];
-    const embedder = new StubEmbedder();
+    const embedder = getEmbedder();
     const vectors = await embedder.embedMany(chunks.map((c) => c.text));
     const withEmb = chunks.map((c, i) => ({ ...c, embedding: vectors[i] }));
     return {
@@ -142,6 +142,32 @@ export function buildMemoryChromaUpsertNode(node: LangGraphNodeIR) {
         lastIngest: { count: records.length, chunkIds: records.map((r) => r.id) },
       },
       output: `Upserted ${records.length} chunk(s) to memory store`,
+    };
+  };
+}
+
+export function buildMemoryRecallContextNode(node: LangGraphNodeIR) {
+  return buildMemoryChromaRecallNode(node);
+}
+
+export function buildMemoryInjectNode(node: LangGraphNodeIR) {
+  return async (state: GraphState): Promise<Partial<GraphState>> => {
+    const mem = getMem(state);
+    const hits = (mem.recallResults as Array<{ text: string; score: number }>) ?? [];
+    const header = String(node.properties.header ?? '## Agent memory');
+    const block =
+      hits.length === 0
+        ? ''
+        : [
+            header,
+            '',
+            ...hits.map((h, i) => `### Hit ${i + 1} (${h.score.toFixed(3)})\n${h.text}`),
+            '',
+          ].join('\n');
+    return {
+      memory: { ...mem, contextBlock: block },
+      output: block,
+      memoryContext: block,
     };
   };
 }

@@ -1,4 +1,4 @@
-CREATE TABLE "memory_chunks" (
+CREATE TABLE IF NOT EXISTS "memory_chunks" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "chroma_id" VARCHAR(120) NOT NULL,
     "scope_kind" VARCHAR(20) NOT NULL,
@@ -15,10 +15,10 @@ CREATE TABLE "memory_chunks" (
     CONSTRAINT "memory_chunks_pkey" PRIMARY KEY ("id")
 );
 
-CREATE INDEX "memory_chunks_scope_kind_scope_id_created_at_idx" ON "memory_chunks"("scope_kind", "scope_id", "created_at");
-CREATE INDEX "memory_chunks_workflow_run_id_idx" ON "memory_chunks"("workflow_run_id");
+CREATE INDEX IF NOT EXISTS "memory_chunks_scope_kind_scope_id_created_at_idx" ON "memory_chunks"("scope_kind", "scope_id", "created_at");
+CREATE INDEX IF NOT EXISTS "memory_chunks_workflow_run_id_idx" ON "memory_chunks"("workflow_run_id");
 
-CREATE TABLE "memory_agent_bindings" (
+CREATE TABLE IF NOT EXISTS "memory_agent_bindings" (
     "agent_id" VARCHAR(120) NOT NULL,
     "read_scopes" JSONB NOT NULL,
     "write_scopes" JSONB NOT NULL,

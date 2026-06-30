@@ -7,6 +7,11 @@ import { WorkflowCanvas } from '../workflow/WorkflowCanvas';
 import { NodePalette } from '../workflow/NodePalette';
 import { NodeInspector } from '../workflow/NodeInspector';
 import { RunnerPanel } from './RunnerPanel';
+import {
+  AGENT_NAVIGATE_EVENT,
+  consumePendingWorkflowId,
+  type AgentNavigateDetail,
+} from '@/lib/agent-navigation';
 import type { WorkflowNodeData, WorkflowDefinition, WorkflowKind } from '../../lib/workflow/types';
 
 type WorkflowSummary = {
@@ -116,6 +121,18 @@ export function WorkflowPanel() {
       setStatus('Failed to create workflow');
     }
   }, [workflows.length, refreshWorkflows, loadWorkflow]);
+
+  useEffect(() => {
+    const pending = consumePendingWorkflowId();
+    if (pending) void loadWorkflow(pending);
+
+    const onNav = (ev: Event) => {
+      const detail = (ev as CustomEvent<AgentNavigateDetail>).detail;
+      if (detail?.workflowId) void loadWorkflow(detail.workflowId);
+    };
+    window.addEventListener(AGENT_NAVIGATE_EVENT, onNav);
+    return () => window.removeEventListener(AGENT_NAVIGATE_EVENT, onNav);
+  }, [loadWorkflow]);
 
   const saveWorkflow = useCallback(async () => {
     if (!workflowId) return;

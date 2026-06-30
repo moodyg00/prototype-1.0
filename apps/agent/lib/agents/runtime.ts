@@ -1,3 +1,5 @@
+import { buildMemoryContextBlock } from '@/lib/memory/recall-context';
+
 import { agentMemoryService } from './memory/service';
 import { bootstrapAgents } from './bootstrap';
 import { toolRegistry } from './tools';
@@ -8,6 +10,7 @@ export type AgentRunResult = {
   prompt: string;
   tools: ReturnType<typeof toolRegistry.list>;
   memoryPreview: Awaited<ReturnType<typeof agentMemoryService.recallRecent>>;
+  memoryContext: string;
 };
 
 export class AgentRuntime {
@@ -31,7 +34,10 @@ export class AgentRuntime {
 
   async run(agentId: string, prompt: string): Promise<AgentRunResult> {
     const ctx = await this.createContext(agentId);
-    const memoryPreview = await agentMemoryService.recallRecent(agentId, 5);
+    const [memoryPreview, memoryContext] = await Promise.all([
+      agentMemoryService.recallRecent(agentId, 5),
+      buildMemoryContextBlock(agentId, prompt, 6),
+    ]);
 
     await agentMemoryService.handleTurnCommitted({
       agentId: ctx.agentId,
@@ -45,6 +51,7 @@ export class AgentRuntime {
       prompt,
       tools: toolRegistry.list(),
       memoryPreview,
+      memoryContext,
     };
   }
 }

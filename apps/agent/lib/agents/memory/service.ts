@@ -89,18 +89,13 @@ export class AgentMemoryService {
       metadata: { toolsUsed: args.toolsUsed ?? [] },
     });
 
-    const text = `Turn for agent ${args.agentId}\nUser: ${args.input}\nAgent: ${args.output}`;
-    void import('@/lib/memory/run-ingest')
-      .then(({ runMemoryIngestWorkflow }) =>
-        runMemoryIngestWorkflow(
-          JSON.stringify({
-            text,
-            scopeKind: 'agent',
-            scopeId: args.agentId,
-            sourceKind: 'turn',
-            agentId: args.agentId,
-          }),
-        ),
+    void import('@/lib/memory/execute-ingest')
+      .then(({ captureTurnToMemory }) =>
+        captureTurnToMemory({
+          agentId: args.agentId,
+          input: args.input,
+          output: args.output,
+        }),
       )
       .catch((err) => console.error('[memory] turn capture failed', err));
   }

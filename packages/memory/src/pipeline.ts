@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 
-import { StubEmbedder } from './embed';
+import { getEmbedder } from './embed';
 import { getMemoryStore } from './store';
 import { shardToDrafts } from './shard';
 import { applyTags, type TagInput } from './tag';
@@ -41,7 +41,7 @@ export async function runMemoryIngestPipeline(
     ...tagExtras,
   });
 
-  const embedder = new StubEmbedder();
+  const embedder = getEmbedder();
   const texts = tagged.map((t) => t.text);
   const vectors = await embedder.embedMany(texts);
 

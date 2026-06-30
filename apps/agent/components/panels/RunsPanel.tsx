@@ -2,7 +2,9 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Activity, Brain, AlertTriangle, RefreshCw, Trash2, X } from 'lucide-react';
+import { Activity, Brain, RefreshCw, Trash2, X } from 'lucide-react';
+
+import { AGENT_NAVIGATE_EVENT, consumePendingRunId, type AgentNavigateDetail } from '@/lib/agent-navigation';
 
 interface RunSummaryRow {
   id: string;
@@ -67,13 +69,16 @@ const STATUS_COLORS: Record<string, string> = {
 export function RunsPanel() {
   const [data, setData] = useState<RunsResponse | null>(null);
   const [loading, setLoading] = useState(false);
+  const [memoryFilter, setMemoryFilter] = useState(false);
   const [selected, setSelected] = useState<RunDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/runs?limit=100');
+      const qs = new URLSearchParams({ limit: '100' });
+      if (memoryFilter) qs.set('memoryOnly', '1');
+      const res = await fetch(`/api/runs?${qs}`);
       const json = (await res.json()) as RunsResponse;
       setData(json);
       if (json.error) toast.error(json.error);
@@ -84,7 +89,7 @@ export function RunsPanel() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [memoryFilter]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -101,6 +106,17 @@ export function RunsPanel() {
       setDetailLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    const pending = consumePendingRunId();
+    if (pending) void openDetail(pending);
+    const onNav = (ev: Event) => {
+      const detail = (ev as CustomEvent<AgentNavigateDetail>).detail;
+      if (detail?.toolId === 'runs' && detail.runId) void openDetail(detail.runId);
+    };
+    window.addEventListener(AGENT_NAVIGATE_EVENT, onNav);
+    return () => window.removeEventListener(AGENT_NAVIGATE_EVENT, onNav);
+  }, [openDetail]);
 
   const sendToMemory = useCallback(async (runId: string) => {
     try {
@@ -147,6 +163,14 @@ export function RunsPanel() {
           </div>
         </div>
         <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setMemoryFilter((v) => !v)}
+            className={`btn btn-ghost !px-2 !py-1 text-[10px] gap-1 ${memoryFilter ? 'text-violet-300' : ''}`}
+            title="Show memory workflow runs only"
+          >
+            <Brain size={12} /> Memory
+          </button>
           <button onClick={() => load()} disabled={loading} className="btn btn-ghost !p-1.5" title="Refresh">
             <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
           </button>

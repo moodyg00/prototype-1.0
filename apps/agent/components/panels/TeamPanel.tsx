@@ -1,7 +1,10 @@
 "use client";
 
 import React from 'react';
-import { Users } from 'lucide-react';
+import { Brain, Users } from 'lucide-react';
+import { toast } from 'sonner';
+
+import { dispatchAgentNavigate, setPendingMemoryFocus } from '@/lib/agent-navigation';
 
 type OrgNodeType = 'executive' | 'vp' | 'manager' | 'supervisor' | 'worker' | 'tool' | 'automation';
 
@@ -59,6 +62,17 @@ export function TeamPanel() {
                 <div className="text-[10px] text-zinc-500 uppercase tracking-wider">{exec.role}</div>
                 <div className="text-sm text-zinc-100 mt-1">{exec.title}</div>
                 <div className="text-[10px] text-zinc-500 mt-2">{exec.model || 'grok'}</div>
+                <button
+                  type="button"
+                  className="mt-2 flex items-center gap-1 text-[10px] text-violet-300 hover:underline"
+                  onClick={() => {
+                    setPendingMemoryFocus(exec.id, 'corpus');
+                    dispatchAgentNavigate({ toolId: 'memory', agentId: exec.id, memoryTab: 'corpus' });
+                    toast.message(`Memory scoped to agent:${exec.id}`);
+                  }}
+                >
+                  <Brain size={11} /> Open memory
+                </button>
               </div>
             ))}
           </div>

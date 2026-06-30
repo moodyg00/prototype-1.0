@@ -34,6 +34,15 @@ export async function catalogMemoryChunks(
   });
 }
 
+export async function deleteMemoryChunk(id: string): Promise<void> {
+  const row = await prisma.memoryChunk.findUnique({ where: { id } });
+  if (!row) return;
+  const { getMemoryStore } = await import('@prototype/memory');
+  const store = getMemoryStore();
+  await store.deleteByIds([row.chromaId]);
+  await prisma.memoryChunk.delete({ where: { id } });
+}
+
 export async function listMemoryChunks(args: {
   scopeKind?: string;
   scopeId?: string;

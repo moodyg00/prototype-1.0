@@ -6,7 +6,9 @@ import {
   buildMemoryChromaRecallNode,
   buildMemoryChromaUpsertNode,
   buildMemoryEmbedNode,
+  buildMemoryInjectNode,
   buildMemoryIngestTriggerNode,
+  buildMemoryRecallContextNode,
   buildMemoryShardNode,
   buildMemoryTagNode,
 } from './memory-executors';
@@ -50,7 +52,10 @@ function executorForTypeId(typeId: string, nodeIr: LangGraphNodeIR) {
   if (typeId === 'memory.tag') return buildMemoryTagNode(nodeIr);
   if (typeId === 'memory.embed') return buildMemoryEmbedNode(nodeIr);
   if (typeId === 'memory.chroma_upsert') return buildMemoryChromaUpsertNode(nodeIr);
-  if (typeId === 'memory.chroma_recall') return buildMemoryChromaRecallNode(nodeIr);
+  if (typeId === 'memory.chroma_recall' || typeId === 'memory.recall_context') {
+    return buildMemoryRecallContextNode(nodeIr);
+  }
+  if (typeId === 'transform.memory_inject') return buildMemoryInjectNode(nodeIr);
   if (typeId === 'tool.http') {
     return async (state: GraphState): Promise<Partial<GraphState>> => {
       const url = String(nodeIr.properties.url ?? '');
@@ -90,6 +95,9 @@ export async function runStandardWorkflow(
     memory: {},
     routeTo: undefined,
     tokens: 0,
+    memoryContext: '',
+    ide: {},
+    ideMessages: [],
   };
 
   const events: StandardRunEvent[] = [];
