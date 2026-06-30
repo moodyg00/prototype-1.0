@@ -3,6 +3,7 @@ import { createHash } from 'crypto';
 import type { Prisma } from '@prototype/db';
 import type { MemoryScope, SourceKind } from '@prototype/memory';
 
+import type { IngestStatus } from './ingest-status';
 import { prisma } from '../prisma';
 
 export async function catalogMemoryChunks(
@@ -13,6 +14,7 @@ export async function catalogMemoryChunks(
     partition?: string;
     sourceKind?: SourceKind;
     metadata?: Record<string, unknown>;
+    ingestStatus?: IngestStatus;
   }>,
   workflowRunId?: string,
 ): Promise<void> {
@@ -29,7 +31,7 @@ export async function catalogMemoryChunks(
       contentHash: createHash('sha256').update(r.text).digest('hex').slice(0, 64),
       metadata: (r.metadata ?? null) as Prisma.InputJsonValue,
       workflowRunId: workflowRunId ?? null,
-      status: 'indexed',
+      status: r.ingestStatus ?? (r.metadata?.ingestStatus as string) ?? 'indexed',
     })),
   });
 }

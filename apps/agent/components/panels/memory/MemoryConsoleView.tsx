@@ -27,6 +27,7 @@ type ChunkRow = {
   sourceKind: string;
   contentExcerpt: string;
   workflowRunId: string | null;
+  status: string;
   createdAt: string;
 };
 
@@ -338,6 +339,7 @@ export function MemoryConsoleView({
                     <th className="pb-1">Excerpt</th>
                     <th className="pb-1">Scope</th>
                     <th className="pb-1">Kind</th>
+                    <th className="pb-1">Status</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -353,6 +355,7 @@ export function MemoryConsoleView({
                         {c.scopeId ? `:${c.scopeId}` : ''}
                       </td>
                       <td className="py-1.5 text-zinc-500">{c.sourceKind}</td>
+                      <td className="py-1.5 text-zinc-600">{c.status}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -361,7 +364,9 @@ export function MemoryConsoleView({
             {selectedChunk && (
               <div className="mt-3 rounded border border-white/10 p-2">
                 <div className="flex justify-between text-[10px] text-zinc-500">
-                  <span>{selectedChunk.id.slice(0, 8)}…</span>
+                  <span>
+                    {selectedChunk.id.slice(0, 8)}… · {selectedChunk.status}
+                  </span>
                   <button type="button" className="text-zinc-400" onClick={() => setSelectedChunk(null)}>
                     Close
                   </button>

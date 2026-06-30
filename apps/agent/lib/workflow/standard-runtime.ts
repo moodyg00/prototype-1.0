@@ -12,6 +12,7 @@ import {
   buildMemoryShardNode,
   buildMemoryTagNode,
 } from './memory-executors';
+import { invokeChatLlm } from './llm-invoke';
 import { serializeState, type GraphState, type SerializedState } from './runtime';
 import type { LangGraphNodeIR, WorkflowDefinition } from './types';
 
@@ -56,6 +57,22 @@ function executorForTypeId(typeId: string, nodeIr: LangGraphNodeIR) {
     return buildMemoryRecallContextNode(nodeIr);
   }
   if (typeId === 'transform.memory_inject') return buildMemoryInjectNode(nodeIr);
+  if (typeId === 'llm.chat') {
+    return async (state: GraphState): Promise<Partial<GraphState>> => {
+      const { text, tokens } = await invokeChatLlm({
+        model: String(nodeIr.properties.model ?? nodeIr.model ?? 'grok-3-mini'),
+        systemPrompt: String(nodeIr.properties.systemPrompt ?? nodeIr.systemPrompt ?? ''),
+        memoryContext: state.memoryContext,
+        input: state.input,
+        messages: state.messages ?? [],
+        temperature:
+          typeof nodeIr.properties.temperature === 'number'
+            ? (nodeIr.properties.temperature as number)
+            : 0.7,
+      });
+      return { output: text, tokens, memoryContext: state.memoryContext };
+    };
+  }
   if (typeId === 'tool.http') {
     return async (state: GraphState): Promise<Partial<GraphState>> => {
       const url = String(nodeIr.properties.url ?? '');

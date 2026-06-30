@@ -31,6 +31,17 @@ pnpm --filter @prototype/db exec prisma migrate resolve --applied 20260630090928
 pnpm --filter @prototype/db exec prisma migrate deploy
 ```
 
+## Webhook & schedule hooks (Agent app)
+
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /api/memory/hooks/ingest` | Webhook ingest (`mode: ingest` or `turn`) |
+| `POST /api/memory/cron/ingest` | Cron batch ingest (`batches: [{ text, agentId }]`) |
+
+Set `MEMORY_WEBHOOK_SECRET` / `MEMORY_CRON_SECRET` and pass `X-Memory-Webhook-Secret` or `Authorization: Bearer …`.
+
+Seed **Memory Agent (RAG)** and **Memory Webhook ingest** via `scripts/seed-memory-workflows.ts`.
+
 ## Tests
 
 ```bash

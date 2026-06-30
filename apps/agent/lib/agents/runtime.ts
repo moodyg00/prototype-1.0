@@ -1,4 +1,5 @@
 import { buildMemoryContextBlock } from '@/lib/memory/recall-context';
+import { invokeChatLlm } from '@/lib/workflow/llm-invoke';
 
 import { agentMemoryService } from './memory/service';
 import { bootstrapAgents } from './bootstrap';
@@ -8,9 +9,11 @@ import type { ToolContext } from './tools/types';
 export type AgentRunResult = {
   agentId: string;
   prompt: string;
+  output: string;
   tools: ReturnType<typeof toolRegistry.list>;
   memoryPreview: Awaited<ReturnType<typeof agentMemoryService.recallRecent>>;
   memoryContext: string;
+  tokens?: number;
 };
 
 export class AgentRuntime {
@@ -39,19 +42,36 @@ export class AgentRuntime {
       buildMemoryContextBlock(agentId, prompt, 6),
     ]);
 
+    let output = `[registered ${toolRegistry.list().length} tools; set XAI_API_KEY for LLM responses]`;
+    let tokens = 0;
+
+    try {
+      const llm = await invokeChatLlm({
+        input: prompt,
+        memoryContext,
+        systemPrompt: `You are agent ${agentId}, a department-head level assistant. Use retrieved memory when relevant.`,
+      });
+      output = llm.text;
+      tokens = llm.tokens;
+    } catch {
+      // keep placeholder output when credentials missing
+    }
+
     await agentMemoryService.handleTurnCommitted({
       agentId: ctx.agentId,
       input: prompt,
-      output: `[registered ${toolRegistry.list().length} tools; awaiting LLM graph runner]`,
+      output,
       toolsUsed: [],
     });
 
     return {
       agentId,
       prompt,
+      output,
       tools: toolRegistry.list(),
       memoryPreview,
       memoryContext,
+      tokens,
     };
   }
 }

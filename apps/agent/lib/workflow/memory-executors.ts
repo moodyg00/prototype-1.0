@@ -66,7 +66,12 @@ export function buildMemoryShardNode(node: LangGraphNodeIR) {
         ...mem,
         rawText,
         scope,
-        chunks: chunks.map((c) => ({ text: c.text, scopeKey: c.scope.kind })),
+        ingestStatus: 'chunked',
+        chunks: chunks.map((c) => ({
+          text: c.text,
+          scopeKey: c.scope.kind,
+          ingestStatus: 'chunked' as const,
+        })),
       },
       output: `Sharded into ${chunks.length} chunk(s)`,
     };
@@ -88,17 +93,30 @@ export function buildMemoryTagNode(node: LangGraphNodeIR) {
         agentId,
       })) ?? [];
 
-    const tagged = applyTags({
-      drafts,
-      scope,
-      partition: String(node.properties.partition ?? binding.defaultPartition ?? 'default'),
-      sourceKind: (node.properties.sourceKind as SourceKind) ?? 'domain',
-      agentId,
-      binding,
-    });
+    let tagged;
+    try {
+      tagged = applyTags({
+        drafts,
+        scope,
+        partition: String(node.properties.partition ?? binding.defaultPartition ?? 'default'),
+        sourceKind: (node.properties.sourceKind as SourceKind) ?? 'domain',
+        agentId,
+        binding,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'tag failed';
+      return {
+        memory: { ...mem, ingestStatus: 'quarantined', quarantineReason: message },
+        output: `Quarantined: ${message}`,
+      };
+    }
 
     return {
-      memory: { ...mem, chunks: tagged },
+      memory: {
+        ...mem,
+        ingestStatus: 'tagged',
+        chunks: tagged.map((t) => ({ ...t, ingestStatus: 'tagged' as const })),
+      },
       output: `Tagged ${tagged.length} chunk(s)`,
     };
   };
@@ -110,9 +128,13 @@ export function buildMemoryEmbedNode(_node: LangGraphNodeIR) {
     const chunks = (mem.chunks as Array<{ text: string }>) ?? [];
     const embedder = getEmbedder();
     const vectors = await embedder.embedMany(chunks.map((c) => c.text));
-    const withEmb = chunks.map((c, i) => ({ ...c, embedding: vectors[i] }));
+    const withEmb = chunks.map((c, i) => ({
+      ...c,
+      embedding: vectors[i],
+      ingestStatus: 'embedded' as const,
+    }));
     return {
-      memory: { ...mem, chunks: withEmb },
+      memory: { ...mem, ingestStatus: 'embedded', chunks: withEmb },
       output: `Embedded ${withEmb.length} chunk(s)`,
     };
   };
@@ -130,7 +152,11 @@ export function buildMemoryChromaUpsertNode(node: LangGraphNodeIR) {
       partition: String(c.partition ?? node.properties.partition ?? 'default'),
       sourceKind: (c.sourceKind as SourceKind) ?? 'domain',
       embedding: c.embedding as number[] | undefined,
-      metadata: (c.metadata as Record<string, unknown>) ?? {},
+      metadata: {
+        ...((c.metadata as Record<string, unknown>) ?? {}),
+        ingestStatus: (c.ingestStatus as string) ?? 'indexed',
+      },
+      ingestStatus: 'indexed' as const,
     }));
     await store.upsert(records);
     const workflowRunId =
@@ -176,8 +202,9 @@ export function buildMemoryChromaRecallNode(node: LangGraphNodeIR) {
   return async (state: GraphState): Promise<Partial<GraphState>> => {
     const mem = getMem(state);
     const query =
-      (typeof node.properties.query === 'string' && node.properties.query) ||
-      state.input ||
+      (typeof node.properties.query === 'string' && node.properties.query.trim()) ||
+      state.input?.trim() ||
+      mem.rawText?.toString() ||
       'recent context';
     const agentId = String(node.properties.agentId ?? 'default');
     const topK = typeof node.properties.topK === 'number' ? (node.properties.topK as number) : 8;

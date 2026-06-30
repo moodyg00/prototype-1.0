@@ -51,6 +51,7 @@ type Blueprint = {
   edges: WorkflowEdge[];
   timeoutMs: number;
   tags: string[];
+  triggers?: Array<{ kind: 'manual' | 'webhook' | 'schedule'; config: Record<string, unknown> }>;
 };
 
 const memoryIngestLinear: Blueprint = {
@@ -149,6 +150,71 @@ const memoryIngestReview: Blueprint = {
   tags: ['memory-ingest', 'memory', 'langgraph'],
 };
 
+const memoryAgentRag: Blueprint = {
+  name: 'Memory Agent (RAG)',
+  description: 'Default agent graph: recall vector memory → inject context → LLM chat response.',
+  kind: 'langgraph',
+  nodes: [
+    node({
+      id: 'trigger',
+      typeId: 'trigger.manual',
+      label: 'User prompt',
+      x: 0,
+      properties: { payload: '{}' },
+    }),
+    node({
+      id: 'recall',
+      typeId: 'memory.recall_context',
+      label: 'Recall context',
+      x: 240,
+      properties: { agentId: 'default', topK: 6, scopeKind: 'agent', scopeId: 'default' },
+    }),
+    node({
+      id: 'inject',
+      typeId: 'transform.memory_inject',
+      label: 'Inject memory',
+      x: 480,
+      properties: { header: '## Retrieved memory' },
+    }),
+    node({
+      id: 'llm',
+      typeId: 'llm.chat',
+      label: 'Agent LLM',
+      x: 720,
+      properties: {
+        model: 'grok-3-mini',
+        systemPrompt: 'You are a helpful executive agent. Use retrieved memory faithfully.',
+        temperature: 0.5,
+      },
+    }),
+    node({ id: 'out', typeId: 'output.respond', label: 'Respond', x: 960, properties: { statusCode: 200 } }),
+  ],
+  edges: [
+    edge('e1', 'trigger', 'recall'),
+    edge('e2', 'recall', 'inject'),
+    edge('e3', 'inject', 'llm'),
+    edge('e4', 'llm', 'out'),
+  ],
+  timeoutMs: 120_000,
+  tags: ['memory-agent', 'memory', 'langgraph', 'default-agent'],
+};
+
+const memoryWebhookIngest: Blueprint = {
+  name: 'Memory Webhook ingest',
+  description: 'Same linear ingest chain; triggered via POST /api/memory/hooks/ingest.',
+  kind: 'standard',
+  nodes: memoryIngestLinear.nodes,
+  edges: memoryIngestLinear.edges,
+  timeoutMs: 120_000,
+  tags: ['memory-ingest', 'memory', 'webhook'],
+  triggers: [
+    {
+      kind: 'webhook',
+      config: { path: '/api/memory/hooks/ingest', secretHeader: 'X-Memory-Webhook-Secret' },
+    },
+  ],
+};
+
 const turnCapture: Blueprint = {
   name: 'Turn capture',
   description: 'Capture agent turns into scoped vector memory (standard pipeline).',
@@ -171,6 +237,12 @@ const turnCapture: Blueprint = {
   edges: memoryIngestLinear.edges,
   timeoutMs: 120_000,
   tags: ['memory-turn', 'memory', 'standard'],
+  triggers: [
+    {
+      kind: 'schedule',
+      config: { cron: '0 */6 * * *', endpoint: '/api/memory/cron/ingest' },
+    },
+  ],
 };
 
 async function api(method: string, url: string, body?: unknown) {
@@ -223,7 +295,7 @@ async function upsert(bp: Blueprint): Promise<string> {
       executionMode: 'sequential',
       errorPolicy: 'stop',
       timeoutMs: bp.timeoutMs,
-      triggers: [{ kind: 'manual', config: {} }],
+      triggers: bp.triggers ?? [{ kind: 'manual', config: {} }],
     },
   });
 
@@ -247,7 +319,14 @@ async function exportArtifacts(id: string, bp: Blueprint) {
 
 async function main() {
   console.log(`Seeding memory workflows against ${BASE_URL}\n`);
-  for (const bp of [memoryIngestLinear, memoryRecallTest, memoryIngestReview, turnCapture]) {
+  for (const bp of [
+    memoryIngestLinear,
+    memoryRecallTest,
+    memoryIngestReview,
+    turnCapture,
+    memoryAgentRag,
+    memoryWebhookIngest,
+  ]) {
     console.log(`▶ ${bp.name} [${bp.kind}]`);
     const id = await upsert(bp);
     const validation = await exportArtifacts(id, bp);

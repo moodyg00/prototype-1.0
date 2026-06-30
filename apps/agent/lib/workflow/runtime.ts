@@ -3,11 +3,9 @@
 // Keys are read from the server environment only — never the client.
 
 import { StateGraph, START, END, Annotation, MemorySaver } from '@langchain/langgraph';
-import { ChatOpenAI } from '@langchain/openai';
 import {
   AIMessage,
   HumanMessage,
-  SystemMessage,
   type BaseMessage,
 } from '@langchain/core/messages';
 import type { LangGraphIR, LangGraphNodeIR } from './types';
@@ -23,6 +21,7 @@ import {
 } from './memory-executors';
 import { buildIdeChatTriggerNode, type IdeRunState } from './ide-executors';
 import { buildLlmAgentNode } from './ide-agent-node';
+import { invokeChatLlm } from './llm-invoke';
 
 // ─── State ──────────────────────────────────────────────────────────────────
 
@@ -107,42 +106,18 @@ export function missingLlmKey(ir: LangGraphIR): boolean {
 
 function buildLlmNode(node: LangGraphNodeIR) {
   return async (state: GraphState): Promise<Partial<GraphState>> => {
-    const model = new ChatOpenAI({
+    const { text, tokens } = await invokeChatLlm({
       model: node.model || 'grok-3-mini',
+      systemPrompt: node.systemPrompt || 'You are a helpful assistant.',
+      memoryContext: state.memoryContext,
+      input: state.input,
+      messages: state.messages ?? [],
       temperature:
         typeof node.properties.temperature === 'number'
           ? (node.properties.temperature as number)
           : 0.7,
-      apiKey: process.env.XAI_API_KEY,
-      configuration: { baseURL: XAI_BASE_URL },
     });
-
-    const history = state.messages ?? [];
-    const prompt: BaseMessage[] = [
-      new SystemMessage(node.systemPrompt || 'You are a helpful assistant.'),
-      ...history,
-    ];
-    if (history.length === 0 && state.input) {
-      prompt.push(new HumanMessage(state.input));
-    }
-
-    const response = await model.invoke(prompt);
-    const text =
-      typeof response.content === 'string'
-        ? response.content
-        : JSON.stringify(response.content);
-    // Best-effort token capture for native observability. LangChain attaches
-    // usage_metadata on the AIMessage when the provider reports it.
-    const usage = (response as unknown as {
-      usage_metadata?: { total_tokens?: number };
-      response_metadata?: { tokenUsage?: { totalTokens?: number }; usage?: { total_tokens?: number } };
-    });
-    const tokens =
-      usage.usage_metadata?.total_tokens ??
-      usage.response_metadata?.tokenUsage?.totalTokens ??
-      usage.response_metadata?.usage?.total_tokens ??
-      0;
-    return { messages: [response], output: text, tokens };
+    return { messages: [new AIMessage(text)], output: text, tokens };
   };
 }
 
