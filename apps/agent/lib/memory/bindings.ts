@@ -34,8 +34,13 @@ function rowToBinding(row: {
 }
 
 export async function getMemoryBinding(agentId: string): Promise<MemoryAgentBinding> {
-  const row = await prisma.memoryAgentBinding.findUnique({ where: { agentId } });
-  if (row) return rowToBinding(row);
+  try {
+    if (!prisma?.memoryAgentBinding) return defaultBinding(agentId);
+    const row = await prisma.memoryAgentBinding.findUnique({ where: { agentId } });
+    if (row) return rowToBinding(row);
+  } catch {
+    // catalog not migrated — use in-memory defaults
+  }
   return defaultBinding(agentId);
 }
 
@@ -58,7 +63,12 @@ export async function saveMemoryBinding(binding: MemoryAgentBinding): Promise<Me
 }
 
 export async function listKnownAgentIds(): Promise<string[]> {
-  const rows = await prisma.memoryAgentBinding.findMany({ select: { agentId: true } });
-  const ids = new Set([...DEFAULT_AGENT_IDS, ...rows.map((r: { agentId: string }) => r.agentId)]);
-  return [...ids].sort();
+  try {
+    if (!prisma?.memoryAgentBinding) return [...DEFAULT_AGENT_IDS];
+    const rows = await prisma.memoryAgentBinding.findMany({ select: { agentId: true } });
+    const ids = new Set([...DEFAULT_AGENT_IDS, ...rows.map((r: { agentId: string }) => r.agentId)]);
+    return [...ids].sort();
+  } catch {
+    return [...DEFAULT_AGENT_IDS];
+  }
 }

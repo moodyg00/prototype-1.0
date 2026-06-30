@@ -12,6 +12,7 @@ import {
   setPendingWorkflowId,
   type AgentNavigateDetail,
 } from '@/lib/agent-navigation';
+import { fetchJson } from '@/lib/memory/fetch-json';
 import { ScopeMatrix } from './ScopeMatrix';
 import type { ToolRenderContext } from '@/lib/tool-surfaces';
 import type { ToolId } from '@/lib/tools';
@@ -78,15 +79,17 @@ export function MemoryConsoleView({
     setLoading(true);
     try {
       const [s, w, scopes, agents] = await Promise.all([
-        fetch('/api/memory/stats').then((r) => r.json()),
-        fetch('/api/memory/workflows').then((r) => r.json()),
-        fetch('/api/memory/scopes').then((r) => r.json()),
-        fetch('/api/memory/agents').then((r) => r.json()),
+        fetchJson<{ documentCount: number; store: string }>('/api/memory/stats'),
+        fetchJson<typeof workflows>('/api/memory/workflows'),
+        fetchJson<{ scopes?: ScopeStat[]; hint?: string }>('/api/memory/scopes'),
+        fetchJson<{ agentIds?: string[]; hint?: string }>('/api/memory/agents'),
       ]);
       setStats(s);
       setWorkflows(w);
       setScopeStats(scopes.scopes ?? []);
       setKnownAgents(agents.agentIds ?? []);
+      const hint = scopes.hint ?? agents.hint;
+      if (hint) toast.message(hint, { duration: 8000 });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to load memory stats');
     } finally {

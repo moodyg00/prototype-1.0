@@ -9,6 +9,7 @@ import {
 import { prisma } from '@/lib/prisma';
 
 export async function GET() {
+  try {
   const rows = await prisma.workflow.findMany({
     where: {
       name: {
@@ -36,4 +37,21 @@ export async function GET() {
       cronUrl: '/api/memory/cron/ingest',
     },
   });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to load workflows';
+    return NextResponse.json(
+      {
+        ingest: null,
+        recall: null,
+        agentRag: null,
+        webhookIngest: null,
+        hooks: {
+          ingestUrl: '/api/memory/hooks/ingest',
+          cronUrl: '/api/memory/cron/ingest',
+        },
+        error: message,
+      },
+      { status: 500 },
+    );
+  }
 }
