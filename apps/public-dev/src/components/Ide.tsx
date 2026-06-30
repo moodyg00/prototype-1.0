@@ -4,13 +4,18 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Editor from '@monaco-editor/react';
 import {
   Code2,
+  Eraser,
   File as FileIcon,
   FilePlus2,
   FileText,
+  FileUp,
+  FolderInput,
   FolderPlus,
   Globe,
   Image as ImageIcon,
   Loader2,
+  MousePointerClick,
+  Pencil,
   Plus,
   RefreshCw,
   Rocket,
@@ -20,7 +25,8 @@ import {
 } from 'lucide-react';
 import type { FileNode, ProjectMeta } from '@/src/lib/types';
 import { FileTree } from './FileTree';
-import { AgentChat } from './AgentChat';
+import { AgentChat, type AgentChatHandle } from './AgentChat';
+import { DesignModeOverlay, type DesignModeOverlayHandle } from './DesignModeOverlay';
 import { DeployModal } from './DeployModal';
 import { NewProjectModal } from './NewProjectModal';
 import { NewEntryModal } from './NewEntryModal';
@@ -112,6 +118,12 @@ export function Ide({ initialProjects }: { initialProjects: ProjectMeta[] }) {
   const [showNewProject, setShowNewProject] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [newEntryKind, setNewEntryKind] = useState<'file' | 'dir' | null>(null);
+  const [newEntryPrefix, setNewEntryPrefix] = useState('');
+  const [selectedDir, setSelectedDir] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const dirInputRef = useRef<HTMLInputElement>(null);
 
   const filesRef = useRef(files);
   filesRef.current = files;
@@ -119,6 +131,14 @@ export function Ide({ initialProjects }: { initialProjects: ProjectMeta[] }) {
   const editorPaneRef = useRef<HTMLElement>(null);
   const editorZoom = usePaneZoom('editor', 13);
   usePaneZoomShortcuts(editorPaneRef, editorZoom);
+
+  const agentChatRef = useRef<AgentChatHandle>(null);
+  const [agentBusy, setAgentBusy] = useState(false);
+
+  const [designEnabled, setDesignEnabled] = useState(false);
+  const [designMode, setDesignMode] = useState<'select' | 'draw'>('select');
+  const [designHasStrokes, setDesignHasStrokes] = useState(false);
+  const designOverlayRef = useRef<DesignModeOverlayHandle>(null);
 
   const activeFile = active !== PREVIEW_TAB ? files[active] : undefined;
   const activeIsText = activeFile?.kind === 'text' || (activeFile?.kind === 'image' && activeFile.asText);
@@ -141,6 +161,7 @@ export function Ide({ initialProjects }: { initialProjects: ProjectMeta[] }) {
     setOpenTabs([]);
     setFiles({});
     setActive(PREVIEW_TAB);
+    setSelectedDir(null);
     refreshTree(slug);
   }, [slug, refreshTree]);
 
@@ -264,6 +285,12 @@ export function Ide({ initialProjects }: { initialProjects: ProjectMeta[] }) {
     [flash],
   );
 
+  const openNewEntry = useCallback((kind: 'file' | 'dir', dirPath = '') => {
+    const prefix = dirPath ? `${dirPath.replace(/\/+$/, '')}/` : '';
+    setNewEntryPrefix(prefix);
+    setNewEntryKind(kind);
+  }, []);
+
   const createEntry = useCallback(
     async (path: string) => {
       if (!slug || !newEntryKind) throw new Error('No project selected');
@@ -279,6 +306,113 @@ export function Ide({ initialProjects }: { initialProjects: ProjectMeta[] }) {
       flash(`Created ${data.path ?? path}`);
     },
     [slug, newEntryKind, refreshTree, openFile, flash],
+  );
+
+  const moveEntry = useCallback(
+    async (from: string, to: string) => {
+      if (!slug || from === to) return;
+      const res = await fetch(`/api/projects/${slug}/files`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ from, to }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        flash(data.error || 'Move failed');
+        return;
+      }
+      // Remap open tabs and file state for moved paths.
+      const prefix = from + '/';
+      setOpenTabs((prev) =>
+        prev.map((p) => {
+          if (p === from) return to;
+          if (p.startsWith(prefix)) return `${to}/${p.slice(prefix.length)}`;
+          return p;
+        }),
+      );
+      setFiles((prev) => {
+        const next: Record<string, FileState> = {};
+        for (const [p, state] of Object.entries(prev)) {
+          if (p === from) next[to] = state;
+          else if (p.startsWith(prefix)) next[`${to}/${p.slice(prefix.length)}`] = state;
+          else next[p] = state;
+        }
+        return next;
+      });
+      setActive((cur) => {
+        if (cur === from) return to;
+        if (cur.startsWith(prefix)) return `${to}/${cur.slice(prefix.length)}`;
+        return cur;
+      });
+      if (selectedDir === from) setSelectedDir(to);
+      else if (selectedDir?.startsWith(prefix)) setSelectedDir(`${to}/${selectedDir.slice(prefix.length)}`);
+      await refreshTree(slug);
+      flash(`Moved to ${to}`);
+    },
+    [slug, selectedDir, refreshTree, flash],
+  );
+
+  const duplicateEntry = useCallback(
+    async (path: string) => {
+      if (!slug) return;
+      const res = await fetch(`/api/projects/${slug}/files/copy`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        flash(data.error || 'Duplicate failed');
+        return;
+      }
+      await refreshTree(slug);
+      if (data.path) openFile(data.path);
+      flash(`Duplicated as ${data.path}`);
+    },
+    [slug, refreshTree, openFile, flash],
+  );
+
+  const copyPath = useCallback(
+    async (path: string) => {
+      try {
+        await navigator.clipboard.writeText(path);
+        flash(`Copied path: ${path}`);
+      } catch {
+        flash('Could not copy to clipboard');
+      }
+    },
+    [flash],
+  );
+
+  const uploadFiles = useCallback(
+    async (fileList: FileList, isDirectory: boolean) => {
+      if (!slug || fileList.length === 0) return;
+      setUploading(true);
+      try {
+        const form = new FormData();
+        form.append('basePath', selectedDir ?? '');
+        for (const file of Array.from(fileList)) {
+          const rel = isDirectory
+            ? (file as File & { webkitRelativePath?: string }).webkitRelativePath || file.name
+            : file.name;
+          form.append('files', file);
+          form.append('paths', rel);
+        }
+        const res = await fetch(`/api/projects/${slug}/files/upload`, { method: 'POST', body: form });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Upload failed');
+        await refreshTree(slug);
+        setPreviewKey((k) => k + 1);
+        flash(`Uploaded ${data.count ?? fileList.length} file(s)`);
+      } catch (err) {
+        flash((err as Error).message);
+      } finally {
+        setUploading(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        if (dirInputRef.current) dirInputRef.current.value = '';
+      }
+    },
+    [slug, selectedDir, refreshTree, flash],
   );
 
   const deleteEntry = useCallback(
@@ -358,6 +492,60 @@ export function Ide({ initialProjects }: { initialProjects: ProjectMeta[] }) {
           >
             <Globe size={14} /> Open in new tab
           </a>
+          {active === PREVIEW_TAB && slug && (
+            <>
+              {designEnabled && (
+                <>
+                  <button
+                    onClick={() => setDesignMode('select')}
+                    title="Select elements"
+                    className={`flex items-center gap-1 rounded-md border px-2 py-1 text-sm ${
+                      designMode === 'select'
+                        ? 'border-[var(--color-accent)] bg-[var(--color-accent-soft)]'
+                        : 'border-[var(--color-border)] hover:bg-[var(--color-panel-2)]'
+                    }`}
+                  >
+                    <MousePointerClick size={14} />
+                  </button>
+                  <button
+                    onClick={() => setDesignMode('draw')}
+                    title="Draw annotations"
+                    className={`flex items-center gap-1 rounded-md border px-2 py-1 text-sm ${
+                      designMode === 'draw'
+                        ? 'border-[var(--color-accent)] bg-[var(--color-accent-soft)]'
+                        : 'border-[var(--color-border)] hover:bg-[var(--color-panel-2)]'
+                    }`}
+                  >
+                    <Pencil size={14} />
+                  </button>
+                  {designHasStrokes && (
+                    <button
+                      onClick={() => designOverlayRef.current?.clearStrokes()}
+                      title="Clear drawing"
+                      className="flex items-center gap-1 rounded-md border border-[var(--color-border)] px-2 py-1 text-sm hover:bg-[var(--color-panel-2)]"
+                    >
+                      <Eraser size={14} />
+                    </button>
+                  )}
+                  <div className="mx-0.5 h-5 w-px bg-[var(--color-border)]" />
+                </>
+              )}
+              <button
+                onClick={() => {
+                  setDesignEnabled((v) => !v);
+                  if (designEnabled) setDesignMode('select');
+                }}
+                title={designEnabled ? 'Exit Design Mode' : 'Enter Design Mode — click elements to edit visually'}
+                className={`flex items-center gap-1 rounded-md border px-2 py-1 text-sm ${
+                  designEnabled
+                    ? 'border-[var(--color-accent)] bg-[var(--color-accent)] text-[var(--color-accent-fg)]'
+                    : 'border-[var(--color-border)] hover:bg-[var(--color-panel-2)]'
+                }`}
+              >
+                <MousePointerClick size={14} /> Design{designEnabled ? ' · on' : ''}
+              </button>
+            </>
+          )}
           <button
             onClick={() => setShowDeploy(true)}
             disabled={!slug}
@@ -373,13 +561,31 @@ export function Ide({ initialProjects }: { initialProjects: ProjectMeta[] }) {
         {/* File tree */}
         <aside className="flex w-60 flex-col border-r border-[var(--color-border)] bg-[var(--color-panel)]">
           <div className="flex items-center justify-between border-b border-[var(--color-border)] px-3 py-2 text-xs uppercase tracking-wide text-[var(--color-muted)]">
-            <span>Files</span>
+            <span>Files{selectedDir ? ` · ${selectedDir}` : ''}</span>
             <div className="flex items-center gap-1">
+              <button
+                type="button"
+                title="Upload file(s)"
+                disabled={!slug || uploading}
+                onClick={() => fileInputRef.current?.click()}
+                className="hover:text-[var(--color-fg)] disabled:opacity-40"
+              >
+                {uploading ? <Loader2 size={14} className="animate-spin" /> : <FileUp size={14} />}
+              </button>
+              <button
+                type="button"
+                title="Upload folder"
+                disabled={!slug || uploading}
+                onClick={() => dirInputRef.current?.click()}
+                className="hover:text-[var(--color-fg)] disabled:opacity-40"
+              >
+                <FolderInput size={14} />
+              </button>
               <button
                 type="button"
                 title="New file"
                 disabled={!slug}
-                onClick={() => setNewEntryKind('file')}
+                onClick={() => openNewEntry('file', selectedDir ?? '')}
                 className="hover:text-[var(--color-fg)] disabled:opacity-40"
               >
                 <FilePlus2 size={14} />
@@ -388,7 +594,7 @@ export function Ide({ initialProjects }: { initialProjects: ProjectMeta[] }) {
                 type="button"
                 title="New folder"
                 disabled={!slug}
-                onClick={() => setNewEntryKind('dir')}
+                onClick={() => openNewEntry('dir', selectedDir ?? '')}
                 className="hover:text-[var(--color-fg)] disabled:opacity-40"
               >
                 <FolderPlus size={14} />
@@ -404,8 +610,36 @@ export function Ide({ initialProjects }: { initialProjects: ProjectMeta[] }) {
               </button>
             </div>
           </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={(e) => e.target.files && uploadFiles(e.target.files, false)}
+          />
+          <input
+            ref={dirInputRef}
+            type="file"
+            className="hidden"
+            // @ts-expect-error webkitdirectory is supported in Chromium/Safari
+            webkitdirectory=""
+            multiple
+            onChange={(e) => e.target.files && uploadFiles(e.target.files, true)}
+          />
           <div className="min-h-0 flex-1 overflow-auto">
-            <FileTree tree={tree} activePath={active === PREVIEW_TAB ? null : active} onOpen={openFile} onDelete={deleteEntry} />
+            <FileTree
+              tree={tree}
+              activePath={active === PREVIEW_TAB ? null : active}
+              selectedDir={selectedDir}
+              onOpen={openFile}
+              onDelete={deleteEntry}
+              onSelectDir={setSelectedDir}
+              onMove={moveEntry}
+              onCopyPath={copyPath}
+              onDuplicate={duplicateEntry}
+              onAddFile={(dir) => openNewEntry('file', dir)}
+              onAddFolder={(dir) => openNewEntry('dir', dir)}
+            />
           </div>
         </aside>
 
@@ -485,11 +719,19 @@ export function Ide({ initialProjects }: { initialProjects: ProjectMeta[] }) {
           {/* Content area */}
           <div className="min-h-0 flex-1">
             {active === PREVIEW_TAB ? (
-              slug ? (
-                <iframe key={previewKey} src={previewUrl} title="preview" className="h-full w-full border-0 bg-white" />
-              ) : (
-                <div className="flex h-full items-center justify-center text-sm text-[var(--color-muted)]">No project selected</div>
-              )
+              <DesignModeOverlay
+                ref={designOverlayRef}
+                slug={slug}
+                previewUrl={previewUrl}
+                previewKey={previewKey}
+                busy={agentBusy}
+                enabled={designEnabled}
+                mode={designMode}
+                onStrokesChange={setDesignHasStrokes}
+                onSubmit={(prompt, ctx) =>
+                  agentChatRef.current?.submitWithDesign(prompt, ctx) ?? Promise.resolve()
+                }
+              />
             ) : activeFile ? (
               activeFile.loading ? (
                 <div className="flex h-full items-center justify-center text-sm text-[var(--color-muted)]">
@@ -532,6 +774,8 @@ export function Ide({ initialProjects }: { initialProjects: ProjectMeta[] }) {
         {/* Agent chat */}
         <aside className="flex w-96 flex-col border-l border-[var(--color-border)] bg-[var(--color-panel)]">
           <AgentChat
+            ref={agentChatRef}
+            onBusyChange={setAgentBusy}
             slug={slug}
             onFilesChanged={() => {
               if (slug) refreshTree(slug);
@@ -558,7 +802,11 @@ export function Ide({ initialProjects }: { initialProjects: ProjectMeta[] }) {
       {newEntryKind && slug && (
         <NewEntryModal
           kind={newEntryKind}
-          onClose={() => setNewEntryKind(null)}
+          defaultPath={newEntryPrefix}
+          onClose={() => {
+            setNewEntryKind(null);
+            setNewEntryPrefix('');
+          }}
           onCreate={createEntry}
         />
       )}

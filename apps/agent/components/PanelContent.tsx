@@ -1,10 +1,9 @@
 'use client';
 
 import { BrowserPanel } from '@/components/panels/BrowserPanel';
-import { LangSmithPanel } from '@/components/panels/LangSmithPanel';
 import { PlaceholderPanel } from '@/components/panels/PlaceholderPanel';
-import { PureBrowserPanel } from '@/components/panels/PureBrowserPanel';
 import { RunnerPanel } from '@/components/panels/RunnerPanel';
+import { RunsPanel } from '@/components/panels/RunsPanel';
 import { TeamPanel } from '@/components/panels/TeamPanel';
 import { WorkflowPanel } from '@/components/panels/WorkflowPanel';
 import { getRegisteredToolView } from '@/lib/tool-views';
@@ -15,9 +14,10 @@ function LegacyToolView({ toolId }: { toolId: ToolId }) {
   if (toolId === 'team') return <TeamPanel />;
   if (toolId === 'workflow') return <WorkflowPanel />;
   if (toolId === 'runner') return <RunnerPanel />;
-  if (toolId === 'langsmith') return <LangSmithPanel />;
-  if (toolId === 'pure-browser') return <PureBrowserPanel />;
-  if (toolId === 'visual-browser') return <BrowserPanel />;
+  if (toolId === 'runs') return <RunsPanel />;
+  if (toolId === 'browser') return <BrowserPanel defaultMode="visual" />;
+  if (toolId === 'pure-browser') return <BrowserPanel defaultMode="headless" />;
+  if (toolId === 'visual-browser') return <BrowserPanel defaultMode="visual" />;
   const tool = getTool(toolId);
   return <PlaceholderPanel tool={tool} />;
 }

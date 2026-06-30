@@ -10,7 +10,7 @@ import { getSecureStore, SecureStore } from '../secure-store';
 // Core visual browser operator substrate.
 import { BrowserActionReasoner } from '../reasoners/BrowserActionReasoner';
 import { LoginSpecialist } from '../reasoners/LoginSpecialist';
-import { SpecialistContext } from '../reasoners/types';
+import { SpecialistContext, loadSkillFiles } from '../reasoners/types';
 
 // Screenshot archive on page change only.
 const SCREENSHOTS_DIR = path.join(process.cwd(), 'logs', 'screenshots');
@@ -229,6 +229,22 @@ export class BrowserOperator implements Operator {
     this.view = { ...this.view, ...patch };
   }
 
+  /**
+   * Context-aware skill selection. Keeps the reasoner prompt tight: navigation is always
+   * loaded, the secure-login skill is added only when the page looks like an auth surface,
+   * and the extraction skill is added only once we are likely on a results page or stuck.
+   * This avoids paying for every skill file on a simple navigation step.
+   */
+  private selectSkills(cheapText: string, step: number, noProgress: number): string {
+    const names = ['navigation'];
+    const t = (cheapText || '').toLowerCase();
+    const loginSignals = /password|sign in|log in|login|sign-in|credential|input\[type="password"\]/.test(t);
+    if (loginSignals) names.push('secure-login');
+    const resultSignals = /\$\d|price|results|listing|search results|reviews/.test(t);
+    if (resultSignals || step >= 3 || noProgress >= 1) names.push('extraction');
+    return loadSkillFiles(names);
+  }
+
   async runTask(prompt: string, opts?: { maxSteps?: number }): Promise<void> {
     if (this.running) this.stop();
     if (!prompt.trim()) {
@@ -356,7 +372,7 @@ export class BrowserOperator implements Operator {
           screenshotDataUrl: includeVision ? screenshotDataUrl : null,
           step,
           domain: this.extractDomainFromTask(prompt) || undefined,
-          skills,
+          skills: this.selectSkills(cheap.text, step, this.noProgressCount),
           inferenceOverrides: this.inferenceOverrides,
           noProgressCount: this.noProgressCount,
         };

@@ -11,6 +11,10 @@ import {
   serializeState,
   type GraphState,
 } from '../../../../../lib/workflow/runtime';
+import {
+  runStandardWorkflow,
+  validateStandardWorkflow,
+} from '../../../../../lib/workflow/standard-runtime';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -28,6 +32,45 @@ interface RunEvent {
 }
 
 const DEFAULT_TIMEOUT_MS = 120_000;
+
+// Persist a native run/trace record. Best-effort: a logging failure must never
+// break the actual run response. Replaces external LangSmith tracing.
+async function recordRun(args: {
+  workflowId: string;
+  workflowName: string;
+  version: number;
+  status: 'completed' | 'interrupted' | 'error';
+  input: string;
+  threadId: string;
+  startedAt: number;
+  events: RunEvent[];
+  state: ReturnType<typeof serializeState>;
+  nodeCount: number;
+  errorText?: string;
+}): Promise<void> {
+  try {
+    await prisma.workflowRun.create({
+      data: {
+        workflowId: args.workflowId,
+        workflowName: args.workflowName,
+        version: args.version,
+        status: args.status,
+        input: args.input.slice(0, 8000),
+        output: (args.state.output ?? '').slice(0, 8000),
+        errorText: args.errorText?.slice(0, 4000),
+        threadId: args.threadId,
+        durationMs: Date.now() - args.startedAt,
+        nodeCount: args.nodeCount,
+        eventCount: args.events.length,
+        tokens: args.state.tokens ?? 0,
+        events: args.events as unknown as object,
+        state: args.state as unknown as object,
+      },
+    });
+  } catch (err) {
+    console.error('[workflow/run] Failed to record run:', err);
+  }
+}
 
 // POST /api/workflow/[id]/run — compile the latest definition server-side and
 // execute it with LangGraph. Supports human-in-the-loop interrupt + resume.
@@ -66,6 +109,58 @@ export async function POST(req: Request, { params }: Params) {
     return NextResponse.json({ error: 'Validation failed', validation }, { status: 422 });
   }
 
+  const workflowName = workflow.name;
+  const version = workflow.currentVersion;
+  const runInput = body.resume ? (body.resumeValue ?? '') : (body.input ?? '');
+  const startedAt = Date.now();
+  const threadId = body.threadId ?? randomUUID();
+
+  if (def.kind === 'standard' && !body.resume) {
+    const standardError = validateStandardWorkflow(def);
+    if (standardError) {
+      return NextResponse.json({ error: standardError }, { status: 422 });
+    }
+    try {
+      const result = await runStandardWorkflow(def, runInput);
+      await recordRun({
+        workflowId: id,
+        workflowName,
+        version,
+        status: 'completed',
+        input: runInput,
+        threadId,
+        startedAt,
+        events: result.events,
+        state: result.state,
+        nodeCount: def.nodes.length,
+      });
+      return NextResponse.json({
+        status: 'completed',
+        engine: 'langchain-standard',
+        threadId,
+        events: result.events,
+        state: result.state,
+        validation,
+      });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Standard run failed';
+      await recordRun({
+        workflowId: id,
+        workflowName,
+        version,
+        status: 'error',
+        input: runInput,
+        threadId,
+        startedAt,
+        events: [],
+        state: serializeState({ input: runInput, output: '', messages: [], memory: {}, tokens: 0 }),
+        nodeCount: def.nodes.length,
+        errorText: message,
+      });
+      return NextResponse.json({ error: message }, { status: 500 });
+    }
+  }
+
   if (missingLlmKey(ir)) {
     return NextResponse.json(
       { error: 'XAI_API_KEY is not configured on the server. Set it to run model nodes.' },
@@ -77,7 +172,6 @@ export async function POST(req: Request, { params }: Params) {
     ? def.metadata.timeoutMs
     : DEFAULT_TIMEOUT_MS;
 
-  const threadId = body.threadId ?? randomUUID();
   const { graph } = buildGraph(ir);
   const config = {
     configurable: { thread_id: threadId },
@@ -119,6 +213,11 @@ export async function POST(req: Request, { params }: Params) {
 
     if (nextNodes.length > 0) {
       const interruptNode = nextNodes[0];
+      await recordRun({
+        workflowId: id, workflowName, version, status: 'interrupted',
+        input: runInput, threadId, startedAt, events, state: finalState,
+        nodeCount: ir.nodes.length,
+      });
       return NextResponse.json({
         status: 'interrupted',
         threadId,
@@ -129,6 +228,11 @@ export async function POST(req: Request, { params }: Params) {
       });
     }
 
+    await recordRun({
+      workflowId: id, workflowName, version, status: 'completed',
+      input: runInput, threadId, startedAt, events, state: finalState,
+      nodeCount: ir.nodes.length,
+    });
     return NextResponse.json({
       status: 'completed',
       threadId,
@@ -138,6 +242,11 @@ export async function POST(req: Request, { params }: Params) {
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Run failed';
+    await recordRun({
+      workflowId: id, workflowName, version, status: 'error',
+      input: runInput, threadId, startedAt, events,
+      state: serializeState({}), nodeCount: ir.nodes.length, errorText: message,
+    });
     return NextResponse.json(
       { status: 'error', threadId, events, error: message },
       { status: 500 },

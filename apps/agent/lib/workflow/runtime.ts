@@ -11,6 +11,14 @@ import {
   type BaseMessage,
 } from '@langchain/core/messages';
 import type { LangGraphIR, LangGraphNodeIR } from './types';
+import {
+  buildMemoryChromaRecallNode,
+  buildMemoryChromaUpsertNode,
+  buildMemoryEmbedNode,
+  buildMemoryIngestTriggerNode,
+  buildMemoryShardNode,
+  buildMemoryTagNode,
+} from './memory-executors';
 
 // ─── State ──────────────────────────────────────────────────────────────────
 
@@ -23,6 +31,9 @@ const StateAnnotation = Annotation.Root({
   output: Annotation<string>({ reducer: (_a, b) => b, default: () => '' }),
   memory: Annotation<Record<string, unknown>>({ reducer: (_a, b) => b, default: () => ({}) }),
   routeTo: Annotation<string | undefined>({ reducer: (_a, b) => b, default: () => undefined }),
+  // Cumulative token usage across all model nodes in a run (summed). Powers native
+  // run observability without any external tracing service.
+  tokens: Annotation<number>({ reducer: (a, b) => (a ?? 0) + (b ?? 0), default: () => 0 }),
 });
 
 export type GraphState = typeof StateAnnotation.State;
@@ -47,6 +58,7 @@ export interface SerializedState {
   messages: SerializedMessage[];
   memory: Record<string, unknown>;
   routeTo?: string;
+  tokens: number;
 }
 
 export function serializeState(state: Partial<GraphState>): SerializedState {
@@ -56,6 +68,7 @@ export function serializeState(state: Partial<GraphState>): SerializedState {
     messages: (state.messages ?? []).map(serializeMessage),
     memory: state.memory ?? {},
     routeTo: state.routeTo,
+    tokens: state.tokens ?? 0,
   };
 }
 
@@ -98,7 +111,18 @@ function buildLlmNode(node: LangGraphNodeIR) {
       typeof response.content === 'string'
         ? response.content
         : JSON.stringify(response.content);
-    return { messages: [response], output: text };
+    // Best-effort token capture for native observability. LangChain attaches
+    // usage_metadata on the AIMessage when the provider reports it.
+    const usage = (response as unknown as {
+      usage_metadata?: { total_tokens?: number };
+      response_metadata?: { tokenUsage?: { totalTokens?: number }; usage?: { total_tokens?: number } };
+    });
+    const tokens =
+      usage.usage_metadata?.total_tokens ??
+      usage.response_metadata?.tokenUsage?.totalTokens ??
+      usage.response_metadata?.usage?.total_tokens ??
+      0;
+    return { messages: [response], output: text, tokens };
   };
 }
 
@@ -140,6 +164,24 @@ function buildPassthroughNode() {
   return async (): Promise<Partial<GraphState>> => ({});
 }
 
+// Condition node. Evaluates the authored boolean expression over the current run state
+// and sets `routeTo` to the matching branch ('true' | 'false'), which the conditional
+// edges built in buildGraph use to pick the next node. The expression is authored in the
+// editor and evaluated server-side only (never sent to the client).
+function buildConditionNode(node: LangGraphNodeIR) {
+  return async (state: GraphState): Promise<Partial<GraphState>> => {
+    const expr = String(node.properties.expression ?? 'false');
+    let result = false;
+    try {
+      const fn = new Function('input', 'output', 'memory', 'state', `return (${expr});`);
+      result = Boolean(fn(state.input, state.output, state.memory ?? {}, state));
+    } catch {
+      result = false;
+    }
+    return { routeTo: result ? 'true' : 'false' };
+  };
+}
+
 // Browser agent tool node. Reuses the existing BrowserOperator singleton exactly
 // (Playwright + xAI vision reasoner loop: navigation, login, extraction, bounded
 // loop, secure credential injection). The whole agent loop is encapsulated as a
@@ -178,6 +220,13 @@ function buildBrowserToolNode(node: LangGraphNodeIR) {
 
 function nodeExecutor(node: LangGraphNodeIR) {
   if (node.nodeType === 'tool.browser') return buildBrowserToolNode(node);
+  if (node.nodeType === 'logic.condition') return buildConditionNode(node);
+  if (node.nodeType === 'trigger.memory_ingest') return buildMemoryIngestTriggerNode(node);
+  if (node.nodeType === 'memory.shard') return buildMemoryShardNode(node);
+  if (node.nodeType === 'memory.tag') return buildMemoryTagNode(node);
+  if (node.nodeType === 'memory.embed') return buildMemoryEmbedNode(node);
+  if (node.nodeType === 'memory.chroma_upsert') return buildMemoryChromaUpsertNode(node);
+  if (node.nodeType === 'memory.chroma_recall') return buildMemoryChromaRecallNode(node);
   if (node.model) return buildLlmNode(node);
   if (node.kind === 'tool' && (node.nodeType === 'tool.http' || node.properties.url !== undefined)) {
     return buildHttpToolNode(node);

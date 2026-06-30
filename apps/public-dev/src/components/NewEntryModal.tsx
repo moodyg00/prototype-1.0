@@ -13,14 +13,16 @@ function normalizePath(raw: string): string {
 
 export function NewEntryModal({
   kind,
+  defaultPath = '',
   onClose,
   onCreate,
 }: {
   kind: 'file' | 'dir';
+  defaultPath?: string;
   onClose: () => void;
   onCreate: (path: string) => Promise<void>;
 }) {
-  const [path, setPath] = useState('');
+  const [path, setPath] = useState(defaultPath);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,9 +30,9 @@ export function NewEntryModal({
   const valid = normalized.length > 0 && !normalized.includes('..');
 
   useEffect(() => {
-    setPath('');
+    setPath(defaultPath);
     setError(null);
-  }, [kind]);
+  }, [kind, defaultPath]);
 
   const create = async () => {
     if (!valid || saving) return;

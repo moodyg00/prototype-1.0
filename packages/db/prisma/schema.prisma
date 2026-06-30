@@ -2923,6 +2923,35 @@ model AgentMemoryEvent {
   @@map("agent_memory_events")
 }
 
+model MemoryChunk {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  chromaId       String   @map("chroma_id") @db.VarChar(120)
+  scopeKind      String   @map("scope_kind") @db.VarChar(20)
+  scopeId        String?  @map("scope_id") @db.VarChar(120)
+  partition      String   @default("default") @db.VarChar(80)
+  sourceKind     String   @map("source_kind") @db.VarChar(40)
+  contentExcerpt String   @map("content_excerpt") @db.VarChar(500)
+  contentHash    String?  @map("content_hash") @db.VarChar(64)
+  metadata       Json?    @db.JsonB
+  workflowRunId  String?  @map("workflow_run_id") @db.VarChar(64)
+  status         String   @default("indexed") @db.VarChar(40)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([scopeKind, scopeId, createdAt])
+  @@index([workflowRunId])
+  @@map("memory_chunks")
+}
+
+model MemoryAgentBinding {
+  agentId           String   @id @map("agent_id") @db.VarChar(120)
+  readScopes        Json     @map("read_scopes") @db.JsonB
+  writeScopes       Json     @map("write_scopes") @db.JsonB
+  defaultPartition  String   @default("default") @map("default_partition") @db.VarChar(80)
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("memory_agent_bindings")
+}
+
 model LowStockAlert {
   id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   inventoryId    String    @map("inventory_id") @db.Uuid
@@ -3316,6 +3345,33 @@ model Workflow {
   updatedAt      DateTime          @updatedAt
   versions       WorkflowVersion[]
   exports        WorkflowExport[]
+  runs           WorkflowRun[]
+}
+
+// Native run/trace record. Replaces external LangSmith tracing: every workflow
+// execution (any kind, not just browser) persists a row here so the Runs panel
+// can show history, status, latency, token usage, node timeline and final state.
+model WorkflowRun {
+  id           String    @id @default(cuid())
+  workflowId   String
+  workflowName String
+  version      Int       @default(1)
+  status       String // 'completed' | 'interrupted' | 'error'
+  input        String    @default("")
+  output       String    @default("")
+  errorText    String?
+  threadId     String?
+  durationMs   Int       @default(0)
+  nodeCount    Int       @default(0)
+  eventCount   Int       @default(0)
+  tokens       Int       @default(0)
+  events       Json // serialized node timeline
+  state        Json // serialized final state
+  createdAt    DateTime  @default(now())
+  workflow     Workflow  @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@index([workflowId])
+  @@index([createdAt])
 }
 
 model WorkflowVersion {

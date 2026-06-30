@@ -13,19 +13,19 @@ Agent workspace UI — browser automation, workflows, and AI operators.
 
 - **Team** — executive room panels
 - **Workflow** — visual workflow builder (LangGraph compile)
-- **Browser / Visual browser** — Playwright with live screenshots
-- **LangSmith** — trace review panel
+- **Browser** — unified Playwright/CDP browser (visual, headless, login modes)
+- **Runs** — native workflow run traces (status, latency, tokens, timeline)
 - **C-Suite** — LangGraph compile endpoint
 
 ## Environment
 
 ```bash
 XAI_API_KEY=              # Grok models
-LANGCHAIN_TRACING_V2=true # optional LangSmith
-LANGCHAIN_API_KEY=
-LANGCHAIN_PROJECT=agentic-enterprise
 CSUITE_MODEL=grok-4.3
 ```
+
+Workflow run traces are recorded natively in the `WorkflowRun` table — no external
+tracing service (e.g. LangSmith) is required.
 
 ## Commands
 

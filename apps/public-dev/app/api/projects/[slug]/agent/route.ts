@@ -1,14 +1,45 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { generateText, stepCountIs } from 'ai';
+import { generateText, stepCountIs, type ModelMessage } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { projectExists } from '@/src/lib/projects';
 import { AGENT_SYSTEM_PROMPT, buildProjectTools, type AgentToolState } from '@/src/lib/agent/tools';
+import { buildDesignPromptBlock } from '@/src/lib/design-mode';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
 type Ctx = { params: Promise<{ slug: string }> };
+
+const ElementContextSchema = z.object({
+  cssSelector: z.string(),
+  xpath: z.string(),
+  tagName: z.string(),
+  id: z.string(),
+  classList: z.array(z.string()),
+  attributes: z.record(z.string(), z.string()),
+  outerHTML: z.string(),
+  innerText: z.string(),
+  computedStyles: z.record(z.string(), z.string()),
+  rect: z.object({ x: z.number(), y: z.number(), w: z.number(), h: z.number() }),
+});
+
+const DesignContextSchema = z.object({
+  pagePath: z.string(),
+  selections: z.array(ElementContextSchema),
+  annotation: z
+    .object({
+      kind: z.literal('area'),
+      rect: z.object({ x: z.number(), y: z.number(), w: z.number(), h: z.number() }),
+    })
+    .optional(),
+  viewport: z.object({ w: z.number(), h: z.number() }).optional(),
+  screenshotDataUrl: z
+    .string()
+    .startsWith('data:image/')
+    .max(8_000_000)
+    .optional(),
+});
 
 const BodySchema = z.object({
   messages: z
@@ -19,6 +50,7 @@ const BodySchema = z.object({
       }),
     )
     .min(1),
+  designContext: DesignContextSchema.optional(),
 });
 
 export async function POST(req: Request, { params }: Ctx) {
@@ -48,11 +80,36 @@ export async function POST(req: Request, { params }: Ctx) {
   const openai = createOpenAI({ apiKey });
   const model = process.env.OPENAI_MODEL?.trim() || 'gpt-4o-mini';
 
+  const messages: ModelMessage[] = parsed.data.messages.map((m) => ({
+    role: m.role,
+    content: m.content,
+  }));
+  const design = parsed.data.designContext;
+  if (design && design.selections.length > 0) {
+    messages.push({
+      role: 'system',
+      content:
+        'The user is using Design Mode and selected elements in the live preview. ' +
+        'Apply their request to the corresponding source by editing the page listed below and any CSS/JS it references. ' +
+        'Prefer minimal, targeted edits and read the file before writing.\n\n' +
+        buildDesignPromptBlock(design),
+    });
+    if (design.screenshotDataUrl) {
+      messages.push({
+        role: 'user',
+        content: [
+          { type: 'text', text: 'Screenshot of the current selection (red marks = my annotations):' },
+          { type: 'image', image: design.screenshotDataUrl },
+        ],
+      });
+    }
+  }
+
   try {
     const result = await generateText({
       model: openai(model),
       system: AGENT_SYSTEM_PROMPT(slug),
-      messages: parsed.data.messages,
+      messages,
       tools,
       stopWhen: stepCountIs(12),
     });

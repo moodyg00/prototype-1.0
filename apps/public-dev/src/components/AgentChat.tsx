@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { Bot, Loader2, Send, Wrench } from 'lucide-react';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { Bot, Loader2, MousePointerClick, Send, Wrench } from 'lucide-react';
 import { PaneZoomControls } from './PaneZoomControls';
 import { usePaneZoom, usePaneZoomShortcuts } from '@/src/lib/usePaneZoom';
+import type { DesignContext } from '@/src/lib/design-mode';
 
 type ToolEvent = { tool: string; summary: string };
 
@@ -11,17 +12,27 @@ type ChatMessage = {
   role: 'user' | 'assistant' | 'system';
   content: string;
   tools?: ToolEvent[];
+  /** Short note shown under a user message when Design Mode context was attached. */
+  designNote?: string;
 };
 
-export function AgentChat({
-  slug,
-  onFilesChanged,
-  onRequestDeploy,
-}: {
-  slug: string | null;
-  onFilesChanged: () => void;
-  onRequestDeploy: () => void;
-}) {
+export type AgentChatHandle = {
+  /**
+   * Submit a prompt with attached Design Mode context (from the preview overlay).
+   * Resolves when the agent run completes, so the overlay can sequence a queue.
+   */
+  submitWithDesign: (prompt: string, design: DesignContext) => Promise<void>;
+};
+
+export const AgentChat = forwardRef<
+  AgentChatHandle,
+  {
+    slug: string | null;
+    onFilesChanged: () => void;
+    onRequestDeploy: () => void;
+    onBusyChange?: (busy: boolean) => void;
+  }
+>(function AgentChat({ slug, onFilesChanged, onRequestDeploy, onBusyChange }, ref) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
@@ -30,43 +41,80 @@ export function AgentChat({
   const agentZoom = usePaneZoom('agent', 14);
   usePaneZoomShortcuts(paneRef, agentZoom);
 
+  // Refs mirror state so sequential awaited runs (the Design Mode queue) always
+  // see the latest history/busy without waiting for a React re-render.
+  const messagesRef = useRef<ChatMessage[]>([]);
+  const busyRef = useRef(false);
+
+  const commitMessages = (next: ChatMessage[]) => {
+    messagesRef.current = next;
+    setMessages(next);
+  };
+
   useEffect(() => {
-    setMessages([]);
+    commitMessages([]);
   }, [slug]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [messages, busy]);
 
-  const send = async () => {
-    if (!slug || !input.trim() || busy) return;
-    const userMsg: ChatMessage = { role: 'user', content: input.trim() };
-    const history = [...messages, userMsg];
-    setMessages(history);
-    setInput('');
+  useEffect(() => {
+    onBusyChange?.(busy);
+  }, [busy, onBusyChange]);
+
+  const runAgent = async (content: string, design?: DesignContext) => {
+    if (!slug || !content.trim() || busyRef.current) return;
+    const designNote = design
+      ? `Design selection: ${design.selections.length} element${
+          design.selections.length > 1 ? 's' : ''
+        } on ${design.pagePath}`
+      : undefined;
+    const userMsg: ChatMessage = { role: 'user', content: content.trim(), designNote };
+    commitMessages([...messagesRef.current, userMsg]);
+    busyRef.current = true;
     setBusy(true);
     try {
       const res = await fetch(`/api/projects/${slug}/agent`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: history.map((m) => ({ role: m.role, content: m.content })),
+          messages: messagesRef.current.map((m) => ({ role: m.role, content: m.content })),
+          designContext: design ?? undefined,
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Agent error');
-      setMessages((prev) => [
-        ...prev,
+      commitMessages([
+        ...messagesRef.current,
         { role: 'assistant', content: data.text || '(no response)', tools: data.tools ?? [] },
       ]);
       if (data.filesChanged) onFilesChanged();
       if (data.requestDeploy) onRequestDeploy();
     } catch (err) {
-      setMessages((prev) => [...prev, { role: 'system', content: `Error: ${(err as Error).message}` }]);
+      commitMessages([...messagesRef.current, { role: 'system', content: `Error: ${(err as Error).message}` }]);
     } finally {
+      busyRef.current = false;
       setBusy(false);
     }
   };
+
+  const send = async () => {
+    if (!input.trim()) return;
+    const text = input.trim();
+    setInput('');
+    await runAgent(text);
+  };
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      submitWithDesign: (prompt: string, design: DesignContext) => runAgent(prompt, design),
+    }),
+    // runAgent reads history/busy from refs; only slug affects the request.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [slug],
+  );
 
   return (
     <div ref={paneRef} className="flex h-full flex-col">
@@ -119,6 +167,11 @@ export function AgentChat({
                 </div>
               )}
             </div>
+            {m.designNote && (
+              <div className="mt-1 flex items-center justify-end gap-1 text-[0.75em] text-[var(--color-muted)]">
+                <MousePointerClick size={10} /> {m.designNote}
+              </div>
+            )}
           </div>
         ))}
         {busy && (
@@ -154,4 +207,4 @@ export function AgentChat({
       </div>
     </div>
   );
-}
+});

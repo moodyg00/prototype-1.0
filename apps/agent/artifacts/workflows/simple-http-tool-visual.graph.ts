@@ -6,7 +6,7 @@ import { z } from 'zod';
 
 // Auto-generated from workflow: Simple HTTP Tool Visual
 // Workflow ID: cmqz8nr200004pcaclyg5esdn
-// Generated: 2026-06-29T13:13:32.320Z
+// Generated: 2026-06-30T08:36:30.721Z
 
 
 const StateAnnotation = Annotation.Root({

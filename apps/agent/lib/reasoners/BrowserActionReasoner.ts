@@ -24,12 +24,14 @@ export class BrowserActionReasoner implements PromptReasoner<SpecialistContext, 
   readonly description = 'Decides the next atomic GUI action (goto/click/type/...) for a browser operator task using a tight low-token prompt + strict structured output.';
 
   private apiKey: string;
-  private model: string;
+  private model: string;       // vision-capable model, used only when a screenshot is attached
+  private textModel: string;   // cheap text model, used for DOM-only (no screenshot) steps
   private onRaw?: (raw: string) => void;
 
-  constructor(opts: { apiKey: string; model?: string; onRawResponse?: (raw: string) => void }) {
+  constructor(opts: { apiKey: string; model?: string; textModel?: string; onRawResponse?: (raw: string) => void }) {
     this.apiKey = opts.apiKey;
     this.model = opts.model || 'grok-4.3';
+    this.textModel = opts.textModel || 'grok-3-mini';
     this.onRaw = opts.onRawResponse;
   }
 
@@ -132,11 +134,15 @@ Decide the single next action that best advances the exact task without looping.
     };
     const finalParams = mergeInferenceParams(baseParams, overrides);
 
-    const cacheKey = `browser-action-${(task || '').slice(0, 28).replace(/\s/g, '_')}-${step}`;
+    // Model tiering: a DOM-only step (no screenshot) is a cheap "doer" decision — use the
+    // small fast text model. Only pay for the vision-capable model when an image is attached.
+    const effectiveModel = screenshotDataUrl ? this.model : this.textModel;
+
+    const cacheKey = `browser-action-${effectiveModel}-${(task || '').slice(0, 28).replace(/\s/g, '_')}-${step}`;
 
     const decision = await callXaiStructured<BrowserActionDecision>({
       apiKey: this.apiKey,
-      model: this.model,
+      model: effectiveModel,
       system,
       userContent,
       schemaName: 'BrowserAction',

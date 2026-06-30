@@ -1,7 +1,7 @@
 {
   "workflowId": "cmqz8nr200004pcaclyg5esdn",
-  "version": 2,
-  "exportedAt": "2026-06-29T13:13:32.320Z",
+  "version": 3,
+  "exportedAt": "2026-06-30T08:36:30.722Z",
   "productionJson": {
     "id": "cmqz8nr200004pcaclyg5esdn",
     "kind": "langgraph",
@@ -111,7 +111,7 @@
         }
       }
     ],
-    "version": 2,
+    "version": 3,
     "metadata": {
       "tags": [
         "migration",
@@ -127,7 +127,7 @@
       ],
       "createdAt": "2026-06-29T13:13:32.087Z",
       "timeoutMs": 60000,
-      "updatedAt": "2026-06-29T13:13:32.233Z",
+      "updatedAt": "2026-06-30T08:36:30.664Z",
       "maxRetries": 0,
       "errorPolicy": "stop",
       "executionMode": "sequential"
@@ -226,5 +226,5 @@
       }
     ]
   },
-  "typescriptScaffold": "import { StateGraph, START, END, Annotation, interrupt } from '@langchain/langgraph';\nimport { ChatOpenAI } from '@langchain/openai';\nimport { BaseMessage, SystemMessage } from '@langchain/core/messages';\nimport { tool } from '@langchain/core/tools';\nimport { z } from 'zod';\n\n// Auto-generated from workflow: Simple HTTP Tool Visual\n// Workflow ID: cmqz8nr200004pcaclyg5esdn\n// Generated: 2026-06-29T13:13:32.320Z\n\n\nconst StateAnnotation = Annotation.Root({\n  messages: Annotation<BaseMessage[]>({ reducer: (a: any, b: any) => [...(a || []), ...(Array.isArray(b) ? b : [b])] }),\n  input: Annotation<string>(null),\n  output: Annotation<string>(null),\n});\n\n\n// Tool: HTTP GET\nasync function http_tool(input: unknown) {\n  // TODO: implement tool logic for \"HTTP GET\"\n  throw new Error('Tool \"HTTP GET\" not implemented');\n}\nconst http = tool(http_tool, {\n  name: 'http',\n  description: 'HTTP GET',\n  schema: z.object({ input: z.unknown() }),\n});\n\nasync function trigger(state: typeof StateAnnotation.State) {\n  // TODO: implement node \"Manual Trigger\"\n  return {};\n}\n\nasync function out(state: typeof StateAnnotation.State) {\n  // TODO: implement node \"Result\"\n  return {};\n}\nconst builder = new StateGraph(StateAnnotation);\n\nbuilder.addNode('trigger', trigger);\nbuilder.addNode('out', out);\nbuilder.addNode('tools', new ToolNode([http]));\n\n// Entry point\nbuilder.addEdge(START, 'trigger');\nbuilder.addEdge('trigger', 'http');\nbuilder.addEdge('http', 'out');\n\n// Export\nexport const graph = builder.compile({\n});\nexport type WorkflowState = typeof StateAnnotation.State;"
+  "typescriptScaffold": "import { StateGraph, START, END, Annotation, interrupt } from '@langchain/langgraph';\nimport { ChatOpenAI } from '@langchain/openai';\nimport { BaseMessage, SystemMessage } from '@langchain/core/messages';\nimport { tool } from '@langchain/core/tools';\nimport { z } from 'zod';\n\n// Auto-generated from workflow: Simple HTTP Tool Visual\n// Workflow ID: cmqz8nr200004pcaclyg5esdn\n// Generated: 2026-06-30T08:36:30.721Z\n\n\nconst StateAnnotation = Annotation.Root({\n  messages: Annotation<BaseMessage[]>({ reducer: (a: any, b: any) => [...(a || []), ...(Array.isArray(b) ? b : [b])] }),\n  input: Annotation<string>(null),\n  output: Annotation<string>(null),\n});\n\n\n// Tool: HTTP GET\nasync function http_tool(input: unknown) {\n  // TODO: implement tool logic for \"HTTP GET\"\n  throw new Error('Tool \"HTTP GET\" not implemented');\n}\nconst http = tool(http_tool, {\n  name: 'http',\n  description: 'HTTP GET',\n  schema: z.object({ input: z.unknown() }),\n});\n\nasync function trigger(state: typeof StateAnnotation.State) {\n  // TODO: implement node \"Manual Trigger\"\n  return {};\n}\n\nasync function out(state: typeof StateAnnotation.State) {\n  // TODO: implement node \"Result\"\n  return {};\n}\nconst builder = new StateGraph(StateAnnotation);\n\nbuilder.addNode('trigger', trigger);\nbuilder.addNode('out', out);\nbuilder.addNode('tools', new ToolNode([http]));\n\n// Entry point\nbuilder.addEdge(START, 'trigger');\nbuilder.addEdge('trigger', 'http');\nbuilder.addEdge('http', 'out');\n\n// Export\nexport const graph = builder.compile({\n});\nexport type WorkflowState = typeof StateAnnotation.State;"
 }

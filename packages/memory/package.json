@@ -1,0 +1,21 @@
+{
+  "name": "@prototype/memory",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./store": "./src/store/index.ts"
+  },
+  "scripts": {
+    "build": "echo \"no build step\"",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "chromadb": "^3.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.21",
+    "typescript": "^5.8.3"
+  }
+}

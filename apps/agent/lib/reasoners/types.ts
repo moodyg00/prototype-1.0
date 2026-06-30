@@ -114,6 +114,24 @@ export function loadSkills(skillDir = 'skills/visual-browser'): string {
     .join('\n');
 }
 
+// Selective skill loader: load only the named skill files (without the .md extension).
+// Used to keep the worker prompt tight — load navigation by default, and only add the
+// login or extraction skill when the current page context actually calls for it.
+export function loadSkillFiles(names: string[], skillDir = 'skills/visual-browser'): string {
+  const fs = require('fs');
+  const path = require('path');
+  const dir = path.join(process.cwd(), skillDir);
+  if (!fs.existsSync(dir)) return '';
+  return names
+    .map((name: string) => {
+      const file = path.join(dir, `${name}.md`);
+      if (!fs.existsSync(file)) return '';
+      return `### Skill: ${name}\n${fs.readFileSync(file, 'utf8')}\n`;
+    })
+    .filter(Boolean)
+    .join('\n');
+}
+
 // Small helper to compute final inference params (operator-chosen base + user overrides).
 export function mergeInferenceParams(
   base: InferenceParams,

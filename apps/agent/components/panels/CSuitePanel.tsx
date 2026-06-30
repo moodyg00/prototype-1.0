@@ -84,7 +84,6 @@ export function CSuitePanel() {
   const [tab, setTab] = useState<'meeting' | 'graph' | 'flowise' | 'build'>('meeting');
   const [draftText, setDraftText] = useState(JSON.stringify(defaultDraft, null, 2));
   const [flowiseUrl, setFlowiseUrl] = useState('http://localhost:3001');
-  const [smithUrl, setSmithUrl] = useState('https://smith.langchain.com');
   const [scriptPreview, setScriptPreview] = useState('');
   const [compileBusy, setCompileBusy] = useState(false);
 
@@ -212,17 +211,6 @@ export function CSuitePanel() {
             />
             <a href="https://github.com/FlowiseAI/Flowise" target="_blank" rel="noreferrer" className="btn btn-ghost text-xs">
               Flowise Repo
-            </a>
-          </div>
-          <div className="flex gap-2">
-            <input
-              value={smithUrl}
-              onChange={e => setSmithUrl(e.target.value)}
-              className="input flex-1 text-xs"
-              placeholder="https://smith.langchain.com"
-            />
-            <a href={smithUrl} target="_blank" rel="noreferrer" className="btn btn-ghost text-xs">
-              Open LangSmith
             </a>
           </div>
           <div className="flex-1 min-h-0 rounded-lg border border-white/10 overflow-hidden bg-black/40">

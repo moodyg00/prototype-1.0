@@ -20,7 +20,8 @@ export type ToolId =
   | 'team'
   | 'workflow'
   | 'runner'
-  | 'langsmith'
+  | 'runs'
+  | 'browser'
   | 'visual-browser'
   | 'pure-browser'
   | 'video'
@@ -53,12 +54,13 @@ export const TOOLS: ToolDef[] = [
   { id: 'team', label: 'Team', icon: Users, description: 'Executive meeting interface', source: 'core', status: 'built', defaultSize: { w: 1180, h: 760 } },
   { id: 'workflow', label: 'Workflow', icon: GitBranch, description: 'Native workflow graph builder with LangGraph export', source: 'core', status: 'built', defaultSize: { w: 1180, h: 760 } },
   { id: 'runner', label: 'Runner', icon: Play, description: 'Execute LangGraph workflows with live state & human-in-the-loop', source: 'core', status: 'built', defaultSize: { w: 1000, h: 680 } },
-  { id: 'langsmith', label: 'LangSmith', icon: Activity, description: 'Trace dashboard and run analysis', source: 'langchain', status: 'built', defaultSize: { w: 1180, h: 760 } },
+  { id: 'runs', label: 'Runs', icon: Activity, description: 'Native run traces — status, latency, tokens & timeline', source: 'core', status: 'built', defaultSize: { w: 1180, h: 760 } },
+  { id: 'browser', label: 'Browser', icon: Bot, description: 'Unified browser — visual, headless, and login modes share one panel', source: 'core', status: 'built', defaultSize: { w: 1100, h: 700 } },
   { id: 'pure-browser', label: 'Pure Browser', icon: Terminal, description: 'Fast CDP browser — accessibility tree, no vision cost', source: 'core', status: 'built', defaultSize: { w: 900, h: 600 } },
   { id: 'visual-browser', label: 'Visual Browser', icon: Bot, description: 'Visual-first browser operator', source: 'core', status: 'built', defaultSize: { w: 1100, h: 700 } },
   { id: 'video', label: 'Video Production', icon: Video, description: 'Agentic video (Montage blueprint)', source: 'calesthio/OpenMontage', status: 'pending', defaultSize: { w: 640, h: 420 } },
   { id: 'photography', label: 'Photography', icon: ImageIcon, description: 'AI image & canvas (Invoke blueprint)', source: 'invoke-ai/InvokeAI', status: 'pending', defaultSize: { w: 640, h: 420 } },
-  { id: 'memory', label: 'Agent Memory', icon: Brain, description: 'Layered agent memory (Tencent model)', source: 'TencentCloud/TencentDB-Agent-Memory', status: 'pending', defaultSize: { w: 560, h: 380 } },
+  { id: 'memory', label: 'Agent Memory', icon: Brain, description: 'Chroma vector memory — ingest/recall via visual workflows', source: 'core', status: 'built', defaultSize: { w: 720, h: 520 } },
   { id: 'agents', label: 'Agents', icon: Brain, description: 'Agent registry and configuration', source: '', status: 'pending', defaultSize: { w: 560, h: 380 } },
   {
     id: 'photos',

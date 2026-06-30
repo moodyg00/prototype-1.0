@@ -62,6 +62,11 @@ function edge(id: string, source: string, target: string): WorkflowEdge {
   return { id, source, sourceHandle: 'out', target, targetHandle: 'in' };
 }
 
+// Edge from a specific source handle (e.g. a condition node's 'true' / 'false' output).
+function edgeFrom(id: string, source: string, sourceHandle: string, target: string): WorkflowEdge {
+  return { id, source, sourceHandle, target, targetHandle: 'in' };
+}
+
 type Blueprint = {
   name: string;
   description: string;
@@ -138,6 +143,63 @@ const httpTool: Blueprint = {
   tags: ['migration', 'http', 'visual'],
 };
 
+// ── Blueprint 3: Task Router Visual ─────────────────────────────────────────────
+// Demonstrates the tiered "supervisor routes to the cheapest worker" pattern:
+// a logic.condition node inspects the input and routes either to a cheap HTTP fetch
+// (when the task needs external data) or straight to a direct response. No vision,
+// no LLM tokens — the routing decision itself is free.
+const taskRouter: Blueprint = {
+  name: 'Task Router Visual',
+  description:
+    'Visual LangGraph router. trigger -> condition -> (HTTP worker | direct respond). Routes simple tasks to the cheapest path, escalating only when external data is needed.',
+  nodes: [
+    node({ id: 'trigger', typeId: 'trigger.manual', label: 'Task Input', x: 0, properties: { payload: '{}' } }),
+    node({
+      id: 'route',
+      typeId: 'logic.condition',
+      label: 'Needs External Data?',
+      x: 260,
+      properties: {
+        expression: "typeof input === 'string' && /fetch|http|url|api|data/i.test(input)",
+      },
+    }),
+    node({
+      id: 'http',
+      typeId: 'tool.http',
+      label: 'HTTP Worker',
+      x: 540,
+      properties: {
+        method: 'GET',
+        url: 'https://jsonplaceholder.typicode.com/todos/1',
+        headers: '{}',
+        body: 'null',
+      },
+    }),
+    node({
+      id: 'respondFetch',
+      typeId: 'output.respond',
+      label: 'Respond (with data)',
+      x: 820,
+      properties: { statusCode: 200, contentType: 'application/json' },
+    }),
+    node({
+      id: 'respondDirect',
+      typeId: 'output.respond',
+      label: 'Respond (direct)',
+      x: 540,
+      properties: { statusCode: 200, contentType: 'application/json' },
+    }),
+  ],
+  edges: [
+    edge('e1', 'trigger', 'route'),
+    edgeFrom('e2', 'route', 'true', 'http'),
+    edgeFrom('e3', 'route', 'false', 'respondDirect'),
+    edge('e4', 'http', 'respondFetch'),
+  ],
+  timeoutMs: 60_000,
+  tags: ['migration', 'router', 'visual'],
+};
+
 async function api(method: string, url: string, body?: unknown) {
   const res = await fetch(`${BASE_URL}${url}`, {
     method,
@@ -212,7 +274,7 @@ async function exportArtifacts(id: string, bp: Blueprint) {
 
 async function main() {
   console.log(`Seeding visual workflows against ${BASE_URL}\n`);
-  for (const bp of [browserAgent, httpTool]) {
+  for (const bp of [browserAgent, httpTool, taskRouter]) {
     console.log(`▶ ${bp.name}`);
     const id = await upsert(bp);
     const validation = await exportArtifacts(id, bp);

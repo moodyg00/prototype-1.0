@@ -292,6 +292,93 @@ export async function deleteFile(slug: string, relPath: string): Promise<void> {
   await touchProject(slug);
 }
 
+/** True if `candidate` is `ancestor` or a path under it. */
+export function isDescendantOrSelf(ancestor: string, candidate: string): boolean {
+  const a = ancestor.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+  const c = candidate.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+  if (!a) return true;
+  return c === a || c.startsWith(`${a}/`);
+}
+
+function normalizeRelPath(raw: string): string {
+  return raw.trim().replace(/\\/g, '/').replace(/^\/+/, '').replace(/\/+$/, '');
+}
+
+export async function writeBinaryFile(slug: string, relPath: string, data: Buffer): Promise<void> {
+  const abs = resolveInProject(slug, relPath);
+  await fs.mkdir(path.dirname(abs), { recursive: true });
+  await fs.writeFile(abs, data);
+  await touchProject(slug);
+}
+
+export async function uploadFiles(
+  slug: string,
+  basePath: string,
+  files: { relPath: string; data: Buffer }[],
+): Promise<string[]> {
+  const base = normalizeRelPath(basePath);
+  const written: string[] = [];
+  for (const { relPath, data } of files) {
+    const rel = normalizeRelPath(relPath);
+    if (!rel || rel.includes('..')) throw new Error(`Invalid path: ${relPath}`);
+    const full = base ? `${base}/${rel}` : rel;
+    await writeBinaryFile(slug, full, data);
+    written.push(full);
+  }
+  return written;
+}
+
+export async function moveEntry(slug: string, fromPath: string, toPath: string): Promise<void> {
+  const from = normalizeRelPath(fromPath);
+  const to = normalizeRelPath(toPath);
+  if (!from || !to) throw new Error('Invalid path');
+  if (from === to) throw new Error('Source and destination are the same');
+  if (isDescendantOrSelf(from, to)) throw new Error('Cannot move into itself or a descendant');
+
+  const fromAbs = resolveInProject(slug, from);
+  const toAbs = resolveInProject(slug, to);
+  const root = getProjectRoot(slug);
+  if (fromAbs === root) throw new Error('Cannot move project root');
+  if (!existsSync(fromAbs)) throw new Error('Source not found');
+  if (existsSync(toAbs)) throw new Error('Destination already exists');
+
+  await fs.mkdir(path.dirname(toAbs), { recursive: true });
+  await fs.rename(fromAbs, toAbs);
+  await touchProject(slug);
+}
+
+function uniqueCopyPath(slug: string, srcPath: string): string {
+  const parts = srcPath.split('/');
+  const name = parts.pop() ?? srcPath;
+  const dir = parts.join('/');
+  const dot = name.lastIndexOf('.');
+  const base = dot > 0 ? name.slice(0, dot) : name;
+  const ext = dot > 0 ? name.slice(dot) : '';
+  let n = 1;
+  for (;;) {
+    const suffix = n === 1 ? ' (copy)' : ` (copy ${n})`;
+    const candidate = dir ? `${dir}/${base}${suffix}${ext}` : `${base}${suffix}${ext}`;
+    if (!existsSync(resolveInProject(slug, candidate))) return candidate;
+    n += 1;
+  }
+}
+
+export async function duplicateFile(slug: string, srcPath: string): Promise<string> {
+  const src = normalizeRelPath(srcPath);
+  if (!src) throw new Error('Invalid path');
+  const srcAbs = resolveInProject(slug, src);
+  if (!existsSync(srcAbs)) throw new Error('Source not found');
+  const stat = await fs.stat(srcAbs);
+  if (!stat.isFile()) throw new Error('Can only duplicate files');
+
+  const dest = uniqueCopyPath(slug, src);
+  const destAbs = resolveInProject(slug, dest);
+  await fs.mkdir(path.dirname(destAbs), { recursive: true });
+  await fs.copyFile(srcAbs, destAbs);
+  await touchProject(slug);
+  return dest;
+}
+
 export async function createFile(
   slug: string,
   relPath: string,

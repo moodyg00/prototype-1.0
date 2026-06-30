@@ -1,5 +1,8 @@
 import { z } from 'zod';
 
+import { recallMemory } from '@prototype/memory';
+
+import { getMemoryBinding } from '@/lib/memory/bindings';
 import { agentMemoryService } from '../memory/service';
 import type { AgentTool } from './types';
 
@@ -25,8 +28,15 @@ export const memorySearchTool: AgentTool = {
   inputSchema: searchSchema,
   execute: async (ctx, input) => {
     const parsed = searchSchema.parse(input);
+    const binding = await getMemoryBinding(ctx.agentId);
+    const hits = await recallMemory({
+      agentId: ctx.agentId,
+      query: parsed.query,
+      topK: parsed.limit ?? 20,
+      binding,
+    });
     const events = await agentMemoryService.search(ctx.agentId, parsed.query, parsed.limit ?? 20);
-    return { count: events.length, events };
+    return { count: hits.length, hits, legacyEvents: events };
   },
 };
 

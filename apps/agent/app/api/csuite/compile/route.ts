@@ -94,10 +94,8 @@ export const enterpriseGraph = builder.compile();
 
 ${toolNote}
 
-// LangSmith tracing:
-// LANGCHAIN_TRACING_V2=true
-// LANGCHAIN_API_KEY=...
-// LANGCHAIN_PROJECT=${draft.orgName.replace(/\s+/g, '-')}
+// Run traces are recorded natively in the WorkflowRun table (see the Runs panel).
+// No external tracing service required.
 `;
 }
 

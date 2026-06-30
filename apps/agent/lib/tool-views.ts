@@ -1,4 +1,5 @@
 import type { ComponentType } from 'react';
+import { memoryToolViews } from '@/components/panels/memory';
 import { photosToolViews } from '@/components/panels/photos';
 import type { ToolId } from './tools';
 import type { ToolRenderContext, ToolSurface } from './tool-surfaces';
@@ -17,6 +18,7 @@ export interface ToolViewRegistration {
 }
 
 export const TOOL_VIEW_REGISTRY: Partial<Record<ToolId, ToolViewRegistration>> = {
+  memory: memoryToolViews,
   photos: photosToolViews,
 };
 
