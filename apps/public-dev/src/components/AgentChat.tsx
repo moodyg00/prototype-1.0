@@ -14,6 +14,11 @@ import {
 import { PaneZoomControls } from './PaneZoomControls';
 import { usePaneZoom, usePaneZoomShortcuts } from '@/src/lib/usePaneZoom';
 import type { DesignContext } from '@/src/lib/design-mode';
+import {
+  DEFAULT_IDE_MODEL_ID,
+  ideModelStorageKey,
+  type IdeModelOption,
+} from '@prototype/ide-tools/ide-models';
 
 type ToolEvent = { tool: string; summary: string };
 type ThoughtStep = { step: number; reasoning?: string; tool?: string; summary?: string };
@@ -38,6 +43,8 @@ type SessionDetail = SessionMeta & {
   messages: ChatMessage[];
   threadId?: string;
 };
+
+type ModelOption = IdeModelOption & { configured?: boolean };
 
 export type AgentChatHandle = {
   submitWithDesign: (prompt: string, design: DesignContext) => Promise<void>;
@@ -87,6 +94,8 @@ export const AgentChat = forwardRef<
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [sessionMenuOpen, setSessionMenuOpen] = useState(false);
+  const [modelId, setModelId] = useState(DEFAULT_IDE_MODEL_ID);
+  const [models, setModels] = useState<ModelOption[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const paneRef = useRef<HTMLDivElement>(null);
   const agentZoom = usePaneZoom('agent', 14);
@@ -96,6 +105,7 @@ export const AgentChat = forwardRef<
   const busyRef = useRef(false);
   const sessionIdRef = useRef<string | null>(null);
   const threadIdRef = useRef<string | undefined>(undefined);
+  const modelIdRef = useRef(DEFAULT_IDE_MODEL_ID);
 
   const commitMessages = (next: ChatMessage[]) => {
     messagesRef.current = next;
@@ -186,8 +196,19 @@ export const AgentChat = forwardRef<
     commitMessages([]);
     if (!slug) {
       setSessions([]);
+      setModels([]);
       return;
     }
+    const stored = localStorage.getItem(ideModelStorageKey(slug));
+    const nextModel = stored?.trim() || DEFAULT_IDE_MODEL_ID;
+    modelIdRef.current = nextModel;
+    setModelId(nextModel);
+    void fetch(`/api/projects/${slug}/agent/models`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data.models)) setModels(data.models);
+      })
+      .catch(() => {});
     (async () => {
       const res = await fetch(`/api/projects/${slug}/chats`);
       const data = await res.json();
@@ -228,6 +249,7 @@ export const AgentChat = forwardRef<
           messages: withUser.map((m) => ({ role: m.role, content: m.content })),
           designContext: design ?? undefined,
           threadId: threadIdRef.current,
+          modelId: modelIdRef.current,
         }),
       });
       const data = await res.json();
@@ -275,6 +297,13 @@ export const AgentChat = forwardRef<
   );
 
   const activeTitle = sessions.find((s) => s.id === sessionId)?.title ?? 'Chat';
+  const activeModel = models.find((m) => m.id === modelId);
+
+  const onModelChange = (id: string) => {
+    modelIdRef.current = id;
+    setModelId(id);
+    if (slug) localStorage.setItem(ideModelStorageKey(slug), id);
+  };
 
   return (
     <div ref={paneRef} className="flex h-full flex-col">
@@ -383,6 +412,28 @@ export const AgentChat = forwardRef<
         )}
       </div>
       <div className="border-t border-[var(--color-border)] p-2" style={{ fontSize: `${agentZoom.size}px` }}>
+        <div className="mb-2 flex items-center gap-2">
+          <label htmlFor="ide-model" className="shrink-0 text-[0.75em] text-[var(--color-muted)]">
+            Model
+          </label>
+          <select
+            id="ide-model"
+            value={modelId}
+            onChange={(e) => onModelChange(e.target.value)}
+            disabled={!slug || busy}
+            title={activeModel?.description}
+            className="min-w-0 flex-1 truncate rounded-md border border-[var(--color-border)] bg-[var(--color-panel-2)] px-2 py-1 text-[0.85em] outline-none focus:border-[var(--color-accent)] disabled:opacity-50"
+          >
+            {(models.length ? models : [{ id: modelId, label: modelId, provider: 'xai' as const, description: '' }]).map(
+              (m) => (
+                <option key={m.id} value={m.id} disabled={m.configured === false}>
+                  {m.label}
+                  {m.configured === false ? ' (no API key)' : ''}
+                </option>
+              ),
+            )}
+          </select>
+        </div>
         <div className="flex items-end gap-2">
           <textarea
             value={input}

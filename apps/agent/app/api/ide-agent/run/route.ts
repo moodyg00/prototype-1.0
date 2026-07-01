@@ -41,6 +41,7 @@ const BodySchema = z.object({
   designContext: DesignContextSchema.optional(),
   threadId: z.string().optional(),
   runId: z.string().optional(),
+  modelId: z.string().optional(),
 });
 
 type ToolEvent = { tool: string; summary: string };
@@ -119,7 +120,7 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: 'Invalid input' }, { status: 400 });
   }
-  const { slug, messages, designContext, threadId } = parsed.data;
+  const { slug, messages, designContext, threadId, modelId } = parsed.data;
   const runId = parsed.data.runId ?? randomUUID();
 
   if (!(await projectExists(slug))) {
@@ -138,7 +139,7 @@ export async function POST(req: Request) {
     });
   }
 
-  const input = JSON.stringify({ slug, messages, designContext, runId, threadId });
+  const input = JSON.stringify({ slug, messages, designContext, runId, threadId, modelId });
 
   let runJson: any;
   try {

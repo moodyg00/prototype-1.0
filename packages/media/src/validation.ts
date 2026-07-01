@@ -50,6 +50,8 @@ export const mediaUploadSchema = z.object({
   description: z.string().trim().max(500).optional().nullable(),
   categoryId: z.string().uuid().optional().nullable(),
   tags: z.array(z.string().trim().min(1).max(80)).max(30).optional(),
+  /** Structured tags for agent workspace (stored as JSON on MediaFile). */
+  tagsRecord: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type MediaUploadInput = z.infer<typeof mediaUploadSchema>;

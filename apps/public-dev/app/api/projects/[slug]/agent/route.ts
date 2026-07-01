@@ -40,6 +40,7 @@ const BodySchema = z.object({
   designContext: DesignContextSchema.optional(),
   threadId: z.string().optional(),
   runId: z.string().optional(),
+  modelId: z.string().optional(),
 });
 
 /** Base URL of the agent app that hosts the IDE Agent workflow. */
@@ -49,7 +50,7 @@ function agentBaseUrl(): string {
 
 /**
  * IDE chat endpoint. Delegates to the LangGraph "IDE Agent Visual" workflow
- * hosted in the agent app, which runs a Grok ReAct agent bound to the same
+ * hosted in the agent app, which runs a ReAct agent bound to the same
  * path-scoped file tools the IDE uses. The response shape is unchanged so the
  * AgentChat UI works without modification.
  */
@@ -74,6 +75,7 @@ export async function POST(req: Request, { params }: Ctx) {
         designContext: parsed.data.designContext,
         threadId: parsed.data.threadId,
         runId: parsed.data.runId,
+        modelId: parsed.data.modelId,
       }),
     });
     const json = await res.json().catch(() => null);

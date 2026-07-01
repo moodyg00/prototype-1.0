@@ -99,7 +99,7 @@ export function createMediaService(deps: MediaServiceDeps) {
           mimeType: args.mimeType,
           mediaKind: normalizeKind(input.kind, args.mimeType),
           sizeBytes: stored.sizeBytes,
-          tags: input.tags ?? [],
+          tags: (input.tagsRecord ?? input.tags ?? []) as object,
           libraryType: input.library,
           source: input.source,
           scanStatus: input.source === 'submitted' ? 'pending' : 'clean',

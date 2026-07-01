@@ -20,6 +20,7 @@
     "@prototype/db": "workspace:*",
     "@prototype/icons": "workspace:*",
     "@prototype/ide-tools": "workspace:*",
+    "@prototype/media": "workspace:*",
     "@prototype/memory": "workspace:*",
     "@prisma/adapter-pg": "^7.8.0",
     "@xyflow/react": "^12.11.0",

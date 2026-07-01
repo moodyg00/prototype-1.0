@@ -1,42 +1,35 @@
 import { randomUUID } from 'node:crypto';
 
-import { AIMessage, HumanMessage, type BaseMessage } from '@langchain/core/messages';
+import { AIMessage, type BaseMessage } from '@langchain/core/messages';
 import type { StructuredToolInterface } from '@langchain/core/tools';
 import {
   buildDesignPromptBlock,
   buildProjectManifest,
+  DEFAULT_IDE_MODEL_ID,
   IDE_AGENT_SYSTEM_PROMPT,
+  resolveIdeModel,
   type IdeToolContext,
   type ThoughtStep,
 } from '@prototype/ide-tools';
 import { buildIdeLangChainTools, IDE_TOOL_NAMES, type IdeToolName } from '@prototype/ide-tools/langchain';
 
-import {
-  invokeXaiChat,
-  langChainToolsToXai,
-  type XaiChatMessage,
-} from '../integrations/xai-chat';
-import { resolveXaiApiKey } from '../integrations/xai';
+import { langChainToolsToAnthropic, langChainToolsToOpenAi } from '../integrations/chat-tools';
+import type { ChatMessage } from '../integrations/chat-types';
+import { invokeIdeChat } from '../integrations/ide-llm';
 import { ideToolNameFromType, type IdeRunState } from './ide-executors';
 import type { GraphState } from './runtime';
 import type { LangGraphNodeIR } from './types';
 
 type ReasoningEffort = 'low' | 'medium' | 'high';
 
-function lcMessagesToXai(
-  systemPrompt: string,
-  history: Array<{ role: string; content: string }>,
-  lastUser?: string,
-): XaiChatMessage[] {
-  const out: XaiChatMessage[] = [{ role: 'system', content: systemPrompt }];
-  for (const m of history) {
-    if (m.role === 'assistant') out.push({ role: 'assistant', content: m.content });
-    else if (m.role === 'user') out.push({ role: 'user', content: m.content });
-  }
-  if (lastUser && !history.some((m) => m.role === 'user' && m.content === lastUser)) {
-    out.push({ role: 'user', content: lastUser });
-  }
-  return out;
+function historyToChatMessages(history: Array<{ role: string; content: string }>): ChatMessage[] {
+  return history
+    .filter((m) => m.content.trim())
+    .map((m) =>
+      m.role === 'assistant'
+        ? ({ role: 'assistant' as const, content: m.content })
+        : ({ role: 'user' as const, content: m.content }),
+    );
 }
 
 async function executeTool(
@@ -60,16 +53,15 @@ async function executeTool(
 /**
  * Build the IDE agent (ReAct) node executor.
  *
- * Uses direct xAI chat/completions so reasoning_content is preserved. Tool nodes
- * wired into the agent's "tools" input are mapped to LangChain tools that are
- * hard-scoped to the project slug in state.ide.
+ * Supports xAI, Anthropic, and OpenAI (Codex) via invokeIdeChat. The model id
+ * comes from state.ide.modelId (chat picker) or the workflow node default.
  */
 export function buildLlmAgentNode(node: LangGraphNodeIR, toolNodes: LangGraphNodeIR[]) {
   const toolNames = toolNodes
     .map((t: LangGraphNodeIR) => ideToolNameFromType(t.nodeType))
     .filter((n): n is IdeToolName => n !== null);
 
-  const model = node.model || 'grok-4.3';
+  const defaultModelId = node.model || DEFAULT_IDE_MODEL_ID;
   const reasoningEffort = ((): ReasoningEffort => {
     const raw = node.properties.reasoningEffort;
     return raw === 'medium' || raw === 'high' ? raw : 'low';
@@ -86,13 +78,8 @@ export function buildLlmAgentNode(node: LangGraphNodeIR, toolNodes: LangGraphNod
       return { output: 'IDE agent error: no project slug in run context.' };
     }
 
-    const apiKey = await resolveXaiApiKey();
-    if (!apiKey) {
-      return {
-        output:
-          'No xAI API key is configured. Set XAI_API_KEY in apps/agent/.env.local or add an active xAI integration.',
-      };
-    }
+    const modelId = ide.modelId ?? defaultModelId;
+    const modelSpec = resolveIdeModel(modelId);
 
     const runId = ide.runId ?? randomUUID();
     const effects = {
@@ -111,7 +98,8 @@ export function buildLlmAgentNode(node: LangGraphNodeIR, toolNodes: LangGraphNod
     ] as IdeToolName[];
     const tools = buildIdeLangChainTools(ctx, selectedTools);
     const toolMap = new Map<string, StructuredToolInterface>(tools.map((t) => [t.name, t]));
-    const xaiTools = langChainToolsToXai(tools);
+    const openAiTools = langChainToolsToOpenAi(tools);
+    const anthropicTools = langChainToolsToAnthropic(tools);
 
     let systemPrompt =
       (typeof node.systemPrompt === 'string' && node.systemPrompt.trim()) ||
@@ -133,7 +121,7 @@ export function buildLlmAgentNode(node: LangGraphNodeIR, toolNodes: LangGraphNod
         buildDesignPromptBlock(design);
     }
 
-    const history = (state.ideMessages ?? []).map((m) => {
+    const history = (state.ideMessages ?? []).map((m: BaseMessage) => {
       const content =
         typeof m.content === 'string'
           ? m.content
@@ -152,11 +140,10 @@ export function buildLlmAgentNode(node: LangGraphNodeIR, toolNodes: LangGraphNod
       return { role, content };
     });
 
-    const messages: XaiChatMessage[] = lcMessagesToXai(
-      systemPrompt,
-      history,
-      history.length === 0 ? state.input : undefined,
-    );
+    const messages: ChatMessage[] = historyToChatMessages(history);
+    if (history.length === 0 && state.input?.trim()) {
+      messages.push({ role: 'user', content: state.input.trim() });
+    }
 
     if (design?.screenshotDataUrl) {
       messages.push({
@@ -170,62 +157,81 @@ export function buildLlmAgentNode(node: LangGraphNodeIR, toolNodes: LangGraphNod
     let finalText = '';
     let step = 0;
 
-    for (let i = 0; i < Math.max(1, maxIterations); i += 1) {
-      const ai = await invokeXaiChat({
-        apiKey,
-        model,
-        messages,
-        tools: xaiTools.length ? xaiTools : undefined,
-        reasoningEffort,
-      });
-      tokens += ai.totalTokens;
-      step += 1;
-
-      if (ai.reasoningContent?.trim()) {
-        effects.thoughts!.push({
-          step,
-          reasoning: ai.reasoningContent.trim(),
+    try {
+      for (let i = 0; i < Math.max(1, maxIterations); i += 1) {
+        const ai = await invokeIdeChat({
+          modelId,
+          systemPrompt,
+          messages,
+          tools: openAiTools.length ? openAiTools : undefined,
+          anthropicTools: anthropicTools.length ? anthropicTools : undefined,
+          reasoningEffort: modelSpec.provider === 'xai' ? reasoningEffort : undefined,
         });
-      }
+        tokens += ai.totalTokens;
+        step += 1;
 
-      if (!ai.toolCalls.length) {
-        finalText = ai.content || '(done)';
-        messages.push({ role: 'assistant', content: ai.content });
-        break;
-      }
+        if (ai.reasoningContent?.trim()) {
+          effects.thoughts!.push({
+            step,
+            reasoning: ai.reasoningContent.trim(),
+          });
+        }
 
-      messages.push({
-        role: 'assistant',
-        content: ai.content || '',
-        tool_calls: ai.toolCalls.map((tc) => ({
-          id: tc.id || `call_${step}_${tc.name}`,
-          type: 'function' as const,
-          function: { name: tc.name, arguments: JSON.stringify(tc.args) },
-        })),
-      });
-
-      for (const call of ai.toolCalls) {
-        const tool = toolMap.get(call.name);
-        const toolResult = tool
-          ? await executeTool(tool, call.name, call.args, call.id)
-          : JSON.stringify({ error: `Unknown tool: ${call.name}` });
-
-        effects.thoughts!.push({
-          step,
-          tool: call.name,
-          summary: toolResult.slice(0, 120),
-        });
+        if (!ai.toolCalls.length) {
+          finalText = ai.content || '(done)';
+          messages.push({ role: 'assistant', content: ai.content });
+          break;
+        }
 
         messages.push({
-          role: 'tool',
-          content: toolResult,
-          tool_call_id: call.id || `call_${step}`,
+          role: 'assistant',
+          content: ai.content || '',
+          toolCalls: ai.toolCalls.map((tc) => ({
+            id: tc.id || `call_${step}_${tc.name}`,
+            name: tc.name,
+            args: tc.args,
+          })),
         });
-      }
 
-      if (i === maxIterations - 1) {
-        finalText = ai.content || 'Reached the maximum number of tool iterations before finishing.';
+        for (const call of ai.toolCalls) {
+          const tool = toolMap.get(call.name);
+          const callId = call.id || `call_${step}_${call.name}`;
+          const toolResult = tool
+            ? await executeTool(tool, call.name, call.args, callId)
+            : JSON.stringify({ error: `Unknown tool: ${call.name}` });
+
+          effects.thoughts!.push({
+            step,
+            tool: call.name,
+            summary: toolResult.slice(0, 120),
+          });
+
+          messages.push({
+            role: 'tool',
+            content: toolResult,
+            toolCallId: callId,
+          });
+        }
+
+        if (i === maxIterations - 1) {
+          finalText = ai.content || 'Reached the maximum number of tool iterations before finishing.';
+        }
       }
+    } catch (err) {
+      return {
+        output: (err as Error).message,
+        ide: {
+          ...ide,
+          runId,
+          modelId,
+          filesChanged: effects.filesChanged,
+          requestDeploy: effects.requestDeploy,
+          deployReason: effects.deployReason,
+          events: effects.events,
+          thoughts: effects.thoughts,
+          checkpointedPaths: effects.checkpointedPaths,
+        },
+      };
     }
 
     return {
@@ -234,6 +240,7 @@ export function buildLlmAgentNode(node: LangGraphNodeIR, toolNodes: LangGraphNod
       ide: {
         ...ide,
         runId,
+        modelId,
         filesChanged: effects.filesChanged,
         requestDeploy: effects.requestDeploy,
         deployReason: effects.deployReason,

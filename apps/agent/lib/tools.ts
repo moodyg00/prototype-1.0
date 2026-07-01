@@ -28,7 +28,7 @@ export type ToolId =
   | 'photography'
   | 'memory'
   | 'agents'
-  | 'photos'
+  | 'media-library'
   | 'documents'
   | 'analytics'
   | 'mobile'
@@ -59,16 +59,25 @@ export const TOOLS: ToolDef[] = [
   { id: 'pure-browser', label: 'Pure Browser', icon: Terminal, description: 'Fast CDP browser — accessibility tree, no vision cost', source: 'core', status: 'built', defaultSize: { w: 900, h: 600 } },
   { id: 'visual-browser', label: 'Visual Browser', icon: Bot, description: 'Visual-first browser operator', source: 'core', status: 'built', defaultSize: { w: 1100, h: 700 } },
   { id: 'video', label: 'Video Production', icon: Video, description: 'Agentic video (Montage blueprint)', source: 'calesthio/OpenMontage', status: 'pending', defaultSize: { w: 640, h: 420 } },
-  { id: 'photography', label: 'Photography', icon: ImageIcon, description: 'AI image & canvas (Invoke blueprint)', source: 'invoke-ai/InvokeAI', status: 'pending', defaultSize: { w: 640, h: 420 } },
+  {
+    id: 'photography',
+    label: 'Photography',
+    icon: ImageIcon,
+    description: 'AI image studio — prompts, models, queue',
+    source: 'core',
+    status: 'built',
+    defaultSize: { w: 960, h: 640 },
+    surfaceHints: { preferredOpen: 'floating', floatingDefaultSize: { w: 960, h: 640 } },
+  },
   { id: 'memory', label: 'Agent Memory', icon: Brain, description: 'Chroma vector memory — ingest/recall via visual workflows', source: 'core', status: 'built', defaultSize: { w: 720, h: 520 } },
   { id: 'agents', label: 'Agents', icon: Brain, description: 'Agent registry and configuration', source: '', status: 'pending', defaultSize: { w: 560, h: 380 } },
   {
-    id: 'photos',
-    label: 'Photos',
+    id: 'media-library',
+    label: 'Media Library',
     icon: ImageIcon,
-    description: 'Self-hosted photo library (Immich blueprint)',
-    source: 'immich-app/immich',
-    status: 'pending',
+    description: 'Agent media — upload, grid, filters, infinite scroll',
+    source: 'core',
+    status: 'built',
     defaultSize: { w: 960, h: 640 },
     surfaceHints: { preferredOpen: 'container', floatingDefaultSize: { w: 960, h: 640 } },
   },

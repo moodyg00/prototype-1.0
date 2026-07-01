@@ -5,7 +5,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./langchain": "./src/langchain-tools.ts"
+    "./langchain": "./src/langchain-tools.ts",
+    "./ide-models": "./src/ide-models.ts"
   },
   "scripts": {
     "build": "echo \"no build step\"",

@@ -1,10 +1,42 @@
 export type AgentNavigateDetail = {
-  toolId: 'workflow' | 'memory' | 'runs';
+  toolId: 'workflow' | 'memory' | 'runs' | 'media-library' | 'photography';
   workflowId?: string;
   agentId?: string;
   runId?: string;
   memoryTab?: 'overview' | 'corpus' | 'ingest' | 'bindings' | 'recall' | 'jobs';
+  mediaId?: string;
 };
+
+export const AGENT_MEDIA_REFERENCE_EVENT = 'agent:media-reference';
+
+export type AgentMediaReferenceDetail = {
+  mediaId: string;
+  url: string;
+  agentId?: string;
+};
+
+export function dispatchAgentMediaReference(detail: AgentMediaReferenceDetail): void {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent(AGENT_MEDIA_REFERENCE_EVENT, { detail }));
+}
+
+const PENDING_MEDIA_AGENT = 'agent:pendingMediaAgentId';
+const PENDING_MEDIA_ID = 'agent:pendingMediaId';
+
+export function setPendingMediaFocus(agentId: string, mediaId?: string): void {
+  if (typeof window === 'undefined') return;
+  sessionStorage.setItem(PENDING_MEDIA_AGENT, agentId);
+  if (mediaId) sessionStorage.setItem(PENDING_MEDIA_ID, mediaId);
+}
+
+export function consumePendingMediaFocus(): { agentId: string | null; mediaId: string | null } {
+  if (typeof window === 'undefined') return { agentId: null, mediaId: null };
+  const agentId = sessionStorage.getItem(PENDING_MEDIA_AGENT);
+  const mediaId = sessionStorage.getItem(PENDING_MEDIA_ID);
+  sessionStorage.removeItem(PENDING_MEDIA_AGENT);
+  sessionStorage.removeItem(PENDING_MEDIA_ID);
+  return { agentId, mediaId };
+}
 
 const PENDING_MEMORY_AGENT = 'agent:pendingMemoryAgentId';
 const PENDING_MEMORY_TAB = 'agent:pendingMemoryTab';

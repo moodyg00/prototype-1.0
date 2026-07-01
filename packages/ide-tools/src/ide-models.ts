@@ -1,0 +1,53 @@
+export type IdeLlmProvider = 'xai' | 'anthropic' | 'openai';
+
+export type IdeModelOption = {
+  id: string;
+  label: string;
+  provider: IdeLlmProvider;
+  description: string;
+};
+
+/** Curated models for the public-dev IDE agent (ReAct + file tools). */
+export const IDE_MODEL_OPTIONS: IdeModelOption[] = [
+  {
+    id: 'grok-4.3',
+    label: 'Grok 4.3',
+    provider: 'xai',
+    description: 'Default — fast reasoning + tool traces via xAI',
+  },
+  {
+    id: 'claude-sonnet-4-20250514',
+    label: 'Claude Sonnet 4',
+    provider: 'anthropic',
+    description: 'Balanced quality and speed for HTML/CSS edits',
+  },
+  {
+    id: 'claude-opus-4-20250514',
+    label: 'Claude Opus 4',
+    provider: 'anthropic',
+    description: 'Highest quality for complex multi-file refactors',
+  },
+  {
+    id: 'gpt-5.1-codex',
+    label: 'GPT-5.1 Codex',
+    provider: 'openai',
+    description: 'OpenAI agentic coding model',
+  },
+  {
+    id: 'gpt-5.1-codex-mini',
+    label: 'GPT-5.1 Codex Mini',
+    provider: 'openai',
+    description: 'Lighter Codex variant for faster iterations',
+  },
+];
+
+export const DEFAULT_IDE_MODEL_ID = 'grok-4.3';
+
+export function resolveIdeModel(modelId?: string | null): IdeModelOption {
+  const id = modelId?.trim() || DEFAULT_IDE_MODEL_ID;
+  return IDE_MODEL_OPTIONS.find((m) => m.id === id) ?? IDE_MODEL_OPTIONS[0]!;
+}
+
+export function ideModelStorageKey(slug?: string | null): string {
+  return slug ? `public-dev:ide-agent-model:${slug}` : 'public-dev:ide-agent-model';
+}

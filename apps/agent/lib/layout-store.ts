@@ -1,4 +1,6 @@
 import { createFloatingPanel, type PanelInstance } from './panels';
+import { migrateLegacyToolId, migrateToolIdList } from './tool-id-migration';
+import type { ToolId } from './tools';
 import {
   createDefaultWorkspace,
   DEFAULT_WORKSPACE_ID,
@@ -11,13 +13,58 @@ import {
 function migrateLayout(layout: WorkspaceLayout): WorkspaceLayout {
   return {
     ...layout,
+    tooltipBars: layout.tooltipBars.map((bar) => ({
+      ...bar,
+      tools: migrateToolIdList(bar.tools),
+    })),
     panelContainers: layout.panelContainers.map((container) => ({
       ...container,
       width:
         container.width === undefined || container.width === 300
           ? PANEL_CONTAINER_WIDTH
           : container.width,
+      panels: migrateToolIdList(container.panels),
     })),
+    drawerTools: migrateToolIdList(layout.drawerTools),
+    defaultFloatingPanels: layout.defaultFloatingPanels.map((panel) => ({
+      ...panel,
+      toolId: migrateLegacyToolId(panel.toolId),
+    })),
+  };
+}
+
+function migrateSessionToolMaps(
+  record: Record<string, string | null> | undefined,
+): Record<string, string | null> {
+  if (!record) return {};
+  const out: Record<string, string | null> = {};
+  for (const [key, value] of Object.entries(record)) {
+    out[key] = value ? migrateLegacyToolId(value) : null;
+  }
+  return out;
+}
+
+function migrateSessionToolLists(record: Record<string, string[]> | undefined): Record<string, string[]> {
+  if (!record) return {};
+  const out: Record<string, string[]> = {};
+  for (const [key, value] of Object.entries(record)) {
+    out[key] = migrateToolIdList(value);
+  }
+  return out;
+}
+
+function migrateSession(session: LayoutSession): LayoutSession {
+  return {
+    ...session,
+    floatingPanels: session.floatingPanels.map((panel) => ({
+      ...panel,
+      toolId: migrateLegacyToolId(panel.toolId) as ToolId,
+    })),
+    barActiveTools: migrateSessionToolMaps(session.barActiveTools),
+    barDetachedTools: migrateSessionToolLists(session.barDetachedTools),
+    containerOpenPanels: migrateSessionToolLists(session.containerOpenPanels),
+    runtimeBarTools: migrateSessionToolLists(session.runtimeBarTools),
+    runtimeContainerPanels: migrateSessionToolLists(session.runtimeContainerPanels),
   };
 }
 
@@ -156,7 +203,7 @@ export function loadSession(workspaceId: WorkspaceId, layout: WorkspaceLayout): 
     const raw = localStorage.getItem(sessionKey(workspaceId));
     if (!raw) return createDefaultSession(layout);
     const parsed = JSON.parse(raw) as PersistedSession;
-    return mergePersistedSession(layout, parsed);
+    return migrateSession(mergePersistedSession(layout, parsed));
   } catch {
     return createDefaultSession(layout);
   }

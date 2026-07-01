@@ -13,6 +13,7 @@ import type { LangGraphNodeIR } from './types';
 export interface IdeRunState {
   slug?: string;
   runId?: string;
+  modelId?: string;
   filesChanged?: boolean;
   requestDeploy?: boolean;
   deployReason?: string;
@@ -30,6 +31,7 @@ interface IdeChatPayload {
   designContext?: DesignContext;
   runId?: string;
   threadId?: string;
+  modelId?: string;
 }
 
 function parseIdeChatPayload(state: GraphState, props: Record<string, unknown>): IdeChatPayload {
@@ -50,6 +52,7 @@ function parseIdeChatPayload(state: GraphState, props: Record<string, unknown>):
     designContext: parsed.designContext,
     runId: typeof parsed.runId === 'string' ? parsed.runId : undefined,
     threadId: typeof parsed.threadId === 'string' ? parsed.threadId : undefined,
+    modelId: typeof parsed.modelId === 'string' ? parsed.modelId : undefined,
   };
 }
 
@@ -79,6 +82,7 @@ export function buildIdeChatTriggerNode(node: LangGraphNodeIR) {
       ide: {
         slug: payload.slug,
         runId: payload.runId,
+        modelId: payload.modelId,
         filesChanged: false,
         requestDeploy: false,
         events: [],
