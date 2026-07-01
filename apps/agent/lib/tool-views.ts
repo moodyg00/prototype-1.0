@@ -2,6 +2,7 @@ import type { ComponentType } from 'react';
 import { memoryToolViews } from '@/components/panels/memory';
 import { mediaLibraryToolViews } from '@/components/panels/media-library';
 import { photographyToolViews } from '@/components/panels/photography';
+import { videoProductionToolViews } from '@/components/panels/video-production';
 import type { ToolId } from './tools';
 import type { ToolRenderContext, ToolSurface } from './tool-surfaces';
 
@@ -22,6 +23,7 @@ export const TOOL_VIEW_REGISTRY: Partial<Record<ToolId, ToolViewRegistration>> =
   memory: memoryToolViews,
   'media-library': mediaLibraryToolViews,
   photography: photographyToolViews,
+  video: videoProductionToolViews,
 };
 
 export function resolveToolViewComponent(

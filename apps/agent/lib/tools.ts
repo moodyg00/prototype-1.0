@@ -58,7 +58,16 @@ export const TOOLS: ToolDef[] = [
   { id: 'browser', label: 'Browser', icon: Bot, description: 'Unified browser — visual, headless, and login modes share one panel', source: 'core', status: 'built', defaultSize: { w: 1100, h: 700 } },
   { id: 'pure-browser', label: 'Pure Browser', icon: Terminal, description: 'Fast CDP browser — accessibility tree, no vision cost', source: 'core', status: 'built', defaultSize: { w: 900, h: 600 } },
   { id: 'visual-browser', label: 'Visual Browser', icon: Bot, description: 'Visual-first browser operator', source: 'core', status: 'built', defaultSize: { w: 1100, h: 700 } },
-  { id: 'video', label: 'Video Production', icon: Video, description: 'Agentic video (Montage blueprint)', source: 'calesthio/OpenMontage', status: 'pending', defaultSize: { w: 640, h: 420 } },
+  {
+    id: 'video',
+    label: 'Video Production',
+    icon: Video,
+    description: 'AI video studio — fps, sync, auto assists, render queue',
+    source: 'core',
+    status: 'built',
+    defaultSize: { w: 1100, h: 720 },
+    surfaceHints: { preferredOpen: 'floating', floatingDefaultSize: { w: 1100, h: 720 } },
+  },
   {
     id: 'photography',
     label: 'Photography',

@@ -3,7 +3,15 @@ import { tool } from '@langchain/core/tools';
 import type { StructuredToolInterface } from '@langchain/core/tools';
 import { z } from 'zod';
 
-import { patchFile, restoreCheckpoint, saveCheckpoint } from './checkpoints';
+import {
+  patchFile,
+  restoreCheckpoint,
+  saveCheckpoint,
+  formatContentHash,
+  ensureAgentDirs,
+  SCRATCH_DIR,
+} from './checkpoints';
+import { validateProject } from './validate-project';
 import {
   createFile,
   deleteFile,
@@ -53,11 +61,21 @@ async function maybeCheckpoint(ctx: IdeToolContext, relPath: string): Promise<vo
 }
 
 /** The short name of each IDE tool, used as the LangChain tool name. */
+function planPath(): string {
+  return `${SCRATCH_DIR}/plan.md`;
+}
+
+function planExists(slug: string): boolean {
+  return existsSync(resolveInProject(slug, planPath()));
+}
+
 export type IdeToolName =
   | 'list_files'
   | 'read_file'
   | 'patch_file'
   | 'write_file'
+  | 'write_plan'
+  | 'validate_project'
   | 'create_path'
   | 'delete_file'
   | 'move_file'
@@ -94,14 +112,19 @@ const builders: Record<IdeToolName, ToolBuilder> = {
           if (!ctx.effects.readCache) ctx.effects.readCache = {};
           ctx.effects.readCache[path] = content;
           ctx.effects.events.push({ tool: 'read_file', summary: path });
-          return JSON.stringify({ path, content });
+          return JSON.stringify({
+            path,
+            content,
+            contentHash: formatContentHash(content),
+          });
         } catch (err) {
           return JSON.stringify({ error: (err as Error).message });
         }
       },
       {
         name: 'read_file',
-        description: 'Read the UTF-8 text contents of a file in the current project.',
+        description:
+          'Read the UTF-8 text contents of a file in the current project. Returns contentHash — pass it as expect_hash on the next patch_file for stale-state protection.',
         schema: z.object({
           path: z.string().describe('Project-relative path, e.g. index.html or .agent/scratch/plan.md'),
         }),
@@ -115,20 +138,23 @@ const builders: Record<IdeToolName, ToolBuilder> = {
         old_string,
         new_string,
         replace_all,
+        expect_hash,
       }: {
         path: string;
         old_string: string;
         new_string: string;
         replace_all?: boolean;
+        expect_hash?: string;
       }) => {
         try {
           await maybeCheckpoint(ctx, path);
-          const { replacements } = await patchFile(
+          const { replacements, contentHash } = await patchFile(
             ctx.slug,
             path,
             old_string,
             new_string,
             Boolean(replace_all),
+            expect_hash,
           );
           const updated = await readFile(ctx.slug, path);
           if (!ctx.effects.readCache) ctx.effects.readCache = {};
@@ -138,7 +164,12 @@ const builders: Record<IdeToolName, ToolBuilder> = {
             tool: 'patch_file',
             summary: `${path} (${replacements} replacement${replacements === 1 ? '' : 's'})`,
           });
-          return JSON.stringify({ ok: true, path, replacements });
+          const result: Record<string, unknown> = { ok: true, path, replacements, contentHash };
+          if (!isScratchPath(path) && !planExists(ctx.slug) && !ctx.effects.planWritten) {
+            result.hint =
+              'No .agent/scratch/plan.md yet — use write_plan before multi-step production edits.';
+          }
+          return JSON.stringify(result);
         } catch (err) {
           return JSON.stringify({ error: (err as Error).message });
         }
@@ -146,12 +177,92 @@ const builders: Record<IdeToolName, ToolBuilder> = {
       {
         name: 'patch_file',
         description:
-          'Surgical edit: replace old_string with new_string in an existing file. old_string must match exactly — include surrounding lines for a unique match. Preferred for all edits to existing HTML/CSS/JS.',
+          'Surgical edit: replace old_string with new_string. Pass expect_hash from read_file to fail fast if the file changed. Preferred for all edits to existing HTML/CSS/JS.',
         schema: z.object({
           path: z.string().describe('Project-relative path, e.g. css/public-home-variant.css'),
-          old_string: z.string().describe('Exact text to find in the file (must be unique unless replace_all)'),
+          old_string: z.string().describe('Exact text to find (unique unless replace_all)'),
           new_string: z.string().describe('Replacement text'),
           replace_all: z.boolean().optional().describe('Replace every occurrence (default false)'),
+          expect_hash: z
+            .string()
+            .optional()
+            .describe('contentHash from read_file — rejects patch if file changed since read'),
+        }),
+      },
+    ),
+
+  write_plan: (ctx) =>
+    tool(
+      async ({ content, append }: { content: string; append?: boolean }) => {
+        try {
+          await ensureAgentDirs(ctx.slug);
+          const rel = planPath();
+          let body = content.trim();
+          if (append) {
+            try {
+              const prior = await readFile(ctx.slug, rel);
+              body = prior.trimEnd() + '\n\n' + body;
+            } catch {
+              /* new plan */
+            }
+          }
+          if (!body) return JSON.stringify({ error: 'Plan content must not be empty.' });
+          await writeFile(ctx.slug, rel, body + '\n');
+          ctx.effects.planWritten = true;
+          ctx.effects.events.push({ tool: 'write_plan', summary: rel });
+          return JSON.stringify({ ok: true, path: rel, chars: body.length });
+        } catch (err) {
+          return JSON.stringify({ error: (err as Error).message });
+        }
+      },
+      {
+        name: 'write_plan',
+        description:
+          'Write or append the edit plan at .agent/scratch/plan.md before touching production files (multi-file or non-trivial tasks).',
+        schema: z.object({
+          content: z.string().describe('Markdown plan: files, selectors, property changes'),
+          append: z.boolean().optional().describe('Append to existing plan instead of replacing'),
+        }),
+      },
+    ),
+
+  validate_project: (ctx) =>
+    tool(
+      async ({ paths }: { paths?: string[] }) => {
+        try {
+          const report = await validateProject(ctx.slug);
+          let issues = report.issues;
+          if (paths?.length) {
+            const wanted = new Set(paths.map((p) => p.replace(/\\/g, '/')));
+            issues = issues.filter((i) => wanted.has(i.file));
+          }
+          const filtered = {
+            ...report,
+            issues,
+            errorCount: issues.filter((i) => i.severity === 'error').length,
+            warningCount: issues.filter((i) => i.severity === 'warning').length,
+            ok: issues.every((i) => i.severity !== 'error'),
+          };
+          ctx.effects.events.push({
+            tool: 'validate_project',
+            summary: filtered.ok
+              ? `${filtered.checkedHtml} html, ${filtered.checkedCss} css — ok`
+              : `${filtered.errorCount} error(s), ${filtered.warningCount} warning(s)`,
+          });
+          return JSON.stringify(filtered);
+        } catch (err) {
+          return JSON.stringify({ error: (err as Error).message });
+        }
+      },
+      {
+        name: 'validate_project',
+        description:
+          'Run post-edit checks: broken relative links in HTML, missing @imports, empty files, CSS brace balance. Call after production edits.',
+        schema: z.object({
+          paths: z
+            .array(z.string())
+            .optional()
+            .describe('Optional subset of files to filter reported issues'),
         }),
       },
     ),

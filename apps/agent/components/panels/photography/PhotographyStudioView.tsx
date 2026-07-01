@@ -12,8 +12,8 @@ import {
 import { fetchJson } from '@/lib/memory/fetch-json';
 import type { ToolRenderContext } from '@/lib/tool-surfaces';
 import type { ToolId } from '@/lib/tools';
-import type { AgentImageModelPrefs } from '@prototype/ide-tools';
-import type { ImageModelOption } from '@prototype/ide-tools';
+import type { AgentImageModelPrefs } from '@prototype/ide-tools/image-models';
+import type { ImageModelOption } from '@prototype/ide-tools/image-models';
 import { ModelPicker } from './ModelPicker';
 import type { MediaLibraryItem } from '../media-library/types';
 

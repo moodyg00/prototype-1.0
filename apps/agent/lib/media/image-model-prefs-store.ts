@@ -1,10 +1,8 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-import {
-  DEFAULT_AGENT_IMAGE_MODEL_PREFS,
-  type AgentImageModelPrefs,
-} from '@prototype/ide-tools';
+import type { AgentImageModelPrefs } from '@prototype/ide-tools/image-models';
+import { DEFAULT_AGENT_IMAGE_MODEL_PREFS } from '@prototype/ide-tools/image-models';
 
 const PREFS_PATH = path.join(process.cwd(), '.data', 'image-model-prefs.json');
 

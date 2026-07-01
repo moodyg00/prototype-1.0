@@ -1,13 +1,12 @@
 import {
   IMAGE_MODEL_OPTIONS,
-  isImageProviderConfigured,
   resolveImageModel,
   type ImageModelOption,
-} from '@prototype/ide-tools';
+} from '@prototype/ide-tools/image-models';
+import { isImageProviderConfigured } from '@prototype/ide-tools/model-registry';
 
 import { isIdeProviderConfigured, resolveOpenAiApiKey } from './ide-llm';
 import { resolveXaiApiKey, XAI_BASE_URL } from './xai';
-import { randomUUID } from 'node:crypto';
 
 export async function isImageModelProviderConfigured(
   provider: ImageModelOption['provider'],
@@ -87,7 +86,7 @@ export async function generateImageForPhotography(opts: {
   prompt: string;
 }): Promise<{ buffer: Buffer; mimeType: string; generationId: string; stub: boolean }> {
   const model = resolveImageModel(opts.modelId);
-  const generationId = randomUUID();
+  const generationId = crypto.randomUUID();
 
   if (model.provider === 'xai') {
     const key = await resolveXaiApiKey();

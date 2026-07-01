@@ -56,13 +56,23 @@ export function MediaLibraryGrid({
                 : 'border-white/10 hover:border-white/25'
             }`}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={item.thumbnailUrl ?? item.url}
-              alt={item.altText ?? item.filename}
-              className="h-full w-full object-cover"
-              loading="lazy"
-            />
+            {item.mediaKind === 'video' || item.mimeType.startsWith('video/') ? (
+              <video
+                src={item.url}
+                className="h-full w-full object-cover"
+                muted
+                playsInline
+                preload="metadata"
+              />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={item.thumbnailUrl ?? item.url}
+                alt={item.altText ?? item.filename}
+                className="h-full w-full object-cover"
+                loading="lazy"
+              />
+            )}
             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-1.5 text-[9px] text-zinc-300 opacity-0 transition group-hover:opacity-100">
               {item.tags?.origin ?? item.libraryType}
             </div>

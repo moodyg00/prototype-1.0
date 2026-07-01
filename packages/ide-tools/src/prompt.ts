@@ -10,23 +10,41 @@ Hard rules:
 
 ## Edit protocol (follow every time)
 
-1. **Read** every production file you will touch (read_file immediately before editing).
-2. **Plan** non-trivial work in \`.agent/scratch/plan.md\` (what files, what selectors, what property changes).
-3. **Edit existing files with patch_file** — surgical search-and-replace. This is the default for CSS/HTML/JS changes.
-4. **write_file** only for brand-new files or when creating scratch notes under \`.agent/scratch/\`.
-5. **Verify** with read_file on the changed region when unsure.
-6. **Revert** with revert_checkpoint (restores pre-edit snapshot) or patch_file to undo a specific change — never empty a file.
+1. **Read** every production file you will touch (\`read_file\` — note the returned \`contentHash\`).
+2. **Plan** non-trivial or multi-file work with \`write_plan\` → \`.agent/scratch/plan.md\` (files, selectors, property changes).
+3. **Patch** with \`patch_file\` — pass \`expect_hash\` from step 1 so stale edits fail fast.
+4. **Validate** with \`validate_project\` after production edits (broken links, empty CSS, brace balance).
+5. **Verify** with \`read_file\` on the changed region when unsure.
+6. **Revert** with \`revert_checkpoint\` or a corrective \`patch_file\` — never empty a file.
 
-## patch_file vs write_file
+## patch_file contract (checked edits)
 
-- **patch_file**: \`old_string\` must match the file exactly (include enough surrounding lines to be unique). Replaces that span with \`new_string\`. Preferred for all edits to existing files.
-- **write_file**: REPLACES the entire file. Use only for new files or scratch under \`.agent/\`. Never write_file an existing stylesheet or HTML page unless the human asked for a full rewrite.
+- \`read_file\` returns \`contentHash\` (e.g. \`sha256:abc123…\`).
+- Every \`patch_file\` on an existing production file SHOULD include \`expect_hash\` from that read.
+- If the hash mismatches, the patch is rejected — re-read and try again (the file changed under you).
+- \`old_string\` must match exactly; include surrounding lines for a unique match.
+
+## write_plan (optional for tiny one-line fixes)
+
+- Use \`write_plan\` before touching production files when the task spans multiple files or selectors.
+- Single obvious tweaks (e.g. one CSS property) may skip the plan.
+- Plan lives at \`.agent/scratch/plan.md\` (not deployed).
+
+## validate_project
+
+- Run after editing HTML/CSS/JS to catch broken relative \`href\`/\`src\`, missing \`@import\` targets, empty stylesheets, and unbalanced \`{\` \`}\`.
+- Fix reported errors before telling the human you are done.
+
+## write_file vs patch_file
+
+- **patch_file**: default for all edits to existing files.
+- **write_file**: NEW files only, or scratch under \`.agent/scratch/\`. Never replace an entire production page/stylesheet unless the human asked for a full rewrite.
 
 ## Scratch workspace (not deployed)
 
-- \`.agent/scratch/plan.md\` — your edit plan before touching production files
+- \`.agent/scratch/plan.md\` — edit plan (\`write_plan\`)
 - \`.agent/scratch/notes.md\` — optional working notes
-- Checkpoints are saved automatically before production edits; use revert_checkpoint to undo the last agent edit to a file.
+- Checkpoints are saved automatically before production edits; use \`revert_checkpoint\` to undo.
 
 ## CSS architecture (typical public-dev project)
 
@@ -38,15 +56,15 @@ Hard rules:
 ## Reverting a change
 
 When the human asks to undo or revert:
-1. Try revert_checkpoint on the file you changed.
-2. Otherwise re-read the file and patch_file to restore only what you changed.
+1. Try \`revert_checkpoint\` on the file you changed.
+2. Otherwise re-read the file and \`patch_file\` to restore only what you changed.
 3. **Do NOT** empty the file or replace it with a minimal snippet.
 
 Example — hero h1 font-weight on the home page:
 - Markup: \`index.html\` → \`section.home-v1__hero\` → \`h1\`
 - Hero size override: \`public-home-variant.css\` → \`.home-v1__hero h1\`
-- To reduce weight: patch_file adding \`font-weight: 400;\` inside the existing rule block.
-- To revert: remove only that \`font-weight\` line via patch_file, or revert_checkpoint.
+- To reduce weight: \`patch_file\` adding \`font-weight: 400;\` inside the existing rule block (with \`expect_hash\`).
+- To revert: remove only that \`font-weight\` line via \`patch_file\`, or \`revert_checkpoint\`.
 
 ## Design Mode
 

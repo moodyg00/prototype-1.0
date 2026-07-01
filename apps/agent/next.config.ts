@@ -7,7 +7,7 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  transpilePackages: ['@prototype/auth', '@prototype/db', '@prototype/icons'],
+  transpilePackages: ['@prototype/auth', '@prototype/db', '@prototype/icons', '@prototype/ide-tools'],
   serverExternalPackages: ['@prisma/client', 'pg'],
 };
 

@@ -1,5 +1,5 @@
 export type AgentNavigateDetail = {
-  toolId: 'workflow' | 'memory' | 'runs' | 'media-library' | 'photography';
+  toolId: 'workflow' | 'memory' | 'runs' | 'media-library' | 'photography' | 'video';
   workflowId?: string;
   agentId?: string;
   runId?: string;
@@ -13,6 +13,7 @@ export type AgentMediaReferenceDetail = {
   mediaId: string;
   url: string;
   agentId?: string;
+  kind?: 'image' | 'video';
 };
 
 export function dispatchAgentMediaReference(detail: AgentMediaReferenceDetail): void {

@@ -1,16 +1,14 @@
-import { randomUUID } from 'node:crypto';
-
 import { AIMessage, type BaseMessage } from '@langchain/core/messages';
 import type { StructuredToolInterface } from '@langchain/core/tools';
 import {
   buildDesignPromptBlock,
-  buildProjectManifest,
   DEFAULT_IDE_MODEL_ID,
   IDE_AGENT_SYSTEM_PROMPT,
   resolveIdeModel,
   type IdeToolContext,
   type ThoughtStep,
 } from '@prototype/ide-tools';
+import { buildProjectManifest } from '@prototype/ide-tools/server';
 import { buildIdeLangChainTools, IDE_TOOL_NAMES, type IdeToolName } from '@prototype/ide-tools/langchain';
 
 import { langChainToolsToAnthropic, langChainToolsToOpenAi } from '../integrations/chat-tools';
@@ -81,7 +79,7 @@ export function buildLlmAgentNode(node: LangGraphNodeIR, toolNodes: LangGraphNod
     const modelId = ide.modelId ?? defaultModelId;
     const modelSpec = resolveIdeModel(modelId);
 
-    const runId = ide.runId ?? randomUUID();
+    const runId = ide.runId ?? crypto.randomUUID();
     const effects = {
       filesChanged: ide.filesChanged ?? false,
       requestDeploy: ide.requestDeploy ?? false,
@@ -92,7 +90,14 @@ export function buildLlmAgentNode(node: LangGraphNodeIR, toolNodes: LangGraphNod
       checkpointedPaths: ide.checkpointedPaths ? [...ide.checkpointedPaths] : [],
     };
     const ctx: IdeToolContext = { slug, effects };
-    const essentialTools: IdeToolName[] = ['read_file', 'patch_file', 'revert_checkpoint', 'list_files'];
+    const essentialTools: IdeToolName[] = [
+      'read_file',
+      'patch_file',
+      'write_plan',
+      'validate_project',
+      'revert_checkpoint',
+      'list_files',
+    ];
     const selectedTools = [
       ...new Set([...(toolNames.length ? toolNames : IDE_TOOL_NAMES), ...essentialTools]),
     ] as IdeToolName[];

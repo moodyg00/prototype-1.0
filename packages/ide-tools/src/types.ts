@@ -61,6 +61,8 @@ export type IdeSideEffects = {
   runId?: string;
   /** Paths checkpointed this run (avoid duplicate snapshots). */
   checkpointedPaths?: string[];
+  /** Set when write_plan succeeds this run. */
+  planWritten?: boolean;
 };
 
 /** Per-run context every IDE tool needs: the project it is hard-scoped to. */
@@ -72,3 +74,26 @@ export type IdeToolContext = {
 export function createIdeSideEffects(): IdeSideEffects {
   return { filesChanged: false, requestDeploy: false, events: [] };
 }
+
+export type ChatMessageRecord = {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  tools?: ToolEvent[];
+  thoughts?: ThoughtStep[];
+  designNote?: string;
+  /** User feedback on assistant (or any) message. */
+  feedback?: 'up' | 'down';
+};
+
+export type ChatSessionMeta = {
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+  messageCount: number;
+};
+
+export type ChatSession = ChatSessionMeta & {
+  messages: ChatMessageRecord[];
+  threadId?: string;
+};

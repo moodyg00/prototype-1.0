@@ -24,8 +24,11 @@ export const ALLOWED_IMAGE_MIME_TYPES = [
   'image/svg+xml',
 ] as const;
 
+export const ALLOWED_VIDEO_MIME_TYPES = ['video/mp4', 'video/webm', 'video/quicktime'] as const;
+
 export const ALLOWED_FILE_MIME_TYPES = [
   ...ALLOWED_IMAGE_MIME_TYPES,
+  ...ALLOWED_VIDEO_MIME_TYPES,
   'application/pdf',
   'text/plain',
   'text/csv',
@@ -68,6 +71,15 @@ export function assertUploadAllowed(args: { kind: MediaKind; mimeType: string; s
     }
     if (sizeBytes > MAX_IMAGE_SIZE_BYTES) {
       throw new MediaValidationError('Image exceeds the 10 MB limit.');
+    }
+    return;
+  }
+  if (kind === 'video') {
+    if (!(ALLOWED_VIDEO_MIME_TYPES as readonly string[]).includes(mimeType)) {
+      throw new MediaValidationError(`Unsupported video type: ${mimeType || 'unknown'}.`);
+    }
+    if (sizeBytes > MAX_FILE_SIZE_BYTES) {
+      throw new MediaValidationError('Video exceeds the 25 MB limit.');
     }
     return;
   }

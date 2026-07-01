@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { IDE_MODEL_OPTIONS } from '@prototype/ide-tools';
+import { IDE_MODEL_OPTIONS } from '@prototype/ide-tools/ide-models';
 
 import { isIdeProviderConfigured } from '../../../../lib/integrations/ide-llm';
 

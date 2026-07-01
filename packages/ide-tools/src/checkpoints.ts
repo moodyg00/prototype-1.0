@@ -3,6 +3,11 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 
 import { readFile, resolveInProject, writeFile } from './project-fs';
+import { contentHashMatches, formatContentHash } from './content-hash';
+
+export { formatContentHash, contentFingerprint, contentHashMatches } from './content-hash';
+export type { ValidateIssue, ValidateProjectResult } from './validate-project';
+export { validateProject, cssBraceBalance } from './validate-project';
 
 export const AGENT_DIR = '.agent';
 export const SCRATCH_DIR = '.agent/scratch';
@@ -64,16 +69,23 @@ export async function restoreCheckpoint(
   return { restored: true, runId: targetRun };
 }
 
-/** Surgical search-and-replace edit — preferred over write_file for existing files. */
+/** Surgical search-and-replace with optional stale-state hash guard. */
 export async function patchFile(
   slug: string,
   relPath: string,
   oldString: string,
   newString: string,
   replaceAll = false,
-): Promise<{ replacements: number }> {
+  expectHash?: string,
+): Promise<{ replacements: number; contentHash: string }> {
   if (!oldString) throw new Error('old_string must not be empty.');
   const content = await readFile(slug, relPath);
+  if (expectHash?.trim() && !contentHashMatches(content, expectHash)) {
+    throw new Error(
+      `Stale file ${relPath}: content hash mismatch (expected ${expectHash.trim()}, got ${formatContentHash(content)}). ` +
+        'Re-read the file and copy a fresh old_string + expect_hash from read_file.',
+    );
+  }
   if (!content.includes(oldString)) {
     throw new Error(`old_string not found in ${relPath}. Re-read the file and copy an exact snippet.`);
   }
@@ -86,5 +98,5 @@ export async function patchFile(
   }
   const next = replaceAll ? content.split(oldString).join(newString) : content.replace(oldString, newString);
   await writeFile(slug, relPath, next);
-  return { replacements: replaceAll ? occurrences : 1 };
+  return { replacements: replaceAll ? occurrences : 1, contentHash: formatContentHash(next) };
 }

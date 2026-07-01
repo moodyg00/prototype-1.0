@@ -7,6 +7,7 @@ import type { MediaLibraryFilters } from './types';
 type Facets = {
   libraryTypes: string[];
   origins: readonly string[];
+  mediaKinds?: readonly string[];
   categories: Array<{ id: string; name: string; slug: string }>;
 };
 
@@ -40,6 +41,19 @@ export function MediaLibraryFilterBar({
         {(facets?.libraryTypes ?? ['content', 'submitted', 'admin_record']).map((t) => (
           <option key={t} value={t}>
             {t}
+          </option>
+        ))}
+      </select>
+      <select
+        className={selectClass}
+        value={filters.mediaKind}
+        onChange={(e) => onChange({ ...filters, mediaKind: e.target.value })}
+        aria-label="Media kind"
+      >
+        <option value="">All media</option>
+        {(facets?.mediaKinds ?? ['image', 'video', 'gif', 'file']).map((k) => (
+          <option key={k} value={k}>
+            {k}
           </option>
         ))}
       </select>

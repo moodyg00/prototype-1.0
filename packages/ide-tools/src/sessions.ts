@@ -1,29 +1,14 @@
 import fs from 'node:fs/promises';
-import { randomUUID } from 'node:crypto';
 
 import { resolveInProject } from './project-fs';
 import { ensureAgentDirs, SESSIONS_DIR } from './checkpoints';
+import type { ChatMessageRecord, ChatSession, ChatSessionMeta } from './types';
 
-export type ChatMessageRecord = {
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-  tools?: Array<{ tool: string; summary: string }>;
-  thoughts?: Array<{ step: number; reasoning?: string; tool?: string; summary?: string }>;
-  designNote?: string;
-};
+export type { ChatMessageRecord, ChatSession, ChatSessionMeta } from './types';
 
-export type ChatSessionMeta = {
-  id: string;
-  title: string;
-  createdAt: string;
-  updatedAt: string;
-  messageCount: number;
-};
-
-export type ChatSession = ChatSessionMeta & {
-  messages: ChatMessageRecord[];
-  threadId?: string;
-};
+function newSessionId(): string {
+  return globalThis.crypto.randomUUID();
+}
 
 function sessionsRoot(slug: string): string {
   return resolveInProject(slug, SESSIONS_DIR);
@@ -77,7 +62,7 @@ export async function getChatSession(slug: string, id: string): Promise<ChatSess
 export async function createChatSession(slug: string, title?: string): Promise<ChatSession> {
   await ensureAgentDirs(slug);
   const now = new Date().toISOString();
-  const id = randomUUID();
+  const id = newSessionId();
   const session: ChatSession = {
     id,
     title: title?.trim() || 'New chat',
@@ -85,7 +70,7 @@ export async function createChatSession(slug: string, title?: string): Promise<C
     updatedAt: now,
     messageCount: 0,
     messages: [],
-    threadId: randomUUID(),
+    threadId: newSessionId(),
   };
   await fs.writeFile(sessionPath(slug, id), JSON.stringify(session, null, 2) + '\n', 'utf8');
   const index = await readIndex(slug);

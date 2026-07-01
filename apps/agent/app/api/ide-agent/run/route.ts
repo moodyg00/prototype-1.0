@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
-import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
-import { projectExists } from '@prototype/ide-tools';
+import { projectExists } from '@prototype/ide-tools/server';
 import { prisma } from '../../../../lib/prisma';
 
 export const runtime = 'nodejs';
@@ -121,7 +120,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Invalid input' }, { status: 400 });
   }
   const { slug, messages, designContext, threadId, modelId } = parsed.data;
-  const runId = parsed.data.runId ?? randomUUID();
+  const runId = parsed.data.runId ?? crypto.randomUUID();
 
   if (!(await projectExists(slug))) {
     return NextResponse.json({ error: 'Project not found' }, { status: 404 });

@@ -103,7 +103,7 @@ export async function buildProjectManifest(slug: string): Promise<string> {
     '  - .agent/scratch/notes.md — optional working notes',
     '  - Checkpoints are saved automatically before edits; use revert_checkpoint to undo.',
     '',
-    'Edit protocol: read → (plan in scratch for non-trivial tasks) → patch_file → verify with read_file.',
+    'Edit protocol: read (note contentHash) → write_plan (multi-file) → patch_file (expect_hash) → validate_project.',
   );
 
   return lines.join('\n');

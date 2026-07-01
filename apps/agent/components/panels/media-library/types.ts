@@ -30,5 +30,5 @@ export const DEFAULT_MEDIA_FILTERS: MediaLibraryFilters = {
   categoryId: '',
   tag: '',
   agentId: '',
-  mediaKind: 'image',
+  mediaKind: '',
 };

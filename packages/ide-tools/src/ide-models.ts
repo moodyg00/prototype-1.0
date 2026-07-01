@@ -16,14 +16,14 @@ export const IDE_MODEL_OPTIONS: IdeModelOption[] = [
     description: 'Default — fast reasoning + tool traces via xAI',
   },
   {
-    id: 'claude-sonnet-4-20250514',
-    label: 'Claude Sonnet 4',
+    id: 'claude-sonnet-4-6',
+    label: 'Claude Sonnet 4.6',
     provider: 'anthropic',
     description: 'Balanced quality and speed for HTML/CSS edits',
   },
   {
-    id: 'claude-opus-4-20250514',
-    label: 'Claude Opus 4',
+    id: 'claude-opus-4-8',
+    label: 'Claude Opus 4.8',
     provider: 'anthropic',
     description: 'Highest quality for complex multi-file refactors',
   },
@@ -41,10 +41,21 @@ export const IDE_MODEL_OPTIONS: IdeModelOption[] = [
   },
 ];
 
+/** Retired Anthropic snapshot ids → current replacements (localStorage / old chats). */
+const IDE_MODEL_ALIASES: Record<string, string> = {
+  'claude-sonnet-4-20250514': 'claude-sonnet-4-6',
+  'claude-opus-4-20250514': 'claude-opus-4-8',
+};
+
 export const DEFAULT_IDE_MODEL_ID = 'grok-4.3';
 
+export function normalizeIdeModelId(modelId?: string | null): string {
+  const raw = modelId?.trim() || DEFAULT_IDE_MODEL_ID;
+  return IDE_MODEL_ALIASES[raw] ?? raw;
+}
+
 export function resolveIdeModel(modelId?: string | null): IdeModelOption {
-  const id = modelId?.trim() || DEFAULT_IDE_MODEL_ID;
+  const id = normalizeIdeModelId(modelId);
   return IDE_MODEL_OPTIONS.find((m) => m.id === id) ?? IDE_MODEL_OPTIONS[0]!;
 }
 

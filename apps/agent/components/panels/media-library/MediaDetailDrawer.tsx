@@ -61,8 +61,18 @@ export function MediaDetailDrawer({
         </button>
       </div>
       <div className="min-h-0 flex-1 overflow-auto p-3 space-y-3">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={item.url} alt="" className="w-full rounded-md border border-white/10" />
+        {item.mimeType.startsWith('video/') || item.mediaKind === 'video' ? (
+          <video src={item.url} controls className="w-full rounded-md border border-white/10" />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={item.url} alt="" className="w-full rounded-md border border-white/10" />
+        )}
+        {item.tags?.videoProduction && (
+          <p className="text-[10px] text-zinc-500">
+            {item.tags.videoProduction.frameRate} fps · {item.tags.videoProduction.durationSeconds}s ·{' '}
+            {item.tags.videoProduction.syncMode} sync · {item.tags.videoProduction.resolution}
+          </p>
+        )}
         <label className="block text-[10px] text-zinc-500">
           Alt text
           <input
@@ -94,6 +104,10 @@ export function MediaDetailDrawer({
                 mediaId: item.id,
                 url: item.url,
                 agentId: item.tags?.agentId,
+                kind:
+                  item.mediaKind === 'video' || item.mimeType.startsWith('video/')
+                    ? 'video'
+                    : 'image',
               })
             }
             className="flex-1 rounded border border-violet-500/30 py-1.5 text-[11px] text-violet-200 hover:bg-violet-500/10"

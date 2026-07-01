@@ -1,10 +1,10 @@
 'use client';
 
-import type { ImageModelOption } from '@prototype/ide-tools/image-models';
+import type { VideoModelOption } from '@prototype/ide-tools';
 
-type ModelRow = ImageModelOption & { configured: boolean };
+type ModelRow = VideoModelOption & { configured: boolean };
 
-export function ModelPicker({
+export function VideoModelPicker({
   models,
   primaryId,
   backupId,
@@ -23,7 +23,7 @@ export function ModelPicker({
   return (
     <div className="grid gap-2 sm:grid-cols-2">
       <label className="text-[10px] text-zinc-500">
-        Primary model
+        Primary video model
         <select
           className={selectClass}
           value={primaryId}
@@ -31,8 +31,8 @@ export function ModelPicker({
         >
           {models.map((m) => (
             <option key={m.id} value={m.id} disabled={!m.configured}>
-              {m.label}
-              {!m.configured ? ' (no API key)' : ''}
+              {m.label} (≤{m.maxDurationSeconds}s)
+              {!m.configured ? ' — no key' : ''}
             </option>
           ))}
         </select>
@@ -47,7 +47,7 @@ export function ModelPicker({
           {models.map((m) => (
             <option key={m.id} value={m.id} disabled={!m.configured}>
               {m.label}
-              {!m.configured ? ' (no API key)' : ''}
+              {!m.configured ? ' — no key' : ''}
             </option>
           ))}
         </select>

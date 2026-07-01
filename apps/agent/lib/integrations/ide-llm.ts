@@ -1,10 +1,11 @@
-import type { IdeLlmProvider, IdeModelOption } from '@prototype/ide-tools';
-import { resolveIdeModel } from '@prototype/ide-tools';
+import type { IdeLlmProvider, IdeModelOption } from '@prototype/ide-tools/ide-models';
+import { resolveIdeModel } from '@prototype/ide-tools/ide-models';
 
 import { invokeAnthropicChat } from './anthropic-chat';
 import type { ChatMessage, ChatResult, ReasoningEffort } from './chat-types';
 import type { ToolDefinition } from './chat-types';
 import { invokeOpenAiCompatibleChat } from './openai-compatible-chat';
+import { invokeOpenAiResponsesChat, isOpenAiResponsesModel } from './openai-responses-chat';
 import { resolveXaiApiKey, XAI_BASE_URL } from './xai';
 
 export type { ChatMessage, ChatResult, ToolDefinition };
@@ -69,15 +70,19 @@ export async function invokeIdeChat(opts: {
   }
 
   if (model.provider === 'openai') {
-    const result = await invokeOpenAiCompatibleChat({
+    const baseUrl = process.env.OPENAI_BASE_URL ?? 'https://api.openai.com/v1';
+    const openAiOpts = {
       apiKey,
-      baseUrl: process.env.OPENAI_BASE_URL ?? 'https://api.openai.com/v1',
+      baseUrl,
       model: model.id,
       systemPrompt: opts.systemPrompt,
       messages: opts.messages,
       tools: opts.tools,
       signal: opts.signal,
-    });
+    };
+    const result = isOpenAiResponsesModel(model.id)
+      ? await invokeOpenAiResponsesChat(openAiOpts)
+      : await invokeOpenAiCompatibleChat(openAiOpts);
     return { ...result, model };
   }
 

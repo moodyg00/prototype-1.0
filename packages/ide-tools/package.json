@@ -5,8 +5,13 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./server": "./src/server.ts",
+    "./types": "./src/types.ts",
+    "./prompt": "./src/prompt.ts",
     "./langchain": "./src/langchain-tools.ts",
-    "./ide-models": "./src/ide-models.ts"
+    "./ide-models": "./src/ide-models.ts",
+    "./image-models": "./src/image-models.ts",
+    "./model-registry": "./src/model-registry.ts"
   },
   "scripts": {
     "build": "echo \"no build step\"",

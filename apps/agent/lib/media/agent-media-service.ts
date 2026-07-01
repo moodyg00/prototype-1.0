@@ -102,7 +102,11 @@ export async function uploadAgentMedia(args: {
     labels: args.tags,
   };
 
-  const kind = args.file.type.startsWith('image/') ? 'image' : 'file';
+  const kind = args.file.type.startsWith('video/')
+    ? 'video'
+    : args.file.type.startsWith('image/')
+      ? 'image'
+      : 'file';
 
   if (!prisma) throw new Error('Database not configured');
 
@@ -238,6 +242,7 @@ export async function getMediaFacets() {
     return {
       libraryTypes: [...AGENT_MEDIA_LIBRARY_TYPES],
       origins: ['upload', 'generation', 'edit'] as const,
+      mediaKinds: ['image', 'video', 'gif', 'file'] as const,
       categories: [] as Array<{ id: string; name: string; slug: string }>,
     };
   }
@@ -249,6 +254,7 @@ export async function getMediaFacets() {
   return {
     libraryTypes: [...AGENT_MEDIA_LIBRARY_TYPES],
     origins: ['upload', 'generation', 'edit'] as const,
+    mediaKinds: ['image', 'video', 'gif', 'file'] as const,
     categories,
   };
 }
@@ -278,6 +284,43 @@ export async function saveGeneratedImageBuffer(args: {
       ownerType: 'global_upload',
       ownerId: GLOBAL_AGENT_UPLOAD_OWNER_ID,
       kind: 'image',
+      source: 'agent',
+      role: `agent:${args.agentId}`,
+      tagsRecord: tags,
+    },
+  });
+
+  return getAgentMediaItem(summary.id);
+}
+
+export async function saveGeneratedVideoBuffer(args: {
+  buffer: Buffer;
+  mimeType: string;
+  agentId: string;
+  prompt: string;
+  generationId: string;
+  settings: import('@prototype/ide-tools').VideoProductionSettings;
+}) {
+  if (!prisma) throw new Error('Database not configured');
+  const tags: AgentMediaTag = {
+    workspace: 'agent',
+    agentId: args.agentId,
+    origin: 'generation',
+    generationId: args.generationId,
+    modality: 'video',
+    labels: [args.prompt.slice(0, 80)],
+    videoProduction: args.settings,
+  };
+
+  const summary = await mediaService.createMediaFromBuffer({
+    buffer: args.buffer,
+    mimeType: args.mimeType,
+    originalName: `gen-${args.generationId}.mp4`,
+    input: {
+      library: 'content',
+      ownerType: 'global_upload',
+      ownerId: GLOBAL_AGENT_UPLOAD_OWNER_ID,
+      kind: 'video',
       source: 'agent',
       role: `agent:${args.agentId}`,
       tagsRecord: tags,
