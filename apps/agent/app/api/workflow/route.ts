@@ -45,7 +45,12 @@ export async function POST(req: Request) {
     data: {
       name: body.name,
       description: body.description ?? '',
-      kind: body.kind ?? 'standard',
+      // Default to 'langgraph': per product direction, most workflows should run on the
+      // real LangGraph engine. 'standard' (a straight-line subset, see standard-runtime.ts)
+      // remains available as an explicit opt-in for genuinely simple linear action
+      // sequences — it must never be the silent default, since it rejects
+      // conditionals/interrupts at run time instead of edit time.
+      kind: body.kind ?? 'langgraph',
       currentVersion: 1,
       versions: {
         create: {
@@ -54,7 +59,7 @@ export async function POST(req: Request) {
             id: '',          // filled after creation
             name: body.name,
             description: body.description ?? '',
-            kind: body.kind ?? 'standard',
+            kind: body.kind ?? 'langgraph',
             version: 1,
             nodes,
             edges,

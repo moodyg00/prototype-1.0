@@ -1,59 +1,14 @@
 import { NextResponse } from 'next/server';
-import { z } from 'zod';
 import { projectExists } from '@prototype/ide-tools/server';
+import { IdeAgentRunRequestSchema } from '@prototype/ide-tools/agent-bridge';
+import type { IdeAgentChatResponse } from '@prototype/ide-tools/agent-bridge';
+import type { ThoughtStep, ToolEvent } from '@prototype/ide-tools/types';
 import { prisma } from '../../../../lib/prisma';
 
 export const runtime = 'nodejs';
 export const maxDuration = 120;
 
-const ElementContextSchema = z.object({
-  cssSelector: z.string(),
-  xpath: z.string(),
-  tagName: z.string(),
-  id: z.string(),
-  classList: z.array(z.string()),
-  attributes: z.record(z.string(), z.string()),
-  outerHTML: z.string(),
-  innerText: z.string(),
-  computedStyles: z.record(z.string(), z.string()),
-  rect: z.object({ x: z.number(), y: z.number(), w: z.number(), h: z.number() }),
-});
-
-const DesignContextSchema = z.object({
-  pagePath: z.string(),
-  selections: z.array(ElementContextSchema),
-  annotation: z
-    .object({
-      kind: z.literal('area'),
-      rect: z.object({ x: z.number(), y: z.number(), w: z.number(), h: z.number() }),
-    })
-    .optional(),
-  viewport: z.object({ w: z.number(), h: z.number() }).optional(),
-  screenshotDataUrl: z.string().startsWith('data:image/').max(8_000_000).optional(),
-});
-
-const BodySchema = z.object({
-  slug: z.string().min(1),
-  messages: z
-    .array(z.object({ role: z.enum(['user', 'assistant', 'system']), content: z.string() }))
-    .min(1),
-  designContext: DesignContextSchema.optional(),
-  threadId: z.string().optional(),
-  runId: z.string().optional(),
-  modelId: z.string().optional(),
-  todos: z
-    .array(
-      z.object({
-        id: z.string(),
-        content: z.string(),
-        status: z.enum(['pending', 'in_progress', 'completed', 'cancelled']),
-      }),
-    )
-    .optional(),
-});
-
-type ToolEvent = { tool: string; summary: string };
-type ThoughtStep = { step: number; reasoning?: string; tool?: string; summary?: string };
+const BodySchema = IdeAgentRunRequestSchema;
 
 function selfBaseUrl(): string {
   return (
@@ -137,14 +92,15 @@ export async function POST(req: Request) {
 
   const workflowId = await resolveWorkflowId();
   if (!workflowId) {
-    return NextResponse.json({
+    const notSeeded: IdeAgentChatResponse = {
       text:
         'The IDE agent workflow is not seeded yet. Run scripts/seed-ide-agent-workflow.ts (or set IDE_AGENT_WORKFLOW_ID). You can still edit files directly in the editor.',
       tools: [],
       thoughts: [],
       filesChanged: false,
       requestDeploy: false,
-    });
+    };
+    return NextResponse.json(notSeeded);
   }
 
   const input = JSON.stringify({ slug, messages, designContext, runId, threadId, modelId, todos });
@@ -174,7 +130,7 @@ export async function POST(req: Request) {
 
   void maybeIngestThoughts({ runId: workflowRunId, slug, thoughts });
 
-  return NextResponse.json({
+  const response: IdeAgentChatResponse = {
     text: (typeof state.output === 'string' && state.output) || '(done)',
     tools: events,
     thoughts,
@@ -187,5 +143,6 @@ export async function POST(req: Request) {
     todos: Array.isArray(ide.todos) ? ide.todos : [],
     tokens: typeof state.tokens === 'number' ? state.tokens : 0,
     modelId: typeof ide.modelId === 'string' ? ide.modelId : modelId,
-  });
+  };
+  return NextResponse.json(response);
 }

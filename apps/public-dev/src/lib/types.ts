@@ -1,7 +1,7 @@
 // Project model + path-scoped file types are shared with the agent runtime via
 // the @prototype/ide-tools package. Re-exported here so existing imports from
 // `@/src/lib/types` keep working.
-export type { DeployOverrides, ProjectMeta, FileNode } from '@prototype/ide-tools';
+export type { DeployOverrides, ProjectMeta, FileNode } from '@prototype/ide-tools/types';
 
 export type DeployFileChange = {
   path: string;

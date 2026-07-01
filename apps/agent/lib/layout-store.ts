@@ -26,10 +26,12 @@ function migrateLayout(layout: WorkspaceLayout): WorkspaceLayout {
       panels: migrateToolIdList(container.panels),
     })),
     drawerTools: migrateToolIdList(layout.drawerTools),
-    defaultFloatingPanels: layout.defaultFloatingPanels.map((panel) => ({
-      ...panel,
-      toolId: migrateLegacyToolId(panel.toolId),
-    })),
+    defaultFloatingPanels: layout.defaultFloatingPanels
+      .map((panel) => {
+        const toolId = migrateLegacyToolId(panel.toolId);
+        return toolId ? { ...panel, toolId } : null;
+      })
+      .filter((panel): panel is WorkspaceLayout['defaultFloatingPanels'][number] => panel !== null),
   };
 }
 
@@ -56,10 +58,12 @@ function migrateSessionToolLists(record: Record<string, string[]> | undefined): 
 function migrateSession(session: LayoutSession): LayoutSession {
   return {
     ...session,
-    floatingPanels: session.floatingPanels.map((panel) => ({
-      ...panel,
-      toolId: migrateLegacyToolId(panel.toolId) as ToolId,
-    })),
+    floatingPanels: session.floatingPanels
+      .map((panel) => {
+        const toolId = migrateLegacyToolId(panel.toolId);
+        return toolId ? { ...panel, toolId } : null;
+      })
+      .filter((panel): panel is PanelInstance => panel !== null),
     barActiveTools: migrateSessionToolMaps(session.barActiveTools),
     barDetachedTools: migrateSessionToolLists(session.barDetachedTools),
     containerOpenPanels: migrateSessionToolLists(session.containerOpenPanels),

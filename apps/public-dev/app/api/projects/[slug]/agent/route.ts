@@ -1,52 +1,20 @@
 import { NextResponse } from 'next/server';
-import { z } from 'zod';
 import { projectExists } from '@/src/lib/projects';
+import {
+  IdeAgentChatRequestSchema,
+  agentBridgeUrl,
+  type IdeAgentChatResponse,
+} from '@prototype/ide-tools/agent-bridge';
 
 export const runtime = 'nodejs';
 export const maxDuration = 120;
 
 type Ctx = { params: Promise<{ slug: string }> };
 
-const ElementContextSchema = z.object({
-  cssSelector: z.string(),
-  xpath: z.string(),
-  tagName: z.string(),
-  id: z.string(),
-  classList: z.array(z.string()),
-  attributes: z.record(z.string(), z.string()),
-  outerHTML: z.string(),
-  innerText: z.string(),
-  computedStyles: z.record(z.string(), z.string()),
-  rect: z.object({ x: z.number(), y: z.number(), w: z.number(), h: z.number() }),
-});
-
-const DesignContextSchema = z.object({
-  pagePath: z.string(),
-  selections: z.array(ElementContextSchema),
-  annotation: z
-    .object({
-      kind: z.literal('area'),
-      rect: z.object({ x: z.number(), y: z.number(), w: z.number(), h: z.number() }),
-    })
-    .optional(),
-  viewport: z.object({ w: z.number(), h: z.number() }).optional(),
-  screenshotDataUrl: z.string().startsWith('data:image/').max(8_000_000).optional(),
-});
-
-const BodySchema = z.object({
-  messages: z
-    .array(z.object({ role: z.enum(['user', 'assistant', 'system']), content: z.string() }))
-    .min(1),
-  designContext: DesignContextSchema.optional(),
-  threadId: z.string().optional(),
-  runId: z.string().optional(),
-  modelId: z.string().optional(),
-});
+const BodySchema = IdeAgentChatRequestSchema;
 
 /** Base URL of the agent app that hosts the IDE Agent workflow. */
-function agentBaseUrl(): string {
-  return process.env.AGENT_BASE_URL?.trim() || 'http://localhost:3002';
-}
+const agentBaseUrl = agentBridgeUrl;
 
 /**
  * IDE chat endpoint. Delegates to the LangGraph "IDE Agent Visual" workflow
@@ -76,22 +44,24 @@ export async function POST(req: Request, { params }: Ctx) {
         threadId: parsed.data.threadId,
         runId: parsed.data.runId,
         modelId: parsed.data.modelId,
+        todos: parsed.data.todos,
       }),
     });
-    const json = await res.json().catch(() => null);
+    const json = (await res.json().catch(() => null)) as (IdeAgentChatResponse & { message?: string }) | null;
     if (!res.ok) {
       const message = (json && (json.error || json.message)) || `Agent error (${res.status}).`;
       return NextResponse.json({ error: message }, { status: 502 });
     }
-    return NextResponse.json(json);
+    return NextResponse.json(json satisfies IdeAgentChatResponse | null);
   } catch {
-    return NextResponse.json({
+    const fallback: IdeAgentChatResponse = {
       text:
         `Could not reach the agent service at ${agentBaseUrl()}. Make sure the agent app is running ` +
         `(pnpm --filter @prototype/agent dev) and AGENT_BASE_URL is set. You can still edit files directly in the editor.`,
       tools: [],
       filesChanged: false,
       requestDeploy: false,
-    });
+    };
+    return NextResponse.json(fallback);
   }
 }

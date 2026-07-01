@@ -1,0 +1,21 @@
+{
+  "id": "0f301e87-4f44-4054-826f-02e7bca50c0b",
+  "title": "can you align left",
+  "createdAt": "2026-07-01T09:57:00.973Z",
+  "updatedAt": "2026-07-01T09:57:59.513Z",
+  "messageCount": 2,
+  "messages": [
+    {
+      "role": "user",
+      "content": "can you align left",
+      "designNote": "Design selection: 1 element on index.html"
+    },
+    {
+      "role": "assistant",
+      "content": "Anthropic error 404: {\"type\":\"error\",\"error\":{\"type\":\"not_found_error\",\"message\":\"model: claude-sonnet-4-20250514\"},\"request_id\":\"req_011Ccb94mLrH4fr3zt8BJ7x4\"}",
+      "tools": [],
+      "thoughts": []
+    }
+  ],
+  "threadId": "4b64b507-349d-4940-b62e-f98cee5c2173"
+}

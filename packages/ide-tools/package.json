@@ -11,7 +11,8 @@
     "./langchain": "./src/langchain-tools.ts",
     "./ide-models": "./src/ide-models.ts",
     "./image-models": "./src/image-models.ts",
-    "./model-registry": "./src/model-registry.ts"
+    "./model-registry": "./src/model-registry.ts",
+    "./agent-bridge": "./src/agent-bridge.ts"
   },
   "scripts": {
     "build": "echo \"no build step\"",

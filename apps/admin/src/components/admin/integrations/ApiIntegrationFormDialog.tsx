@@ -18,6 +18,7 @@ import { Field, FieldDescription, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { SecretInput } from '@/src/components/admin/integrations/SecretInput';
 import {
   API_AUTH_TYPES,
   API_ENVIRONMENTS,
@@ -276,22 +277,18 @@ export function ApiIntegrationFormDialog({
             <div className="grid gap-4 sm:grid-cols-2">
               <Field>
                 <FieldLabel>API key / token</FieldLabel>
-                <Input
-                  type="password"
+                <SecretInput
                   value={form.apiKey}
-                  onChange={(e) => update('apiKey', e.target.value)}
+                  onChange={(value) => update('apiKey', value)}
                   placeholder="secret_..."
-                  autoComplete="off"
                 />
               </Field>
               <Field>
                 <FieldLabel>API secret</FieldLabel>
-                <Input
-                  type="password"
+                <SecretInput
                   value={form.apiSecret}
-                  onChange={(e) => update('apiSecret', e.target.value)}
+                  onChange={(value) => update('apiSecret', value)}
                   placeholder="Optional second secret"
-                  autoComplete="off"
                 />
               </Field>
             </div>
@@ -299,12 +296,10 @@ export function ApiIntegrationFormDialog({
             <div className="grid gap-4 sm:grid-cols-2">
               <Field>
                 <FieldLabel>Webhook secret</FieldLabel>
-                <Input
-                  type="password"
+                <SecretInput
                   value={form.webhookSecret}
-                  onChange={(e) => update('webhookSecret', e.target.value)}
+                  onChange={(value) => update('webhookSecret', value)}
                   placeholder="whsec_..."
-                  autoComplete="off"
                 />
               </Field>
               <Field>

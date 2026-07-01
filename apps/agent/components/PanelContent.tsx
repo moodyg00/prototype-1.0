@@ -1,25 +1,19 @@
 'use client';
 
 import { BrowserPanel } from '@/components/panels/BrowserPanel';
-import { PlaceholderPanel } from '@/components/panels/PlaceholderPanel';
 import { RunnerPanel } from '@/components/panels/RunnerPanel';
 import { RunsPanel } from '@/components/panels/RunsPanel';
-import { TeamPanel } from '@/components/panels/TeamPanel';
 import { WorkflowPanel } from '@/components/panels/WorkflowPanel';
 import { getRegisteredToolView } from '@/lib/tool-views';
 import type { ToolRenderContext } from '@/lib/tool-surfaces';
-import { getTool, type ToolId } from '@/lib/tools';
+import type { ToolId } from '@/lib/tools';
 
 function LegacyToolView({ toolId }: { toolId: ToolId }) {
-  if (toolId === 'team') return <TeamPanel />;
   if (toolId === 'workflow') return <WorkflowPanel />;
   if (toolId === 'runner') return <RunnerPanel />;
   if (toolId === 'runs') return <RunsPanel />;
-  if (toolId === 'browser') return <BrowserPanel defaultMode="visual" />;
-  if (toolId === 'pure-browser') return <BrowserPanel defaultMode="headless" />;
-  if (toolId === 'visual-browser') return <BrowserPanel defaultMode="visual" />;
-  const tool = getTool(toolId);
-  return <PlaceholderPanel tool={tool} />;
+  if (toolId === 'browser') return <BrowserPanel />;
+  return null;
 }
 
 export function ToolView({

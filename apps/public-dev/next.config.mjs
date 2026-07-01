@@ -11,7 +11,7 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  transpilePackages: ['@prototype/auth'],
+  transpilePackages: ['@prototype/auth', '@prototype/ide-tools'],
   serverExternalPackages: ['ssh2', 'ssh2-sftp-client', 'pg', '@prisma/client'],
 };
 

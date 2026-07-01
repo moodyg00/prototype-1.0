@@ -35,6 +35,6 @@ export {
   createChatSession,
   updateChatSession,
   deleteChatSession,
-} from '@prototype/ide-tools';
+} from '@prototype/ide-tools/server';
 
-export type { FileNode, ProjectMeta, ChatSession, ChatSessionMeta, ChatMessageRecord } from '@prototype/ide-tools';
+export type { FileNode, ProjectMeta, ChatSession, ChatSessionMeta, ChatMessageRecord } from '@prototype/ide-tools/types';

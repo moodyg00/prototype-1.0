@@ -117,6 +117,10 @@ body.page-home-soft-sage .site-brand__text strong {
     color: var(--ink-soft);
 }
 
+.home-v1__lead {
+    text-align: left;
+}
+
 .home-v1__hero-media {
     width: calc(100% + 68px);
     margin: 26px -34px 0;

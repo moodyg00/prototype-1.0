@@ -56,3 +56,9 @@ configs/browser.config.local.*
 screenshots/
 secure/
 vendors/
+
+# On-demand workflow exports (POST /api/workflow/[id]/export, scripts/seed-*.ts).
+# These are generated snapshots of whatever is currently in Postgres — checking
+# them in makes them silently stale the moment the DB workflow is edited again.
+# Treat "export" as a download, not a repo artifact.
+/artifacts/workflows/

@@ -68,6 +68,17 @@ export function WorkflowPanel() {
     [nodes, selectedNodeId],
   );
 
+  // "standard" workflows run on a hand-rolled linear walk (standard-runtime.ts)
+  // that explicitly rejects branching/interrupt nodes at run time. Surface that
+  // as an edit-time warning instead of letting it fail silently on Run.
+  const standardIncompatibleNodes = useMemo(() => {
+    if (kind !== 'standard') return [] as Array<{ id: string; label: string }>;
+    return nodes
+      .filter(n => n.data.typeId === 'logic.condition' || n.data.typeId === 'langgraph.interrupt')
+      .map(n => ({ id: n.id, label: n.data.label || n.data.typeId }));
+  }, [kind, nodes]);
+  const hasStandardViolation = standardIncompatibleNodes.length > 0;
+
   const refreshWorkflows = useCallback(async () => {
     const res = await fetch('/api/workflow');
     if (!res.ok) throw new Error('Failed to fetch workflows');
@@ -90,6 +101,7 @@ export function WorkflowPanel() {
       setNodes((def?.nodes ?? []) as Node<WorkflowNodeData>[]);
       setEdges((def?.edges ?? []) as Edge[]);
       setSelectedNodeId(null);
+      setKind(((def?.kind ?? data.workflow.kind ?? 'langgraph') as WorkflowKind));
     } catch {
       setStatus('Failed to load workflow');
     } finally {
@@ -136,6 +148,13 @@ export function WorkflowPanel() {
 
   const saveWorkflow = useCallback(async () => {
     if (!workflowId) return;
+    if (kind === 'standard') {
+      const violation = nodes.find(n => n.data.typeId === 'logic.condition' || n.data.typeId === 'langgraph.interrupt');
+      if (violation) {
+        setStatus(`Cannot save: "${violation.data.label || violation.data.typeId}" needs kind: langgraph`);
+        return;
+      }
+    }
     setSaving(true);
     setStatus('');
     try {
@@ -158,7 +177,7 @@ export function WorkflowPanel() {
     } finally {
       setSaving(false);
     }
-  }, [workflowId, workflowName, nodes, edges, refreshWorkflows]);
+  }, [workflowId, workflowName, kind, nodes, edges, refreshWorkflows]);
 
   const exportWorkflow = useCallback(async () => {
     if (!workflowId) return;
@@ -257,8 +276,9 @@ export function WorkflowPanel() {
         <select
           value={kind}
           onChange={e => setKind(e.target.value as WorkflowKind)}
-          className="ml-1 bg-white/5 border border-white/10 text-xs text-zinc-300 rounded px-2 py-1"
-          title="Kind for new workflows"
+          disabled={Boolean(workflowId)}
+          className="ml-1 bg-white/5 border border-white/10 text-xs text-zinc-300 rounded px-2 py-1 disabled:opacity-60"
+          title={workflowId ? 'Kind is fixed once a workflow is created' : 'Kind for the new workflow'}
         >
           <option value="langgraph">langgraph</option>
           <option value="standard">standard</option>
@@ -286,13 +306,27 @@ export function WorkflowPanel() {
         <button onClick={createWorkflow} className="btn btn-ghost !p-1.5" title="New Workflow">
           <Plus size={12} />
         </button>
-        <button onClick={saveWorkflow} disabled={!workflowId || saving} className="btn btn-ghost !p-1.5" title="Save">
+        <button
+          onClick={saveWorkflow}
+          disabled={!workflowId || saving || hasStandardViolation}
+          className="btn btn-ghost !p-1.5"
+          title={hasStandardViolation ? 'Resolve standard-kind violations before saving' : 'Save'}
+        >
           <Save size={12} className={saving ? 'animate-pulse' : ''} />
         </button>
         <button onClick={exportWorkflow} disabled={!workflowId || exporting} className="btn btn-ghost !p-1.5" title="Export">
           <Download size={12} className={exporting ? 'animate-pulse' : ''} />
         </button>
       </div>
+
+      {hasStandardViolation && (
+        <div className="flex-shrink-0 px-3 py-1.5 bg-amber-950/50 border-b border-amber-800/40 text-amber-300 text-[11px]">
+          This is a <span className="font-mono">standard</span> workflow, but it contains{' '}
+          {standardIncompatibleNodes.map(n => n.label).join(', ')} — condition/interrupt nodes only run on{' '}
+          <span className="font-mono">langgraph</span> workflows. Remove them, or recreate this workflow as{' '}
+          <span className="font-mono">langgraph</span> kind.
+        </div>
+      )}
 
       {activeTab === 'run' && workflowId ? (
         <div className="flex-1 min-h-0">

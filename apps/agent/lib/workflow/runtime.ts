@@ -28,6 +28,7 @@ import {
   buildVideoTimelineAppendNode,
   buildVideoTimelineLoadNode,
 } from './video-executors';
+import { buildImageGenerateNode } from './image-executors';
 import { buildIdeChatTriggerNode, type IdeRunState } from './ide-executors';
 import { buildLlmAgentNode } from './ide-agent-node';
 import { invokeChatLlm } from './llm-invoke';
@@ -186,12 +187,13 @@ function buildConditionNode(node: LangGraphNodeIR) {
   };
 }
 
-// Browser agent tool node. Reuses the existing BrowserOperator singleton exactly
-// (Playwright + xAI vision reasoner loop: navigation, login, extraction, bounded
-// loop, secure credential injection). The whole agent loop is encapsulated as a
-// single graph tool node so its behavior is faithful to the standalone operator.
-// BrowserOperator is imported dynamically so its server-only / Playwright deps are
-// only loaded when a workflow actually contains a browser node.
+// Browser tool node. Invokes the same canonical pure-browser/CDP engine
+// (lib/browser/pure-browser-engine.ts, backed by the `agent-browser` CLI) used by
+// the standalone Browser panel's headless mode — one execution path behind the
+// "Browser" tool whether it's run interactively or from a workflow, per the
+// unified-browser-tool decision. The engine is imported dynamically so its
+// server-only child_process usage is only loaded when a workflow actually
+// contains a browser node.
 function buildBrowserToolNode(node: LangGraphNodeIR) {
   return async (state: GraphState): Promise<Partial<GraphState>> => {
     const task =
@@ -202,27 +204,23 @@ function buildBrowserToolNode(node: LangGraphNodeIR) {
       return { output: `Browser agent "${node.label}" skipped: no task provided.` };
     }
 
-    const { getBrowserOperator } = await import('../operators/BrowserOperator');
-    const model =
-      typeof node.properties.model === 'string' && node.properties.model
-        ? (node.properties.model as string)
-        : undefined;
-    const maxSteps =
-      typeof node.properties.maxSteps === 'number' ? (node.properties.maxSteps as number) : undefined;
+    const url = typeof node.properties.url === 'string' && node.properties.url ? node.properties.url : undefined;
+    const { runPureBrowserTask } = await import('../browser/pure-browser-engine');
+    const result = await runPureBrowserTask(task, url);
 
-    const op = getBrowserOperator(model ? { model } : undefined);
-    await op.runTask(task, maxSteps ? { maxSteps } : undefined);
-
-    const answer = op.getFinalAnswer() || 'Browser agent finished without a final answer.';
+    const answer = result.finalAnswer || 'Browser agent finished without a final answer.';
     return {
       messages: [new AIMessage(answer)],
       output: answer,
-      memory: { ...(state.memory ?? {}), [node.id]: { task, finalAnswer: answer } },
+      memory: { ...(state.memory ?? {}), [node.id]: { task, lines: result.lines, finalAnswer: answer } },
     };
   };
 }
 
-function nodeExecutor(node: LangGraphNodeIR) {
+// Exported so the "standard" linear engine (standard-runtime.ts) can reuse the exact
+// same per-node-type execution logic instead of maintaining a second, drifting copy
+// (llm.chat, tool.http, memory.*, video.*, tool.browser were previously duplicated).
+export function nodeExecutor(node: LangGraphNodeIR) {
   if (node.nodeType === 'tool.browser') return buildBrowserToolNode(node);
   if (node.nodeType === 'logic.condition') return buildConditionNode(node);
   if (node.nodeType === 'trigger.memory_ingest') return buildMemoryIngestTriggerNode(node);
@@ -240,6 +238,7 @@ function nodeExecutor(node: LangGraphNodeIR) {
   if (node.nodeType === 'video.sync') return buildVideoSyncNode(node);
   if (node.nodeType === 'video.render') return buildVideoRenderNode(node);
   if (node.nodeType === 'video.media_meta') return buildVideoMediaMetaNode(node);
+  if (node.nodeType === 'image.generate') return buildImageGenerateNode(node);
   if (node.nodeType === 'trigger.ide_chat') return buildIdeChatTriggerNode(node);
   if (node.model) return buildLlmNode(node);
   if (node.kind === 'tool' && (node.nodeType === 'tool.http' || node.properties.url !== undefined)) {

@@ -29,11 +29,13 @@ export async function PATCH(req: Request, { params }: Ctx) {
     messages?: unknown;
     title?: string;
     threadId?: string;
+    todos?: unknown;
   };
   const session = await updateChatSession(slug, id, {
     messages: body.messages as Parameters<typeof updateChatSession>[2]['messages'],
     title: body.title,
     threadId: body.threadId,
+    todos: body.todos as Parameters<typeof updateChatSession>[2]['todos'],
   });
   if (!session) return NextResponse.json({ error: 'Session not found' }, { status: 404 });
   return NextResponse.json({ session });

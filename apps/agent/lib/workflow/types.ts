@@ -23,6 +23,7 @@ export type NodeCategory =
   | 'logic'
   | 'memory'
   | 'video'
+  | 'image'
   | 'output'
   | 'langgraph';
 

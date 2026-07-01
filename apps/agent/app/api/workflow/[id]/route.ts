@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/prisma';
+import { validateStandardWorkflow } from '../../../../lib/workflow/standard-runtime';
 import type { UpdateWorkflowInput, WorkflowDefinition } from '../../../../lib/workflow/types';
 
 type Params = { params: Promise<{ id: string }> };
@@ -74,6 +75,16 @@ export async function PATCH(req: Request, { params }: Params) {
       updatedAt: now,
     },
   };
+
+  // `kind` is fixed at creation (see /api/workflow POST) and never changes here, but a
+  // 'standard' workflow can still drift into an invalid shape if branching/interrupt
+  // nodes are saved into it — reject at save time instead of only failing at run time.
+  if (newDef.kind === 'standard') {
+    const standardError = validateStandardWorkflow(newDef);
+    if (standardError) {
+      return NextResponse.json({ error: standardError }, { status: 422 });
+    }
+  }
 
   const [workflow] = await prisma.$transaction([
     prisma.workflow.update({

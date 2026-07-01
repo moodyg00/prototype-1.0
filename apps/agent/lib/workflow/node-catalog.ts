@@ -192,9 +192,9 @@ export const NODE_CATALOG: NodeTypeDefinition[] = [
 
   {
     type: 'tool.browser',
-    label: 'Browser Agent',
+    label: 'Browser',
     category: 'tool',
-    description: 'Runs the visual browser agent (Playwright + xAI vision) on a task — navigation, login, extraction, and bounded reasoning loop — and returns its final answer.',
+    description: 'Runs the fast CDP browser (accessibility tree, no vision cost) on a task — navigation, extraction, clicking, typing — and returns its final output. Same engine as the standalone Browser tool.',
     color: '#0ea5e9',
     icon: 'Globe',
     handles: [
@@ -204,8 +204,7 @@ export const NODE_CATALOG: NodeTypeDefinition[] = [
     properties: [
       { key: 'task', label: 'Task (optional, overrides input)', type: 'textarea',
         placeholder: 'Leave blank to use the workflow input as the task.', group: 'Task' },
-      { key: 'model', label: 'Model', type: 'string', default: 'grok-4.3', group: 'Model' },
-      { key: 'maxSteps', label: 'Max Steps', type: 'number', default: 30, group: 'Config' },
+      { key: 'url', label: 'Start URL', type: 'string', placeholder: 'https://...', group: 'Task' },
     ],
     langGraphKind: 'tool',
   },
@@ -553,6 +552,29 @@ export const NODE_CATALOG: NodeTypeDefinition[] = [
     langGraphKind: 'node',
   },
 
+  // ── Photography ─────────────────────────────────────────────────────────────
+  // Calls the exact same service (generateImageForPhotography + saveGeneratedImageBuffer)
+  // as the standalone Photography studio panel (POST /api/photography/generate), so
+  // this is the visual-graph representation of that tool, not a divergent copy.
+  {
+    type: 'image.generate',
+    label: 'Generate Image',
+    category: 'image',
+    description: 'Text-to-image generation; saves to agent media library. Same engine as the Photography studio panel.',
+    color: '#ec4899',
+    icon: 'ImageIcon',
+    handles: [
+      { id: 'in', direction: 'input', dataType: 'string', label: 'Prompt' },
+      { id: 'out', direction: 'output', dataType: 'object', label: 'Media' },
+    ],
+    properties: [
+      { key: 'agentId', label: 'Agent ID', type: 'string', default: 'default', group: 'Agent' },
+      { key: 'modelId', label: 'Model ID', type: 'string', default: 'grok-imagine', group: 'Model' },
+      { key: 'prompt', label: 'Prompt (optional)', type: 'textarea', group: 'Prompt' },
+    ],
+    langGraphKind: 'node',
+  },
+
   // ── Video production ───────────────────────────────────────────────────────
   {
     type: 'video.generate',
@@ -774,6 +796,7 @@ export const CATEGORY_ORDER = [
   'logic',
   'memory',
   'video',
+  'image',
   'output',
   'langgraph',
 ] as const;
@@ -785,6 +808,7 @@ export const CATEGORY_LABELS: Record<string, string> = {
   logic: 'Logic',
   memory: 'Memory',
   video: 'Video Production',
+  image: 'Photography',
   output: 'Output',
   langgraph: 'LangGraph',
 };

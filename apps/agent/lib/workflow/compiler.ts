@@ -269,8 +269,9 @@ function sanitizeId(id: string): string {
 }
 
 export function generateTypeScaffold(ir: LangGraphIR): string {
+  const hasToolNodes = ir.nodes.some(n => n.kind === 'tool');
   const imports = `import { StateGraph, START, END, Annotation, interrupt } from '@langchain/langgraph';
-import { ChatOpenAI } from '@langchain/openai';
+${hasToolNodes ? "import { ToolNode } from '@langchain/langgraph/prebuilt';\n" : ''}import { ChatOpenAI } from '@langchain/openai';
 import { BaseMessage, SystemMessage } from '@langchain/core/messages';
 import { tool } from '@langchain/core/tools';
 import { z } from 'zod';
@@ -312,7 +313,13 @@ ${ir.stateSchema.map(stateFieldToAnnotation).join('\n')}
   builderLines.push(`// Entry point`);
   builderLines.push(`builder.addEdge(START, '${ir.entryPoint}');`);
 
-  // Build edge/conditional groupings
+  // Build edge/conditional groupings. Tool nodes are consolidated into a single
+  // 'tools' ToolNode above, so any edge referencing an individual tool node id
+  // must be redirected to 'tools' — otherwise the generated addEdge calls would
+  // reference node ids that were never added to the builder.
+  const toolNodeIds = new Set(toolNodes.map(n => n.id));
+  const resolveNodeId = (id: string) => (toolNodeIds.has(id) ? 'tools' : id);
+
   const conditionals = new Map<string, LangGraphEdgeIR[]>();
   const plainEdges: LangGraphEdgeIR[] = [];
 
@@ -327,15 +334,21 @@ ${ir.stateSchema.map(stateFieldToAnnotation).join('\n')}
     }
   }
 
+  const seenEdges = new Set<string>();
   for (const edge of plainEdges) {
-    builderLines.push(`builder.addEdge('${edge.from}', '${edge.to}');`);
+    const from = resolveNodeId(edge.from);
+    const to = resolveNodeId(edge.to);
+    const key = `${from}->${to}`;
+    if (seenEdges.has(key)) continue; // multiple tool ids can collapse onto the same 'tools' node
+    seenEdges.add(key);
+    builderLines.push(`builder.addEdge('${from}', '${to}');`);
   }
 
   for (const [fromId, branches] of conditionals.entries()) {
     const mappingEntries = branches
-      .map(b => `  ${JSON.stringify(b.condition ?? b.to)}: '${b.to}'`)
+      .map(b => `  ${JSON.stringify(b.condition ?? b.to)}: '${resolveNodeId(b.to)}'`)
       .join(',\n');
-    builderLines.push(`builder.addConditionalEdges('${fromId}', ${sanitizeId(fromId)}, {\n${mappingEntries},\n  default: END\n});`);
+    builderLines.push(`builder.addConditionalEdges('${resolveNodeId(fromId)}', ${sanitizeId(fromId)}, {\n${mappingEntries},\n  default: END\n});`);
   }
 
   builderLines.push('');
