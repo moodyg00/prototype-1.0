@@ -179,17 +179,82 @@ export async function renderTimelineToFile(args: {
 
   if (segmentPaths.length === 0) throw new Error('No renderable segments');
 
+  const videoOnlyPath = path.join(workDir, 'video-only.mp4');
   if (ffmpeg) {
     await concatVideoClips({
       segmentPaths,
-      outputPath,
+      outputPath: videoOnlyPath,
       settings: args.project.settings,
     });
   } else {
-    await fs.copyFile(segmentPaths[0]!, outputPath);
+    await fs.copyFile(segmentPaths[0]!, videoOnlyPath);
+  }
+
+  const audioClips = args.project.clips
+    .filter((c) => c.track === 'audio' && c.durationMs > 0)
+    .sort((a, b) => a.startMs - b.startMs);
+
+  if (ffmpeg && audioClips.length && args.project.settings.audioSync !== 'mute') {
+    try {
+      const audioPath = await buildAudioMixForTimeline({
+        workDir,
+        audioClips,
+        resolveMediaUrl: args.resolveMediaUrl,
+        settings: args.project.settings,
+      });
+      await muxVideoAndAudio(videoOnlyPath, audioPath, outputPath, args.project.settings);
+    } catch {
+      warnings.push('Audio mux failed — video-only export');
+      await fs.copyFile(videoOnlyPath, outputPath);
+    }
+  } else {
+    await fs.copyFile(videoOnlyPath, outputPath);
   }
 
   return { outputPath, usedFfmpeg: ffmpeg, warnings };
+}
+
+async function buildAudioMixForTimeline(args: {
+  workDir: string;
+  audioClips: TimelineClip[];
+  resolveMediaUrl: (mediaId: string) => Promise<string | null>;
+  settings: VideoProductionSettings;
+}): Promise<string> {
+  const out = path.join(args.workDir, 'audio-mix.aac');
+  const first = args.audioClips[0]!;
+  const url = await args.resolveMediaUrl(first.mediaId);
+  if (!url) throw new Error('No audio source');
+  const src = await downloadToTemp(url, '.mp4');
+  const delayMs = first.startMs + first.offsetMs;
+  await execFileAsync('ffmpeg', [
+    '-y',
+    '-i',
+    src,
+    '-af',
+    `adelay=${Math.max(0, delayMs)}|${Math.max(0, delayMs)}${args.settings.audioSync === 'duck' ? ',volume=0.6' : ''}`,
+    '-t',
+    String(first.durationMs / 1000),
+    '-c:a',
+    'aac',
+    out,
+  ]);
+  return out;
+}
+
+async function muxVideoAndAudio(
+  videoPath: string,
+  audioPath: string,
+  outputPath: string,
+  settings: VideoProductionSettings,
+) {
+  const args = ['-y', '-i', videoPath, '-i', audioPath, '-c:v', 'copy'];
+  if (settings.audioSync === 'replace') {
+    args.push('-map', '0:v:0', '-map', '1:a:0', '-shortest');
+  } else {
+    args.push('-map', '0:v:0', '-map', '1:a:0', '-c:a', 'aac', '-shortest');
+  }
+  args.push(outputPath);
+  await execFileAsync('ffmpeg', args);
 }
 
 export function applySyncOffsets(clips: TimelineClip[], syncMode: VideoProductionSettings['syncMode']): TimelineClip[] {

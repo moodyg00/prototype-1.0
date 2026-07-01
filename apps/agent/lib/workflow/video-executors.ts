@@ -4,6 +4,7 @@ import { generateVideoForProduction } from '../integrations/video-llm';
 import { saveGeneratedVideoBuffer } from '../media/agent-media-service';
 import { getAgentMediaItem } from '../media/agent-media-service';
 import { addClipFromMedia, getTimeline } from '../video/timeline-store';
+import { runTimelineAnalyze } from '../video/timeline-analyze-service';
 import { runTimelineRender, runTimelineSync } from '../video/timeline-render-service';
 import type { GraphState } from './runtime';
 import type { LangGraphNodeIR } from './types';
@@ -112,6 +113,21 @@ export function buildVideoTimelineAppendNode(node: LangGraphNodeIR) {
     return {
       output: JSON.stringify({ clipCount: project.clips.length, mediaId }),
       ...withVideo(state, { lastMediaId: mediaId, timelineProjectId: projectId }),
+    };
+  };
+}
+
+export function buildVideoAnalyzeNode(node: LangGraphNodeIR) {
+  return async (state: GraphState): Promise<Partial<GraphState>> => {
+    const agentId = parseAgentId(node.properties, state);
+    const projectId = String(node.properties.projectId ?? videoMem(state).timelineProjectId ?? 'default');
+    const project = await runTimelineAnalyze(agentId, projectId);
+    return {
+      output: JSON.stringify({
+        bpm: project.analysis.bpm,
+        beats: project.analysis.beatMarkersMs.length,
+      }),
+      ...withVideo(state, { timelineProjectId: projectId }),
     };
   };
 }

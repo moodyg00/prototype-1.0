@@ -6,6 +6,7 @@ export * from './types';
 export * from './design';
 export * from './prompt';
 export * from './ide-models';
+export * from './agent-todos';
 export * from './model-registry';
 export * from './image-models';
 export * from './video-production-params';

@@ -1,5 +1,5 @@
 import { AIMessage, HumanMessage, type BaseMessage } from '@langchain/core/messages';
-import type { DesignContext, ToolEvent, ThoughtStep } from '@prototype/ide-tools';
+import type { DesignContext, ToolEvent, ThoughtStep, AgentTodoItem } from '@prototype/ide-tools';
 import { IDE_TOOL_NAMES, type IdeToolName } from '@prototype/ide-tools/langchain';
 
 import type { GraphState } from './runtime';
@@ -20,6 +20,7 @@ export interface IdeRunState {
   events?: ToolEvent[];
   thoughts?: ThoughtStep[];
   checkpointedPaths?: string[];
+  todos?: AgentTodoItem[];
   designContext?: DesignContext;
 }
 
@@ -32,6 +33,7 @@ interface IdeChatPayload {
   runId?: string;
   threadId?: string;
   modelId?: string;
+  todos?: AgentTodoItem[];
 }
 
 function parseIdeChatPayload(state: GraphState, props: Record<string, unknown>): IdeChatPayload {
@@ -53,6 +55,7 @@ function parseIdeChatPayload(state: GraphState, props: Record<string, unknown>):
     runId: typeof parsed.runId === 'string' ? parsed.runId : undefined,
     threadId: typeof parsed.threadId === 'string' ? parsed.threadId : undefined,
     modelId: typeof parsed.modelId === 'string' ? parsed.modelId : undefined,
+    todos: Array.isArray(parsed.todos) ? parsed.todos : undefined,
   };
 }
 
@@ -88,6 +91,7 @@ export function buildIdeChatTriggerNode(node: LangGraphNodeIR) {
         events: [],
         thoughts: [],
         checkpointedPaths: [],
+        todos: Array.isArray(payload.todos) ? [...payload.todos] : [],
         designContext: payload.designContext,
       },
       ideMessages: messages,

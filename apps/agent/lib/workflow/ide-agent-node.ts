@@ -88,6 +88,7 @@ export function buildLlmAgentNode(node: LangGraphNodeIR, toolNodes: LangGraphNod
       thoughts: ide.thoughts ? [...ide.thoughts] : [],
       runId,
       checkpointedPaths: ide.checkpointedPaths ? [...ide.checkpointedPaths] : [],
+      todos: ide.todos ? [...ide.todos] : [],
     };
     const ctx: IdeToolContext = { slug, effects };
     const essentialTools: IdeToolName[] = [
@@ -95,6 +96,8 @@ export function buildLlmAgentNode(node: LangGraphNodeIR, toolNodes: LangGraphNod
       'patch_file',
       'write_plan',
       'validate_project',
+      'todo_read',
+      'todo_write',
       'revert_checkpoint',
       'list_files',
     ];
@@ -235,6 +238,7 @@ export function buildLlmAgentNode(node: LangGraphNodeIR, toolNodes: LangGraphNod
           events: effects.events,
           thoughts: effects.thoughts,
           checkpointedPaths: effects.checkpointedPaths,
+          todos: effects.todos,
         },
       };
     }
@@ -252,6 +256,7 @@ export function buildLlmAgentNode(node: LangGraphNodeIR, toolNodes: LangGraphNod
         events: effects.events,
         thoughts: effects.thoughts,
         checkpointedPaths: effects.checkpointedPaths,
+        todos: effects.todos,
       },
     };
   };

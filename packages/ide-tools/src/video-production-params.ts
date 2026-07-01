@@ -34,6 +34,8 @@ export type VideoProductionSettings = {
   interpolate: boolean;
   loop: boolean;
   seed: number | null;
+  /** Used for beat sync when no audio analysis is available. */
+  bpm: number | null;
 };
 
 export const DEFAULT_VIDEO_AUTO: VideoAutoAssist = {
@@ -57,6 +59,7 @@ export const DEFAULT_VIDEO_PRODUCTION_SETTINGS: VideoProductionSettings = {
   interpolate: true,
   loop: false,
   seed: null,
+  bpm: 120,
 };
 
 export function normalizeVideoProductionSettings(
@@ -69,6 +72,7 @@ export function normalizeVideoProductionSettings(
     auto: { ...DEFAULT_VIDEO_AUTO, ...partial.auto },
     motionStrength: clamp(partial.motionStrength ?? 50, 0, 100),
     durationSeconds: clamp(partial.durationSeconds ?? 6, 2, 120),
+    bpm: partial.bpm === null || partial.bpm === undefined ? DEFAULT_VIDEO_PRODUCTION_SETTINGS.bpm : clamp(partial.bpm, 40, 240),
   };
 }
 

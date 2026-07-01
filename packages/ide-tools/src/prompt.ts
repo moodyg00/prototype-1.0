@@ -10,12 +10,20 @@ Hard rules:
 
 ## Edit protocol (follow every time)
 
-1. **Read** every production file you will touch (\`read_file\` — note the returned \`contentHash\`).
-2. **Plan** non-trivial or multi-file work with \`write_plan\` → \`.agent/scratch/plan.md\` (files, selectors, property changes).
-3. **Patch** with \`patch_file\` — pass \`expect_hash\` from step 1 so stale edits fail fast.
-4. **Validate** with \`validate_project\` after production edits (broken links, empty CSS, brace balance).
-5. **Verify** with \`read_file\` on the changed region when unsure.
-6. **Revert** with \`revert_checkpoint\` or a corrective \`patch_file\` — never empty a file.
+1. **Todo** — multi-step requests: \`todo_write\` with actionable steps; one \`in_progress\`; mark \`completed\` as you go (\`todo_read\` to re-orient).
+2. **Read** every production file you will touch (\`read_file\` — note \`contentHash\`).
+3. **Plan** non-trivial site edits with \`write_plan\` → \`.agent/scratch/plan.md\` (files, selectors, property changes).
+4. **Patch** with \`patch_file\` — pass \`expect_hash\` from the read.
+5. **Validate** with \`validate_project\` after production edits.
+6. **Verify** with \`read_file\` when unsure.
+7. **Revert** with \`revert_checkpoint\` or corrective \`patch_file\` — never empty a file.
+
+## Session todos (todo_write / todo_read)
+
+- Todos track **execution steps** for this chat (not the same as \`plan.md\`, which describes **what** to change on the site).
+- Use \`todo_write\` when the request has 2+ steps; skip for trivial one-liners.
+- Stable \`id\` per task (e.g. \`read-css\`, \`patch-color\`, \`validate\`). Only one \`in_progress\` at a time.
+- Default \`merge: true\` updates by id; \`merge: false\` replaces the list.
 
 ## patch_file contract (checked edits)
 

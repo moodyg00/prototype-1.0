@@ -23,6 +23,21 @@ export type TimelineClip = {
   offsetMs: number;
 };
 
+export type TimelineAnalysis = {
+  /** Detected or user-set tempo. */
+  bpm: number | null;
+  /** Beat positions on the timeline (ms). */
+  beatMarkersMs: number[];
+  /** Normalized waveform peaks for UI (0–1), fixed bucket count. */
+  waveformPeaks: number[];
+};
+
+export const DEFAULT_TIMELINE_ANALYSIS: TimelineAnalysis = {
+  bpm: null,
+  beatMarkersMs: [],
+  waveformPeaks: [],
+};
+
 export type VideoTimelineProject = {
   id: string;
   agentId: string;
@@ -31,6 +46,7 @@ export type VideoTimelineProject = {
   settings: VideoProductionSettings;
   clips: TimelineClip[];
   durationMs: number;
+  analysis: TimelineAnalysis;
   updatedAt: string;
 };
 
@@ -52,6 +68,7 @@ export function createDefaultTimeline(agentId: string, projectId = 'default'): V
     settings,
     clips: [],
     durationMs: 0,
+    analysis: { ...DEFAULT_TIMELINE_ANALYSIS },
     updatedAt: new Date().toISOString(),
   };
 }
@@ -59,12 +76,52 @@ export function createDefaultTimeline(agentId: string, projectId = 'default'): V
 export function normalizeTimeline(project: VideoTimelineProject): VideoTimelineProject {
   const settings = normalizeVideoProductionSettings(project.settings);
   const clips = [...project.clips].sort((a, b) => a.startMs - b.startMs);
+  const analysis: TimelineAnalysis = {
+    ...DEFAULT_TIMELINE_ANALYSIS,
+    ...project.analysis,
+    beatMarkersMs: [...(project.analysis?.beatMarkersMs ?? [])],
+    waveformPeaks: [...(project.analysis?.waveformPeaks ?? [])],
+  };
   return {
     ...project,
     settings,
     frameRate: settings.frameRate,
     clips,
     durationMs: computeTimelineDuration(clips),
+    analysis,
     updatedAt: new Date().toISOString(),
   };
+}
+
+export function reorderTrackClips(
+  clips: TimelineClip[],
+  track: TimelineTrack,
+  orderedIds: string[],
+): TimelineClip[] {
+  const onTrack = clips.filter((c) => c.track === track);
+  const other = clips.filter((c) => c.track !== track);
+  const byId = Object.fromEntries(onTrack.map((c) => [c.id, c]));
+  const reordered: TimelineClip[] = [];
+  let cursor = 0;
+  for (const id of orderedIds) {
+    const clip = byId[id];
+    if (!clip) continue;
+    reordered.push({ ...clip, startMs: cursor });
+    cursor += clip.durationMs;
+  }
+  for (const c of onTrack) {
+    if (!orderedIds.includes(c.id)) reordered.push(c);
+  }
+  return [...other, ...reordered];
+}
+
+export function beatIntervalMs(bpm: number): number {
+  return Math.round(60_000 / Math.max(bpm, 1));
+}
+
+export function generateBeatMarkers(durationMs: number, bpm: number): number[] {
+  const step = beatIntervalMs(bpm);
+  const markers: number[] = [];
+  for (let t = 0; t <= durationMs; t += step) markers.push(t);
+  return markers;
 }

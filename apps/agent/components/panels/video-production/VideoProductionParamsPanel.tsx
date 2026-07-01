@@ -117,6 +117,17 @@ export function VideoProductionParamsPanel({
           <input type="checkbox" checked={settings.loop} onChange={(e) => patch({ loop: e.target.checked })} />
           Loop output
         </label>
+        <label className="text-[10px] text-zinc-500">
+          BPM (beat sync fallback)
+          <input
+            className={selectClass}
+            type="number"
+            min={40}
+            max={240}
+            value={settings.bpm ?? 120}
+            onChange={(e) => patch({ bpm: Number(e.target.value) })}
+          />
+        </label>
       </Section>
 
       <Section title="Sync & audio">

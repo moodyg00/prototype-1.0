@@ -2,13 +2,13 @@ import fs from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 
 import { getAgentMediaItem, saveGeneratedVideoBuffer } from '@/lib/media/agent-media-service';
-import { applySyncOffsets, renderTimelineToFile } from './ffmpeg-pipeline';
+import { renderTimelineToFile } from './ffmpeg-pipeline';
+import { applyProjectSync } from './sync-engine';
 import { getTimeline, saveTimeline } from './timeline-store';
 
 export async function runTimelineSync(agentId: string, projectId: string) {
   const project = await getTimeline(agentId, projectId);
-  const synced = applySyncOffsets(project.clips, project.settings.syncMode);
-  return saveTimeline({ ...project, clips: synced });
+  return saveTimeline(applyProjectSync(project));
 }
 
 export async function runTimelineRender(agentId: string, projectId: string) {

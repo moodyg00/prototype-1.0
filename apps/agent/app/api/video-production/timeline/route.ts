@@ -1,6 +1,13 @@
 import { NextResponse } from 'next/server';
 
-import { addClipFromMedia, getTimeline, removeClip, saveTimeline, updateClip } from '@/lib/video/timeline-store';
+import {
+  addClipFromMedia,
+  getTimeline,
+  removeClip,
+  reorderTimelineClips,
+  saveTimeline,
+  updateClip,
+} from '@/lib/video/timeline-store';
 import type { TimelineClip, VideoTimelineProject } from '@prototype/ide-tools';
 
 export const runtime = 'nodejs';
@@ -30,7 +37,9 @@ export async function PUT(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as {
-      action?: 'add_clip' | 'update_clip' | 'remove_clip';
+      action?: 'add_clip' | 'update_clip' | 'remove_clip' | 'reorder_clips';
+      track?: 'video' | 'audio' | 'overlay';
+      orderedIds?: string[];
       agentId?: string;
       projectId?: string;
       mediaId?: string;
@@ -49,6 +58,7 @@ export async function POST(request: Request) {
         mediaId: body.mediaId,
         label: body.label,
         durationMs: body.durationMs,
+        track: body.track,
       });
       return NextResponse.json({ project });
     }
@@ -58,6 +68,15 @@ export async function POST(request: Request) {
     }
     if (body.action === 'remove_clip' && body.clipId) {
       const project = await removeClip(agentId, projectId, body.clipId);
+      return NextResponse.json({ project });
+    }
+    if (body.action === 'reorder_clips' && body.orderedIds?.length && body.track) {
+      const project = await reorderTimelineClips({
+        agentId,
+        projectId,
+        track: body.track,
+        orderedIds: body.orderedIds,
+      });
       return NextResponse.json({ project });
     }
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });

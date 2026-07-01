@@ -609,6 +609,23 @@ export const NODE_CATALOG: NodeTypeDefinition[] = [
     langGraphKind: 'node',
   },
   {
+    type: 'video.analyze',
+    label: 'Analyze Audio',
+    category: 'video',
+    description: 'Waveform peaks + beat markers (ffmpeg astats or BPM fallback).',
+    color: '#f59e0b',
+    icon: 'AudioLines',
+    handles: [
+      { id: 'in', direction: 'input', dataType: 'object', label: 'Timeline' },
+      { id: 'out', direction: 'output', dataType: 'object', label: 'Analysis' },
+    ],
+    properties: [
+      { key: 'agentId', label: 'Agent ID', type: 'string', default: 'default', group: 'Timeline' },
+      { key: 'projectId', label: 'Project ID', type: 'string', default: 'default', group: 'Timeline' },
+    ],
+    langGraphKind: 'node',
+  },
+  {
     type: 'video.sync',
     label: 'Sync Timeline',
     category: 'video',

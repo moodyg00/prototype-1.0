@@ -13,6 +13,7 @@ import {
   buildMemoryTagNode,
 } from './memory-executors';
 import {
+  buildVideoAnalyzeNode,
   buildVideoGenerateNode,
   buildVideoMediaMetaNode,
   buildVideoRenderNode,
@@ -68,6 +69,7 @@ function executorForTypeId(typeId: string, nodeIr: LangGraphNodeIR) {
   if (typeId === 'video.generate') return buildVideoGenerateNode(nodeIr);
   if (typeId === 'video.timeline_load') return buildVideoTimelineLoadNode(nodeIr);
   if (typeId === 'video.timeline_append') return buildVideoTimelineAppendNode(nodeIr);
+  if (typeId === 'video.analyze') return buildVideoAnalyzeNode(nodeIr);
   if (typeId === 'video.sync') return buildVideoSyncNode(nodeIr);
   if (typeId === 'video.render') return buildVideoRenderNode(nodeIr);
   if (typeId === 'video.media_meta') return buildVideoMediaMetaNode(nodeIr);

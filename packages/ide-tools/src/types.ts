@@ -34,6 +34,10 @@ export type FileNode = {
   children?: FileNode[];
 };
 
+import type { AgentTodoItem } from './agent-todos';
+
+export type { AgentTodoItem, AgentTodoStatus } from './agent-todos';
+
 /** A single tool invocation summary, surfaced to the IDE chat UI. */
 export type ToolEvent = { tool: string; summary: string };
 
@@ -63,6 +67,8 @@ export type IdeSideEffects = {
   checkpointedPaths?: string[];
   /** Set when write_plan succeeds this run. */
   planWritten?: boolean;
+  /** Session task list — mutated by todo_write / todo_read tools. */
+  todos?: AgentTodoItem[];
 };
 
 /** Per-run context every IDE tool needs: the project it is hard-scoped to. */
@@ -83,6 +89,12 @@ export type ChatMessageRecord = {
   designNote?: string;
   /** User feedback on assistant (or any) message. */
   feedback?: 'up' | 'down';
+  /** ISO timestamp when the message was sent or received. */
+  createdAt?: string;
+  /** Token spend for this message (assistant: from provider; user: estimated). */
+  tokens?: number;
+  /** Model context window limit at the time of this message. */
+  contextWindow?: number;
 };
 
 export type ChatSessionMeta = {
@@ -96,4 +108,6 @@ export type ChatSessionMeta = {
 export type ChatSession = ChatSessionMeta & {
   messages: ChatMessageRecord[];
   threadId?: string;
+  /** Agent execution checklist for this chat session. */
+  todos?: AgentTodoItem[];
 };

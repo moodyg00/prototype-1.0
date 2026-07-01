@@ -5,6 +5,8 @@ export type IdeModelOption = {
   label: string;
   provider: IdeLlmProvider;
   description: string;
+  /** Provider max context window in tokens (for chat metadata display). */
+  contextWindowTokens: number;
 };
 
 /** Curated models for the public-dev IDE agent (ReAct + file tools). */
@@ -14,30 +16,35 @@ export const IDE_MODEL_OPTIONS: IdeModelOption[] = [
     label: 'Grok 4.3',
     provider: 'xai',
     description: 'Default — fast reasoning + tool traces via xAI',
+    contextWindowTokens: 131_072,
   },
   {
     id: 'claude-sonnet-4-6',
     label: 'Claude Sonnet 4.6',
     provider: 'anthropic',
     description: 'Balanced quality and speed for HTML/CSS edits',
+    contextWindowTokens: 200_000,
   },
   {
     id: 'claude-opus-4-8',
     label: 'Claude Opus 4.8',
     provider: 'anthropic',
     description: 'Highest quality for complex multi-file refactors',
+    contextWindowTokens: 200_000,
   },
   {
     id: 'gpt-5.1-codex',
     label: 'GPT-5.1 Codex',
     provider: 'openai',
     description: 'OpenAI agentic coding model',
+    contextWindowTokens: 192_000,
   },
   {
     id: 'gpt-5.1-codex-mini',
     label: 'GPT-5.1 Codex Mini',
     provider: 'openai',
     description: 'Lighter Codex variant for faster iterations',
+    contextWindowTokens: 192_000,
   },
 ];
 

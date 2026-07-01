@@ -5,7 +5,9 @@ import { randomUUID } from 'node:crypto';
 import {
   createDefaultTimeline,
   normalizeTimeline,
+  reorderTrackClips,
   type TimelineClip,
+  type TimelineTrack,
   type VideoTimelineProject,
 } from '@prototype/ide-tools';
 
@@ -97,4 +99,15 @@ export async function removeClip(
 ): Promise<VideoTimelineProject> {
   const project = await getTimeline(agentId, projectId);
   return saveTimeline({ ...project, clips: project.clips.filter((c) => c.id !== clipId) });
+}
+
+export async function reorderTimelineClips(args: {
+  agentId: string;
+  projectId?: string;
+  track: TimelineTrack;
+  orderedIds: string[];
+}): Promise<VideoTimelineProject> {
+  const project = await getTimeline(args.agentId, args.projectId);
+  const clips = reorderTrackClips(project.clips, args.track, args.orderedIds);
+  return saveTimeline({ ...project, clips });
 }

@@ -41,6 +41,15 @@ const BodySchema = z.object({
   threadId: z.string().optional(),
   runId: z.string().optional(),
   modelId: z.string().optional(),
+  todos: z
+    .array(
+      z.object({
+        id: z.string(),
+        content: z.string(),
+        status: z.enum(['pending', 'in_progress', 'completed', 'cancelled']),
+      }),
+    )
+    .optional(),
 });
 
 type ToolEvent = { tool: string; summary: string };
@@ -119,7 +128,7 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: 'Invalid input' }, { status: 400 });
   }
-  const { slug, messages, designContext, threadId, modelId } = parsed.data;
+  const { slug, messages, designContext, threadId, modelId, todos } = parsed.data;
   const runId = parsed.data.runId ?? crypto.randomUUID();
 
   if (!(await projectExists(slug))) {
@@ -138,7 +147,7 @@ export async function POST(req: Request) {
     });
   }
 
-  const input = JSON.stringify({ slug, messages, designContext, runId, threadId, modelId });
+  const input = JSON.stringify({ slug, messages, designContext, runId, threadId, modelId, todos });
 
   let runJson: any;
   try {
@@ -175,5 +184,8 @@ export async function POST(req: Request) {
     runId: workflowRunId,
     threadId: runJson?.threadId ?? threadId,
     agentRunId: runId,
+    todos: Array.isArray(ide.todos) ? ide.todos : [],
+    tokens: typeof state.tokens === 'number' ? state.tokens : 0,
+    modelId: typeof ide.modelId === 'string' ? ide.modelId : modelId,
   });
 }

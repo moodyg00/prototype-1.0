@@ -20,6 +20,7 @@ import {
   buildMemoryTagNode,
 } from './memory-executors';
 import {
+  buildVideoAnalyzeNode,
   buildVideoGenerateNode,
   buildVideoMediaMetaNode,
   buildVideoRenderNode,
@@ -235,6 +236,7 @@ function nodeExecutor(node: LangGraphNodeIR) {
   if (node.nodeType === 'video.generate') return buildVideoGenerateNode(node);
   if (node.nodeType === 'video.timeline_load') return buildVideoTimelineLoadNode(node);
   if (node.nodeType === 'video.timeline_append') return buildVideoTimelineAppendNode(node);
+  if (node.nodeType === 'video.analyze') return buildVideoAnalyzeNode(node);
   if (node.nodeType === 'video.sync') return buildVideoSyncNode(node);
   if (node.nodeType === 'video.render') return buildVideoRenderNode(node);
   if (node.nodeType === 'video.media_meta') return buildVideoMediaMetaNode(node);

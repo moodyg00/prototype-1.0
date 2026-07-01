@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 
 import { resolveInProject } from './project-fs';
 import { ensureAgentDirs, SESSIONS_DIR } from './checkpoints';
-import type { ChatMessageRecord, ChatSession, ChatSessionMeta } from './types';
+import type { ChatMessageRecord, ChatSession, ChatSessionMeta, AgentTodoItem } from './types';
 
 export type { ChatMessageRecord, ChatSession, ChatSessionMeta } from './types';
 
@@ -88,7 +88,7 @@ export async function createChatSession(slug: string, title?: string): Promise<C
 export async function updateChatSession(
   slug: string,
   id: string,
-  patch: { messages?: ChatMessageRecord[]; title?: string; threadId?: string },
+  patch: { messages?: ChatMessageRecord[]; title?: string; threadId?: string; todos?: AgentTodoItem[] },
 ): Promise<ChatSession | null> {
   const current = await getChatSession(slug, id);
   if (!current) return null;
@@ -99,6 +99,7 @@ export async function updateChatSession(
     messages,
     title: patch.title?.trim() || (messages.length ? titleFromMessages(messages) : current.title),
     threadId: patch.threadId ?? current.threadId,
+    todos: patch.todos ?? current.todos,
     updatedAt: now,
     messageCount: messages.length,
   };

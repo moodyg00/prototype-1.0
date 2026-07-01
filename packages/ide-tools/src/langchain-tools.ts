@@ -11,6 +11,7 @@ import {
   ensureAgentDirs,
   SCRATCH_DIR,
 } from './checkpoints';
+import { mergeAgentTodos, activeAgentTodos } from './agent-todos';
 import { validateProject } from './validate-project';
 import {
   createFile,
@@ -76,6 +77,8 @@ export type IdeToolName =
   | 'write_file'
   | 'write_plan'
   | 'validate_project'
+  | 'todo_read'
+  | 'todo_write'
   | 'create_path'
   | 'delete_file'
   | 'move_file'
@@ -335,6 +338,65 @@ const builders: Record<IdeToolName, ToolBuilder> = {
         schema: z.object({
           path: z.string().describe('Project-relative path to restore'),
           run_id: z.string().optional().describe('Checkpoint run id (omit for latest)'),
+        }),
+      },
+    ),
+
+  todo_read: (ctx) =>
+    tool(
+      async () => {
+        const todos = ctx.effects.todos ?? [];
+        ctx.effects.events.push({
+          tool: 'todo_read',
+          summary: `${activeAgentTodos(todos).length} active / ${todos.length} total`,
+        });
+        return JSON.stringify({ todos, active: activeAgentTodos(todos).length, total: todos.length });
+      },
+      {
+        name: 'todo_read',
+        description:
+          'Read the current session todo list. Use at the start of multi-step work and after completing items.',
+        schema: z.object({}),
+      },
+    ),
+
+  todo_write: (ctx) =>
+    tool(
+      async ({
+        merge,
+        todos,
+      }: {
+        merge?: boolean;
+        todos: Array<{ id: string; content: string; status: 'pending' | 'in_progress' | 'completed' | 'cancelled' }>;
+      }) => {
+        const existing = ctx.effects.todos ?? [];
+        const next = mergeAgentTodos(existing, todos, merge !== false);
+        ctx.effects.todos = next;
+        const active = activeAgentTodos(next).length;
+        ctx.effects.events.push({
+          tool: 'todo_write',
+          summary: `${active} active / ${next.length} total`,
+        });
+        return JSON.stringify({ ok: true, todos: next, active, total: next.length });
+      },
+      {
+        name: 'todo_write',
+        description:
+          'Create or update the session todo list for multi-step tasks. Use merge=true (default) to update by id. Only one item should be in_progress at a time. Mark completed as you finish each step.',
+        schema: z.object({
+          merge: z
+            .boolean()
+            .optional()
+            .describe('When true (default), merge by id; when false, replace the whole list'),
+          todos: z
+            .array(
+              z.object({
+                id: z.string().describe('Stable id for this task, e.g. read-css or patch-hero'),
+                content: z.string().describe('Short actionable step'),
+                status: z.enum(['pending', 'in_progress', 'completed', 'cancelled']),
+              }),
+            )
+            .min(1),
         }),
       },
     ),
