@@ -19,6 +19,14 @@ import {
   buildMemoryShardNode,
   buildMemoryTagNode,
 } from './memory-executors';
+import {
+  buildVideoGenerateNode,
+  buildVideoMediaMetaNode,
+  buildVideoRenderNode,
+  buildVideoSyncNode,
+  buildVideoTimelineAppendNode,
+  buildVideoTimelineLoadNode,
+} from './video-executors';
 import { buildIdeChatTriggerNode, type IdeRunState } from './ide-executors';
 import { buildLlmAgentNode } from './ide-agent-node';
 import { invokeChatLlm } from './llm-invoke';
@@ -224,6 +232,12 @@ function nodeExecutor(node: LangGraphNodeIR) {
   if (node.nodeType === 'memory.chroma_recall') return buildMemoryChromaRecallNode(node);
   if (node.nodeType === 'memory.recall_context') return buildMemoryRecallContextNode(node);
   if (node.nodeType === 'transform.memory_inject') return buildMemoryInjectNode(node);
+  if (node.nodeType === 'video.generate') return buildVideoGenerateNode(node);
+  if (node.nodeType === 'video.timeline_load') return buildVideoTimelineLoadNode(node);
+  if (node.nodeType === 'video.timeline_append') return buildVideoTimelineAppendNode(node);
+  if (node.nodeType === 'video.sync') return buildVideoSyncNode(node);
+  if (node.nodeType === 'video.render') return buildVideoRenderNode(node);
+  if (node.nodeType === 'video.media_meta') return buildVideoMediaMetaNode(node);
   if (node.nodeType === 'trigger.ide_chat') return buildIdeChatTriggerNode(node);
   if (node.model) return buildLlmNode(node);
   if (node.kind === 'tool' && (node.nodeType === 'tool.http' || node.properties.url !== undefined)) {

@@ -22,6 +22,7 @@ export type NodeCategory =
   | 'transform'
   | 'logic'
   | 'memory'
+  | 'video'
   | 'output'
   | 'langgraph';
 

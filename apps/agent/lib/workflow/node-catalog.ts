@@ -553,6 +553,112 @@ export const NODE_CATALOG: NodeTypeDefinition[] = [
     langGraphKind: 'node',
   },
 
+  // ── Video production ───────────────────────────────────────────────────────
+  {
+    type: 'video.generate',
+    label: 'Generate Video',
+    category: 'video',
+    description: 'Text-to-video with production settings; saves to agent media library.',
+    color: '#f59e0b',
+    icon: 'Clapperboard',
+    handles: [
+      { id: 'in', direction: 'input', dataType: 'string', label: 'Prompt' },
+      { id: 'out', direction: 'output', dataType: 'object', label: 'Media' },
+    ],
+    properties: [
+      { key: 'agentId', label: 'Agent ID', type: 'string', default: 'default', group: 'Agent' },
+      { key: 'modelId', label: 'Model ID', type: 'string', default: 'grok-video', group: 'Model' },
+      { key: 'prompt', label: 'Prompt (optional)', type: 'textarea', group: 'Prompt' },
+      { key: 'settings', label: 'Production settings (JSON)', type: 'json', group: 'Production' },
+    ],
+    langGraphKind: 'node',
+  },
+  {
+    type: 'video.timeline_load',
+    label: 'Load Timeline',
+    category: 'video',
+    description: 'Loads persisted timeline project for an agent.',
+    color: '#f59e0b',
+    icon: 'Film',
+    handles: [
+      { id: 'in', direction: 'input', dataType: 'any', label: 'Trigger' },
+      { id: 'out', direction: 'output', dataType: 'object', label: 'Timeline' },
+    ],
+    properties: [
+      { key: 'agentId', label: 'Agent ID', type: 'string', default: 'default', group: 'Timeline' },
+      { key: 'projectId', label: 'Project ID', type: 'string', default: 'default', group: 'Timeline' },
+    ],
+    langGraphKind: 'node',
+  },
+  {
+    type: 'video.timeline_append',
+    label: 'Append Clip',
+    category: 'video',
+    description: 'Adds a library media clip to the timeline (uses last generated media if mediaId empty).',
+    color: '#f59e0b',
+    icon: 'Plus',
+    handles: [
+      { id: 'in', direction: 'input', dataType: 'object', label: 'Media' },
+      { id: 'out', direction: 'output', dataType: 'object', label: 'Timeline' },
+    ],
+    properties: [
+      { key: 'agentId', label: 'Agent ID', type: 'string', default: 'default', group: 'Timeline' },
+      { key: 'projectId', label: 'Project ID', type: 'string', default: 'default', group: 'Timeline' },
+      { key: 'mediaId', label: 'Media ID', type: 'string', placeholder: 'Uses state.memory.video.lastMediaId', group: 'Timeline' },
+    ],
+    langGraphKind: 'node',
+  },
+  {
+    type: 'video.sync',
+    label: 'Sync Timeline',
+    category: 'video',
+    description: 'Applies sync mode (auto, beat, speech, scene) to clip offsets and positions.',
+    color: '#f59e0b',
+    icon: 'AudioLines',
+    handles: [
+      { id: 'in', direction: 'input', dataType: 'object', label: 'Timeline' },
+      { id: 'out', direction: 'output', dataType: 'object', label: 'Synced' },
+    ],
+    properties: [
+      { key: 'agentId', label: 'Agent ID', type: 'string', default: 'default', group: 'Timeline' },
+      { key: 'projectId', label: 'Project ID', type: 'string', default: 'default', group: 'Timeline' },
+    ],
+    langGraphKind: 'node',
+  },
+  {
+    type: 'video.render',
+    label: 'Render Timeline',
+    category: 'video',
+    description: 'FFmpeg concat + fps conform; exports new video to media library.',
+    color: '#f59e0b',
+    icon: 'Play',
+    handles: [
+      { id: 'in', direction: 'input', dataType: 'object', label: 'Timeline' },
+      { id: 'out', direction: 'output', dataType: 'object', label: 'Render' },
+    ],
+    properties: [
+      { key: 'agentId', label: 'Agent ID', type: 'string', default: 'default', group: 'Timeline' },
+      { key: 'projectId', label: 'Project ID', type: 'string', default: 'default', group: 'Timeline' },
+    ],
+    langGraphKind: 'node',
+  },
+  {
+    type: 'video.media_meta',
+    label: 'Video Media Meta',
+    category: 'video',
+    description: 'Reads videoProduction tags (fps, sync, duration) from a library item.',
+    color: '#f59e0b',
+    icon: 'Info',
+    handles: [
+      { id: 'in', direction: 'input', dataType: 'string', label: 'Media ID' },
+      { id: 'out', direction: 'output', dataType: 'object', label: 'Meta' },
+    ],
+    properties: [
+      { key: 'mediaId', label: 'Media ID', type: 'string', group: 'Media' },
+    ],
+    langGraphKind: 'node',
+  },
+
   // ── Output ──────────────────────────────────────────────────────────────────
   {
     type: 'output.terminal',
@@ -643,7 +749,17 @@ export const CATALOG_BY_CATEGORY = NODE_CATALOG.reduce<Record<string, NodeTypeDe
   {},
 );
 
-export const CATEGORY_ORDER = ['trigger', 'llm', 'tool', 'transform', 'logic', 'memory', 'output', 'langgraph'] as const;
+export const CATEGORY_ORDER = [
+  'trigger',
+  'llm',
+  'tool',
+  'transform',
+  'logic',
+  'memory',
+  'video',
+  'output',
+  'langgraph',
+] as const;
 export const CATEGORY_LABELS: Record<string, string> = {
   trigger: 'Triggers',
   llm: 'Language Models',
@@ -651,6 +767,7 @@ export const CATEGORY_LABELS: Record<string, string> = {
   transform: 'Transform',
   logic: 'Logic',
   memory: 'Memory',
+  video: 'Video Production',
   output: 'Output',
   langgraph: 'LangGraph',
 };

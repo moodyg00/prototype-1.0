@@ -16,6 +16,7 @@ import type { AgentVideoModelPrefs, VideoModelOption, VideoProductionSettings } 
 import type { MediaLibraryItem } from '../media-library/types';
 import { VideoModelPicker } from './VideoModelPicker';
 import { VideoProductionParamsPanel } from './VideoProductionParamsPanel';
+import { VideoTimeline } from './VideoTimeline';
 
 type ModelRow = VideoModelOption & { configured: boolean };
 
@@ -46,6 +47,7 @@ export function VideoProductionStudioView({
   const [jobs, setJobs] = useState<JobRow[]>([]);
   const [generating, setGenerating] = useState(false);
   const [refUrl, setRefUrl] = useState<string | null>(null);
+  const [tab, setTab] = useState<'studio' | 'timeline'>('studio');
 
   const loadPrefs = useCallback(async (id: string) => {
     const data = await fetchJson<{ prefs: AgentVideoModelPrefs; models: ModelRow[] }>(
@@ -88,10 +90,27 @@ export function VideoProductionStudioView({
         setRefUrl(detail.url);
         toast.message('Reference clip attached');
       }
+      if (detail?.mediaId) {
+        void fetch('/api/video-production/timeline', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'add_clip',
+            agentId,
+            mediaId: detail.mediaId,
+            label: detail.kind === 'video' ? 'Library clip' : 'Ref image',
+          }),
+        }).then(async (res) => {
+          if (res.ok) {
+            toast.success('Added to timeline');
+            setTab('timeline');
+          }
+        });
+      }
     };
     window.addEventListener(AGENT_MEDIA_REFERENCE_EVENT, handler);
     return () => window.removeEventListener(AGENT_MEDIA_REFERENCE_EVENT, handler);
-  }, []);
+  }, [agentId]);
 
   async function savePrefs(next: Partial<AgentVideoModelPrefs>) {
     const res = await fetch(`/api/agents/${encodeURIComponent(agentId)}/video-models`, {
@@ -152,8 +171,33 @@ export function VideoProductionStudioView({
       <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2">
         <Clapperboard size={14} className="text-amber-400" />
         <span className="text-[11px] font-medium">Video Production</span>
-        <span className="text-[10px] text-zinc-600">{context.surface}</span>
+        <div className="ml-2 flex gap-1">
+          {(['studio', 'timeline'] as const).map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setTab(t)}
+              className={`rounded px-2 py-0.5 text-[10px] capitalize ${
+                tab === t ? 'bg-amber-600/80 text-white' : 'text-zinc-500 hover:text-zinc-300'
+              }`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+        <span className="ml-auto text-[10px] text-zinc-600">{context.surface}</span>
       </div>
+      {tab === 'timeline' ? (
+        <div className="min-h-0 flex-1 p-3">
+          <VideoTimeline
+            agentId={agentId}
+            onPreviewMediaId={async (id) => {
+              const data = await fetchJson<{ item: MediaLibraryItem }>(`/api/media/${id}`);
+              if (data.item) setPreview(data.item);
+            }}
+          />
+        </div>
+      ) : (
       <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(0,1fr)_260px]">
         <div className="min-h-0 overflow-auto p-3 space-y-3">
           <select
@@ -248,6 +292,7 @@ export function VideoProductionStudioView({
           </button>
         </div>
       </div>
+      )}
     </div>
   );
 }

@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "seed:memory": "tsx scripts/seed-memory-workflows.ts"
+    "seed:memory": "tsx scripts/seed-memory-workflows.ts",
+    "seed:video": "tsx scripts/seed-video-workflow.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",

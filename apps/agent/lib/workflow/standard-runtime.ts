@@ -12,6 +12,14 @@ import {
   buildMemoryShardNode,
   buildMemoryTagNode,
 } from './memory-executors';
+import {
+  buildVideoGenerateNode,
+  buildVideoMediaMetaNode,
+  buildVideoRenderNode,
+  buildVideoSyncNode,
+  buildVideoTimelineAppendNode,
+  buildVideoTimelineLoadNode,
+} from './video-executors';
 import { invokeChatLlm } from './llm-invoke';
 import { serializeState, type GraphState, type SerializedState } from './runtime';
 import type { LangGraphNodeIR, WorkflowDefinition } from './types';
@@ -57,6 +65,12 @@ function executorForTypeId(typeId: string, nodeIr: LangGraphNodeIR) {
     return buildMemoryRecallContextNode(nodeIr);
   }
   if (typeId === 'transform.memory_inject') return buildMemoryInjectNode(nodeIr);
+  if (typeId === 'video.generate') return buildVideoGenerateNode(nodeIr);
+  if (typeId === 'video.timeline_load') return buildVideoTimelineLoadNode(nodeIr);
+  if (typeId === 'video.timeline_append') return buildVideoTimelineAppendNode(nodeIr);
+  if (typeId === 'video.sync') return buildVideoSyncNode(nodeIr);
+  if (typeId === 'video.render') return buildVideoRenderNode(nodeIr);
+  if (typeId === 'video.media_meta') return buildVideoMediaMetaNode(nodeIr);
   if (typeId === 'llm.chat') {
     return async (state: GraphState): Promise<Partial<GraphState>> => {
       const { text, tokens } = await invokeChatLlm({

@@ -10,3 +10,4 @@ export * from './model-registry';
 export * from './image-models';
 export * from './video-production-params';
 export * from './video-models';
+export * from './video-timeline';
