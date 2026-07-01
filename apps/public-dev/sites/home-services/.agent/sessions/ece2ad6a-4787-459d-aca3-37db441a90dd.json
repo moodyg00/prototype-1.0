@@ -1,0 +1,25 @@
+{
+  "id": "ece2ad6a-4787-459d-aca3-37db441a90dd",
+  "title": "hi grok this is just a test, give me a thumbs…",
+  "createdAt": "2026-06-30T16:50:35.870Z",
+  "updatedAt": "2026-06-30T16:52:34.987Z",
+  "messageCount": 2,
+  "messages": [
+    {
+      "role": "user",
+      "content": "hi grok this is just a test, give me a thumbs up, dont spend a lot of tokens to respond, less than 299"
+    },
+    {
+      "role": "assistant",
+      "content": "👍",
+      "tools": [],
+      "thoughts": [
+        {
+          "step": 1,
+          "reasoning": "The user said: \"hi grok this is just a test, give me a thumbs up, dont spend a lot of tokens to respond, less than 299\""
+        }
+      ]
+    }
+  ],
+  "threadId": "169761f6-c6cb-4dd1-a266-90374cbccdd9"
+}

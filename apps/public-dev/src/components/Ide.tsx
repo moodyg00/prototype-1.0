@@ -33,6 +33,7 @@ import { NewEntryModal } from './NewEntryModal';
 import { ProjectSettingsModal } from './ProjectSettingsModal';
 import { PaneZoomControls } from './PaneZoomControls';
 import { usePaneZoom, usePaneZoomShortcuts } from '@/src/lib/usePaneZoom';
+import { useAgentPanelWidth } from '@/src/lib/useAgentPanelWidth';
 
 const PREVIEW_TAB = '__preview__';
 
@@ -134,6 +135,30 @@ export function Ide({ initialProjects }: { initialProjects: ProjectMeta[] }) {
 
   const agentChatRef = useRef<AgentChatHandle>(null);
   const [agentBusy, setAgentBusy] = useState(false);
+  const agentPanel = useAgentPanelWidth();
+  const resizingRef = useRef(false);
+
+  const refreshPreview = useCallback(() => {
+    setPreviewKey((k) => k + 1);
+  }, []);
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      if (!resizingRef.current) return;
+      agentPanel.setWidth(window.innerWidth - e.clientX);
+    };
+    const onUp = () => {
+      resizingRef.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+  }, [agentPanel]);
 
   const [designEnabled, setDesignEnabled] = useState(false);
   const [designMode, setDesignMode] = useState<'select' | 'draw'>('select');
@@ -493,6 +518,16 @@ export function Ide({ initialProjects }: { initialProjects: ProjectMeta[] }) {
             <Globe size={14} /> Open in new tab
           </a>
           {active === PREVIEW_TAB && slug && (
+            <button
+              type="button"
+              onClick={refreshPreview}
+              title="Refresh preview (keeps chat history)"
+              className="flex items-center gap-1 rounded-md border border-[var(--color-border)] px-2 py-1 text-sm hover:bg-[var(--color-panel-2)]"
+            >
+              <RefreshCw size={14} /> Refresh preview
+            </button>
+          )}
+          {active === PREVIEW_TAB && slug && (
             <>
               {designEnabled && (
                 <>
@@ -771,16 +806,29 @@ export function Ide({ initialProjects }: { initialProjects: ProjectMeta[] }) {
           </div>
         </main>
 
-        {/* Agent chat */}
-        <aside className="flex w-96 flex-col border-l border-[var(--color-border)] bg-[var(--color-panel)]">
+        {/* Agent chat — drag left edge to resize */}
+        <aside
+          className="relative flex shrink-0 flex-col border-l border-[var(--color-border)] bg-[var(--color-panel)]"
+          style={{ width: agentPanel.width }}
+        >
+          <div
+            role="separator"
+            aria-orientation="vertical"
+            title="Drag to resize chat panel"
+            onMouseDown={() => {
+              resizingRef.current = true;
+              document.body.style.cursor = 'col-resize';
+              document.body.style.userSelect = 'none';
+            }}
+            className="absolute -left-1 top-0 z-10 h-full w-2 cursor-col-resize hover:bg-[var(--color-accent)]/20"
+          />
           <AgentChat
             ref={agentChatRef}
             onBusyChange={setAgentBusy}
             slug={slug}
             onFilesChanged={() => {
               if (slug) refreshTree(slug);
-              setPreviewKey((k) => k + 1);
-              // reload any open text tabs from disk
+              refreshPreview();
               openTabs.forEach((p) => {
                 if (files[p]?.kind === 'text' || files[p]?.asText) loadText(p);
               });

@@ -1,0 +1,25 @@
+{
+  "name": "@prototype/ide-tools",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./langchain": "./src/langchain-tools.ts"
+  },
+  "scripts": {
+    "build": "echo \"no build step\"",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "@langchain/core": "^1.1.48",
+    "zod": "^4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@langchain/core": { "optional": true }
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.21",
+    "typescript": "^5.8.3"
+  }
+}

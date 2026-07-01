@@ -1,16 +1,10 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import {
-  ChevronDown,
-  ChevronRight,
-  File as FileIcon,
-  Folder,
-  FolderOpen,
-  Trash2,
-} from 'lucide-react';
+import { ChevronDown, ChevronRight, Trash2 } from 'lucide-react';
 import type { FileNode } from '@/src/lib/types';
 import { FileContextMenu, type ContextMenuState } from './FileContextMenu';
+import { FileTypeIcon, FolderTypeIcon } from './FileTypeIcon';
 
 const DND_MIME = 'application/x-public-dev-path';
 
@@ -109,11 +103,7 @@ function NodeRow({
           }}
         >
           {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-          {open ? (
-            <FolderOpen size={14} className="text-[var(--color-accent)]" />
-          ) : (
-            <Folder size={14} className="text-[var(--color-accent)]" />
-          )}
+          <FolderTypeIcon folderName={node.name} open={open} />
           <span className="truncate">{node.name}</span>
           <button
             className="ml-auto text-[var(--color-muted)] opacity-0 hover:text-[var(--color-danger)] group-hover:opacity-100"
@@ -163,7 +153,7 @@ function NodeRow({
       style={{ paddingLeft: `${depth * 12 + 26}px` }}
       onClick={() => onOpen(node.path)}
     >
-      <FileIcon size={14} />
+      <FileTypeIcon fileName={node.name} />
       <span className="truncate">{node.name}</span>
       <button
         className="ml-auto text-[var(--color-muted)] opacity-0 hover:text-[var(--color-danger)] group-hover:opacity-100"

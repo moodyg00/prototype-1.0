@@ -1,32 +1,7 @@
-/**
- * Optional per-project deploy overrides. Anything left blank falls back to the
- * target's environment config (DEPLOY_<TARGET>_*). Secrets (passphrase) are
- * intentionally NOT storable per project — keep those in env only.
- */
-export type DeployOverrides = {
-  host?: string;
-  port?: number;
-  user?: string;
-  sshKeyPath?: string;
-  docroot?: string;
-};
-
-export type ProjectMeta = {
-  slug: string;
-  name: string;
-  description?: string;
-  target: string;
-  deploy?: DeployOverrides;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type FileNode = {
-  name: string;
-  path: string;
-  type: 'file' | 'dir';
-  children?: FileNode[];
-};
+// Project model + path-scoped file types are shared with the agent runtime via
+// the @prototype/ide-tools package. Re-exported here so existing imports from
+// `@/src/lib/types` keep working.
+export type { DeployOverrides, ProjectMeta, FileNode } from '@prototype/ide-tools';
 
 export type DeployFileChange = {
   path: string;

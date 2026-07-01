@@ -29,7 +29,7 @@ export type DeployTargetConfig = {
   local: boolean;
 };
 
-const DEFAULT_IGNORES = ['.git', 'node_modules', '.DS_Store', '.project.json', '.deploy-ignore'];
+const DEFAULT_IGNORES = ['.git', 'node_modules', '.DS_Store', '.project.json', '.deploy-ignore', '.agent'];
 
 function expandHome(p: string): string {
   if (p.startsWith('~/') || p === '~') return path.join(os.homedir(), p.slice(1));

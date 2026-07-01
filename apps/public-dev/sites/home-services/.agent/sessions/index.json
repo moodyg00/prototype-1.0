@@ -1,0 +1,16 @@
+[
+  {
+    "id": "4bd9df8e-36e7-4308-84a8-81515dc1daa6",
+    "title": "New chat",
+    "createdAt": "2026-06-30T16:50:48.085Z",
+    "updatedAt": "2026-06-30T16:50:48.085Z",
+    "messageCount": 0
+  },
+  {
+    "id": "ece2ad6a-4787-459d-aca3-37db441a90dd",
+    "title": "hi grok this is just a test, give me a thumbs…",
+    "createdAt": "2026-06-30T16:50:35.870Z",
+    "updatedAt": "2026-06-30T16:52:34.987Z",
+    "messageCount": 2
+  }
+]

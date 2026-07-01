@@ -13,6 +13,8 @@
     "@ai-sdk/openai": "^3.0.0",
     "@monaco-editor/react": "^4.7.0",
     "@prototype/auth": "workspace:*",
+    "@prototype/ide-tools": "workspace:*",
+    "@react-symbols/icons": "^1.4.1",
     "@tailwindcss/postcss": "^4.3.0",
     "ai": "^6.0.0",
     "clsx": "^2.1.1",
