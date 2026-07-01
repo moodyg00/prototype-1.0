@@ -17,11 +17,19 @@ Vector memory helpers for the Agent workspace: shard → tag → embed → Chrom
 ## Ops
 
 ```bash
+# Start Chroma (Docker — preferred when daemon is running)
+pnpm docker:up   # postgres + chroma
+
+# Or local Chroma server (no Docker)
+pnpm dev:chroma  # persists to data/chroma on port 8000
+
+# Agent app needs CHROMA_URL in apps/agent/.env.local, then restart dev:agent
+
 # Apply DB catalog (from repo root)
 pnpm --filter @prototype/db exec prisma migrate deploy
 
 # Seed memory workflows (agent must be running)
-cd apps/agent && BASE_URL=http://localhost:3002 npx tsx scripts/seed-memory-workflows.ts
+cd apps/agent && BASE_URL=http://localhost:3002 pnpm seed:memory
 ```
 
 If migrate fails on `20260630090928_workflow_run_observability` (table already exists):

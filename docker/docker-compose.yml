@@ -17,5 +17,25 @@ services:
       timeout: 5s
       retries: 10
 
+  chroma:
+    image: chromadb/chroma:0.6.3
+    container_name: prototype-chroma
+    restart: unless-stopped
+    ports:
+      - '8000:8000'
+    environment:
+      ANONYMIZED_TELELEMETRY: 'false'
+      IS_PERSISTENT: 'TRUE'
+      PERSIST_DIRECTORY: /chroma/chroma
+    volumes:
+      - prototype_chroma_data:/chroma/chroma
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8000/api/v2/heartbeat']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
 volumes:
   prototype_pg_data:
+  prototype_chroma_data:

@@ -10,5 +10,5 @@ export function isMissingMemoryCatalogError(error: unknown): boolean {
 }
 
 export function memoryCatalogHint(): string {
-  return 'Memory catalog tables missing. Run: pnpm --filter @prototype/db exec prisma migrate deploy';
+  return 'Memory catalog tables missing. Run: pnpm --filter @prototype/db exec prisma migrate deploy (if a prior migration failed, run prisma migrate resolve first).';
 }

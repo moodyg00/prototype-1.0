@@ -13,6 +13,7 @@
     "dev:public": "npx --yes serve apps/public-site -p 8080",
     "docker:up": "docker compose -f docker/docker-compose.yml up -d",
     "docker:down": "docker compose -f docker/docker-compose.yml down",
+    "dev:chroma": "packages/memory/node_modules/.bin/chroma run --path data/chroma --port 8000",
     "promote:public": "node scripts/promote-public-site.mjs",
     "start": "node scripts/hostinger-start.mjs",
     "hostinger:admin": "npm exec pnpm -- install --frozen-lockfile && npm run prisma:generate && npm exec pnpm -- --filter @prototype/admin build",

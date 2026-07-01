@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Brain, RefreshCw } from 'lucide-react';
+import { Brain, Database, GitBranch, RefreshCw, Search, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 
 import {
@@ -50,6 +50,34 @@ type BindingState = {
   defaultPartition?: string;
 };
 
+function shortId(id: string | undefined | null): string {
+  if (!id) return '—';
+  return id.length <= 12 ? id : `${id.slice(0, 8)}…`;
+}
+
+function StatCard({
+  label,
+  value,
+  hint,
+  icon: Icon,
+}: {
+  label: string;
+  value: React.ReactNode;
+  hint?: string;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+}) {
+  return (
+    <div className="rounded-lg border border-white/10 bg-gradient-to-b from-white/[0.04] to-transparent p-3">
+      <div className="flex items-center gap-2 text-[10px] uppercase tracking-wider text-zinc-500">
+        <Icon size={12} className="text-violet-400/80" />
+        {label}
+      </div>
+      <div className="mt-1.5 text-sm font-medium text-zinc-100">{value}</div>
+      {hint && <div className="mt-1 text-[10px] text-zinc-600">{hint}</div>}
+    </div>
+  );
+}
+
 export function MemoryConsoleView({
   context,
 }: {
@@ -74,6 +102,7 @@ export function MemoryConsoleView({
   const [agentId, setAgentId] = useState('default');
   const [binding, setBinding] = useState<BindingState | null>(null);
   const [loading, setLoading] = useState(false);
+  const [initialLoad, setInitialLoad] = useState(true);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -94,6 +123,7 @@ export function MemoryConsoleView({
       toast.error(e instanceof Error ? e.message : 'Failed to load memory stats');
     } finally {
       setLoading(false);
+      setInitialLoad(false);
     }
   }, []);
 
@@ -238,34 +268,55 @@ export function MemoryConsoleView({
     <div className="flex h-full flex-col overflow-hidden bg-[#09090b]">
       <div className="flex items-center justify-between border-b border-white/10 px-4 py-2.5">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/5">
-            <Brain size={15} className="text-zinc-300" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-violet-500/20 bg-violet-500/10">
+            <Brain size={15} className="text-violet-300" />
           </div>
           <div>
             <div className="text-sm font-medium text-zinc-100">Agent Memory</div>
             <div className="text-[10px] text-zinc-500">
-              {context.surface} · Chroma + workflow designer
+              {context.surface} · {stats?.store === 'chroma' ? 'Chroma vector store' : 'Mock store (set CHROMA_URL)'}
             </div>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={() => void refresh()}
-          className="rounded border border-white/10 p-1.5 text-zinc-400 hover:bg-white/5"
-          aria-label="Refresh"
-        >
-          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-        </button>
+        <div className="flex items-center gap-2">
+          {(tab === 'corpus' || tab === 'bindings' || tab === 'recall') && (
+            <input
+              value={agentId}
+              onChange={(e) => setAgentId(e.target.value)}
+              onBlur={() => tab === 'bindings' && void loadBinding(agentId)}
+              list="memory-agent-ids-header"
+              className="w-28 rounded border border-white/10 bg-black/40 px-2 py-1 text-[10px] text-zinc-300"
+              placeholder="agent id"
+              title="Active agent scope"
+            />
+          )}
+          <datalist id="memory-agent-ids-header">
+            {knownAgents.map((id) => (
+              <option key={id} value={id} />
+            ))}
+          </datalist>
+          <button
+            type="button"
+            onClick={() => void refresh()}
+            disabled={loading}
+            className="rounded border border-white/10 p-1.5 text-zinc-400 hover:bg-white/5 disabled:opacity-50"
+            aria-label="Refresh"
+          >
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+          </button>
+        </div>
       </div>
 
-      <div className="flex gap-1 border-b border-white/10 px-3 py-2">
+      <div className="flex gap-1 overflow-x-auto border-b border-white/10 px-3 py-2">
         {tabs.map((t) => (
           <button
             key={t.id}
             type="button"
             onClick={() => setTab(t.id)}
-            className={`rounded px-2.5 py-1 text-[11px] ${
-              tab === t.id ? 'bg-white/10 text-zinc-100' : 'text-zinc-500 hover:text-zinc-300'
+            className={`shrink-0 rounded px-2.5 py-1 text-[11px] transition-colors ${
+              tab === t.id
+                ? 'bg-violet-500/15 text-violet-200 ring-1 ring-violet-500/25'
+                : 'text-zinc-500 hover:bg-white/5 hover:text-zinc-300'
             }`}
           >
             {t.label}
@@ -274,64 +325,114 @@ export function MemoryConsoleView({
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto p-4 text-xs text-zinc-300">
-        {tab === 'overview' && (
+        {initialLoad && (
+          <div className="space-y-3 animate-pulse">
+            <div className="h-20 rounded-lg bg-white/5" />
+            <div className="h-28 rounded-lg bg-white/5" />
+          </div>
+        )}
+
+        {!initialLoad && tab === 'overview' && (
           <div className="space-y-3">
-            <div className="rounded-lg border border-white/10 bg-black/30 p-3">
-              <div className="text-[10px] uppercase tracking-wider text-zinc-500">Store</div>
-              <div className="mt-1 text-sm text-zinc-100">{stats?.store ?? '—'}</div>
-              <div className="mt-2 text-zinc-400">Documents: {stats?.documentCount ?? '—'}</div>
-              {scopeStats.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-1.5">
-                  {scopeStats.slice(0, 8).map((s) => (
-                    <span
-                      key={`${s.scopeKind}:${s.scopeId ?? ''}`}
-                      className="rounded border border-white/10 px-2 py-0.5 text-[10px] text-zinc-400"
-                    >
-                      {s.scopeKind}
-                      {s.scopeId ? `:${s.scopeId}` : ''} ({s.count})
-                    </span>
-                  ))}
-                </div>
-              )}
+            <div className="grid gap-3 sm:grid-cols-2">
+              <StatCard
+                label="Vector store"
+                icon={Database}
+                value={stats?.store ?? '—'}
+                hint={`${stats?.documentCount ?? 0} document${stats?.documentCount === 1 ? '' : 's'} indexed`}
+              />
+              <StatCard
+                label="Scopes"
+                icon={Search}
+                value={scopeStats.length ? `${scopeStats.length} active` : 'None yet'}
+                hint={scopeStats[0] ? `Top: ${scopeStats[0].scopeKind}${scopeStats[0].scopeId ? `:${scopeStats[0].scopeId}` : ''}` : 'Run ingest to populate'}
+              />
             </div>
-            <div className="rounded-lg border border-white/10 bg-black/30 p-3">
-              <div className="text-[10px] uppercase tracking-wider text-zinc-500">Workflows</div>
-              <p className="mt-2 text-zinc-400">
-                Ingest: {workflows?.ingest?.id ?? 'not seeded'}
-              </p>
-              <p className="text-zinc-400">Recall: {workflows?.recall?.id ?? 'not seeded'}</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {workflows?.ingest?.id && (
-                  <button
-                    type="button"
-                    className="rounded border border-white/10 px-2 py-1 text-[10px] hover:bg-white/5"
-                    onClick={() => {
-                      setPendingWorkflowId(workflows.ingest!.id);
-                      dispatchAgentNavigate({ toolId: 'workflow', workflowId: workflows.ingest!.id });
-                      toast.message('Open the Workflow tool to edit ingest graph');
-                    }}
+
+            {scopeStats.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {scopeStats.slice(0, 10).map((s) => (
+                  <span
+                    key={`${s.scopeKind}:${s.scopeId ?? ''}`}
+                    className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-0.5 text-[10px] text-zinc-400"
                   >
-                    Open ingest workflow
-                  </button>
-                )}
-                {workflows?.recall?.id && (
-                  <button
-                    type="button"
-                    className="rounded border border-white/10 px-2 py-1 text-[10px] hover:bg-white/5"
-                    onClick={() => {
-                      setPendingWorkflowId(workflows.recall!.id);
-                      dispatchAgentNavigate({ toolId: 'workflow', workflowId: workflows.recall!.id });
-                    }}
-                  >
-                    Open recall workflow
-                  </button>
-                )}
+                    {s.scopeKind}
+                    {s.scopeId ? `:${s.scopeId}` : ''}
+                    <span className="ml-1 text-zinc-600">({s.count})</span>
+                  </span>
+                ))}
               </div>
+            )}
+
+            <div className="rounded-lg border border-white/10 bg-black/30 p-3">
+              <div className="flex items-center gap-2 text-[10px] uppercase tracking-wider text-zinc-500">
+                <GitBranch size={12} className="text-sky-400/80" />
+                Workflows
+              </div>
+              {!workflows?.ingest?.id && !workflows?.recall?.id ? (
+                <div className="mt-3 space-y-2">
+                  <p className="text-zinc-500">Memory workflows are not seeded yet.</p>
+                  <code className="block rounded border border-white/10 bg-black/40 px-2 py-1.5 text-[10px] text-zinc-400">
+                    cd apps/agent && BASE_URL=http://localhost:3002 pnpm dlx tsx scripts/seed-memory-workflows.ts
+                  </code>
+                </div>
+              ) : (
+                <>
+                  <div className="mt-3 space-y-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-zinc-400">Ingest</span>
+                      <span className="font-mono text-[10px] text-emerald-400/90" title={workflows?.ingest?.id ?? undefined}>
+                        {workflows?.ingest?.id ? shortId(workflows.ingest.id) : 'not seeded'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-zinc-400">Recall</span>
+                      <span className="font-mono text-[10px] text-emerald-400/90" title={workflows?.recall?.id ?? undefined}>
+                        {workflows?.recall?.id ? shortId(workflows.recall.id) : 'not seeded'}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {workflows?.ingest?.id && (
+                      <button
+                        type="button"
+                        className="rounded border border-white/10 px-2 py-1 text-[10px] text-zinc-300 hover:bg-white/5"
+                        onClick={() => {
+                          setPendingWorkflowId(workflows.ingest!.id);
+                          dispatchAgentNavigate({ toolId: 'workflow', workflowId: workflows.ingest!.id });
+                          toast.message('Open the Workflow tool to edit ingest graph');
+                        }}
+                      >
+                        Open ingest workflow
+                      </button>
+                    )}
+                    {workflows?.recall?.id && (
+                      <button
+                        type="button"
+                        className="rounded border border-white/10 px-2 py-1 text-[10px] text-zinc-300 hover:bg-white/5"
+                        onClick={() => {
+                          setPendingWorkflowId(workflows.recall!.id);
+                          dispatchAgentNavigate({ toolId: 'workflow', workflowId: workflows.recall!.id });
+                        }}
+                      >
+                        Open recall workflow
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="rounded border border-violet-500/25 bg-violet-500/10 px-2 py-1 text-[10px] text-violet-200 hover:bg-violet-500/15"
+                      onClick={() => setTab('ingest')}
+                    >
+                      Quick ingest
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
 
-        {tab === 'corpus' && (
+        {!initialLoad && tab === 'corpus' && (
           <div className="space-y-2">
             {chunks.length === 0 ? (
               <p className="text-zinc-500">No catalog chunks yet. Run an ingest workflow.</p>
@@ -405,7 +506,7 @@ export function MemoryConsoleView({
           </div>
         )}
 
-        {tab === 'bindings' && (
+        {!initialLoad && tab === 'bindings' && (
           <div className="space-y-3">
             <label className="block text-zinc-500">
               Agent ID
@@ -456,12 +557,15 @@ export function MemoryConsoleView({
           </div>
         )}
 
-        {tab === 'ingest' && (
+        {!initialLoad && tab === 'ingest' && (
           <div className="space-y-3">
-            <p className="text-zinc-500">
-              Runs the seeded <strong className="text-zinc-300">Memory Ingest (linear)</strong> workflow
-              (shard → tag → embed → Chroma).
-            </p>
+            <div className="flex items-start gap-2 rounded-lg border border-violet-500/15 bg-violet-500/5 p-3 text-zinc-400">
+              <Upload size={14} className="mt-0.5 shrink-0 text-violet-400" />
+              <p>
+                Runs the seeded <span className="text-zinc-200">Memory Ingest (linear)</span> workflow
+                — shard → tag → embed → Chroma upsert.
+              </p>
+            </div>
             <div className="flex gap-2">
               <select
                 value={ingestScopeKind}
@@ -506,7 +610,7 @@ export function MemoryConsoleView({
           </div>
         )}
 
-        {tab === 'recall' && (
+        {!initialLoad && tab === 'recall' && (
           <div className="space-y-3">
             <input
               value={recallQuery}
@@ -538,7 +642,7 @@ export function MemoryConsoleView({
           </div>
         )}
 
-        {tab === 'jobs' && (
+        {!initialLoad && tab === 'jobs' && (
           <div className="space-y-2">
             {jobs.length === 0 ? (
               <p className="text-zinc-500">No memory workflow runs yet.</p>

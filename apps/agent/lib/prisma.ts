@@ -6,8 +6,10 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-function hasWorkflowDelegate(client: PrismaClient | undefined) {
-  return Boolean(client && 'workflow' in (client as object));
+function hasRequiredDelegates(client: PrismaClient | undefined) {
+  if (!client) return false;
+  const c = client as object;
+  return 'workflow' in c && 'memoryChunk' in c && 'memoryAgentBinding' in c;
 }
 
 function createPrismaClient() {
@@ -43,7 +45,7 @@ let prismaInstance = globalForPrisma.prisma ?? createPrismaClient();
 
 // During long-lived dev sessions, HMR can keep an older Prisma client instance
 // that does not include newly-added delegates. Recreate once when detected.
-if (!hasWorkflowDelegate(prismaInstance)) {
+if (!hasRequiredDelegates(prismaInstance)) {
   prismaInstance = createPrismaClient();
 }
 

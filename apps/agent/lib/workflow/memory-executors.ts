@@ -228,14 +228,15 @@ export function buildMemoryChromaRecallNode(node: LangGraphNodeIR) {
 export function buildMemoryIngestTriggerNode(node: LangGraphNodeIR) {
   return async (state: GraphState): Promise<Partial<GraphState>> => {
     let payload: Record<string, unknown> = {};
+    // Runtime input from API/Runner overrides the seeded template payload on the node.
+    const runtimeInput = state.input?.trim() ?? '';
+    const templatePayload =
+      typeof node.properties.payload === 'string' ? (node.properties.payload as string) : '{}';
+    const source = runtimeInput || templatePayload;
     try {
-      payload = JSON.parse(
-        typeof node.properties.payload === 'string'
-          ? (node.properties.payload as string)
-          : state.input || '{}',
-      ) as Record<string, unknown>;
+      payload = JSON.parse(source || '{}') as Record<string, unknown>;
     } catch {
-      payload = { text: state.input };
+      payload = { text: source };
     }
 
     const scope = parseScope({
