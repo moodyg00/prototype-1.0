@@ -59,7 +59,7 @@ export const NODE_CATALOG: NodeTypeDefinition[] = [
           { value: 'agent', label: 'agent' },
           { value: 'group', label: 'group' },
         ]},
-      { key: 'scopeId', label: 'Scope ID (agent/group)', type: 'string', placeholder: 'cfo', group: 'Scope' },
+      { key: 'scopeId', label: 'Scope ID (agent/group)', type: 'string', placeholder: 'default', group: 'Scope' },
       { key: 'sourceKind', label: 'Source Kind', type: 'select', default: 'domain', group: 'Scope',
         options: [
           { value: 'turn', label: 'turn' },

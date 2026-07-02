@@ -110,16 +110,16 @@ function ThoughtTrace({ thoughts }: { thoughts: ThoughtStep[] }) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1 text-[0.8em] text-[var(--color-muted)] hover:text-[var(--color-fg)]"
+        className="flex items-center gap-1.5 text-[0.875em] text-[var(--color-muted)] transition-colors hover:text-[var(--color-fg)]"
       >
         <Sparkles size={11} />
         Thinking ({reasoning.length} step{reasoning.length === 1 ? '' : 's'})
-        <ChevronDown size={11} className={open ? 'rotate-180' : ''} />
+        <ChevronDown size={11} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
-        <div className="mt-1 max-h-40 space-y-2 overflow-auto text-[0.8em] text-[var(--color-muted)]">
+        <div className="mt-1.5 max-h-40 space-y-1.5 overflow-auto text-[0.875em] text-[var(--color-muted)]">
           {reasoning.map((t) => (
-            <div key={t.step} className="whitespace-pre-wrap rounded bg-[var(--color-panel)] p-2">
+            <div key={t.step} className="whitespace-pre-wrap rounded-md bg-[var(--color-panel)] p-2">
               {t.reasoning}
             </div>
           ))}
@@ -170,7 +170,7 @@ function MessageActions({
 
   return (
     <div
-      className={`mt-1 flex flex-wrap items-center gap-1 transition-opacity ${
+      className={`mt-1 flex flex-wrap items-center gap-1.5 transition-opacity ${
         feedback ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
       } ${align === 'right' ? 'justify-end' : 'justify-start'}`}
     >
@@ -189,7 +189,7 @@ function MessageActions({
         </button>
       </div>
       {metaParts.length > 0 ? (
-        <span className="text-[0.7em] tabular-nums text-[var(--color-muted)]">{metaParts.join(' · ')}</span>
+        <span className="text-[0.75em] tabular-nums text-[var(--color-muted)]">{metaParts.join(' · ')}</span>
       ) : null}
     </div>
   );
@@ -204,29 +204,29 @@ function AgentTodoPanel({ todos, busy }: { todos: AgentTodoItem[]; busy: boolean
   const active = visible.filter((t) => t.status === 'pending' || t.status === 'in_progress').length;
 
   return (
-    <div className="border-b border-[var(--color-border)] bg-[var(--color-panel)] px-3 py-2">
+    <div className="border-b border-[var(--color-border)] bg-[var(--color-panel)] px-3 py-2.5">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-2 text-left text-[0.8em] text-[var(--color-muted)] hover:text-[var(--color-fg)]"
+        className="flex w-full items-center gap-2 text-left text-[0.875em] text-[var(--color-muted)] transition-colors hover:text-[var(--color-fg)]"
       >
         <ListTodo size={13} className="shrink-0 text-[var(--color-accent)]" />
         <span className="flex-1 normal-case">
           Tasks {done}/{visible.length}
           {busy && active > 0 ? ' · working…' : ''}
         </span>
-        <ChevronDown size={12} className={open ? 'rotate-180' : ''} />
+        <ChevronDown size={12} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
-        <ul className="mt-2 max-h-36 space-y-1 overflow-auto text-[0.8em]">
+        <ul className="mt-2 max-h-36 space-y-1 overflow-auto text-[0.875em]">
           {visible.map((t) => (
             <li
               key={t.id}
-              className={`flex items-start gap-2 rounded px-1 py-0.5 ${
+              className={`flex items-start gap-2 rounded-md px-1.5 py-1 ${
                 t.status === 'in_progress' ? 'bg-[var(--color-panel-2)] text-[var(--color-fg)]' : 'text-[var(--color-muted)]'
               } ${t.status === 'completed' ? 'line-through opacity-70' : ''}`}
             >
-              <span className="mt-0.5 shrink-0 font-mono text-[0.85em]">
+              <span className="mt-0.5 shrink-0 font-mono text-[0.875em]">
                 {t.status === 'completed' ? '✓' : t.status === 'in_progress' ? '◉' : '○'}
               </span>
               <span className="min-w-0 flex-1 normal-case">{t.content}</span>
@@ -620,10 +620,10 @@ export const AgentChat = forwardRef<
         style={{ fontSize: `${agentZoom.size}px` }}
       >
         {messages.length === 0 && (
-          <p className="text-[0.85em] text-[var(--color-muted)]">
+          <p className="text-[0.875em] leading-relaxed text-[var(--color-muted)]">
             Ask the agent to edit files in <strong>{slug ?? 'this project'}</strong>. It uses{' '}
-            <code className="text-[0.9em]">patch_file</code> for surgical edits and saves chat
-            history per session.
+            <code className="rounded bg-[var(--color-panel-2)] px-1 py-0.5 font-mono">patch_file</code> for
+            surgical edits and saves chat history per session.
           </p>
         )}
         {(() => {
@@ -646,15 +646,15 @@ export const AgentChat = forwardRef<
               {m.tools && m.tools.length > 0 && (
                 <div className="mt-2 space-y-1 border-t border-[var(--color-border)] pt-2">
                   {m.tools.map((t, j) => (
-                    <div key={j} className="flex items-center gap-1 text-[0.85em] text-[var(--color-muted)]">
-                      <Wrench size={11} /> <span className="font-mono">{t.tool}</span> — {t.summary}
+                    <div key={j} className="flex items-center gap-1.5 text-[0.875em] text-[var(--color-muted)]">
+                      <Wrench size={11} className="shrink-0" /> <span className="font-mono">{t.tool}</span> — {t.summary}
                     </div>
                   ))}
                 </div>
               )}
             </div>
             {m.designNote && (
-              <div className="mt-1 flex items-center justify-end gap-1 text-[0.75em] text-[var(--color-muted)]">
+              <div className="mt-1 flex items-center justify-end gap-1.5 text-[0.75em] text-[var(--color-muted)]">
                 <MousePointerClick size={10} /> {m.designNote}
               </div>
             )}
@@ -678,43 +678,50 @@ export const AgentChat = forwardRef<
           });
         })()}
         {busy && (
-          <div className="flex items-center gap-2 text-[0.85em] text-[var(--color-muted)]">
+          <div className="flex items-center gap-2 text-[0.875em] text-[var(--color-muted)]">
             <Loader2 size={13} className="animate-spin" /> thinking…
           </div>
         )}
       </div>
-      <div className="border-t border-[var(--color-border)] p-2" style={{ fontSize: `${agentZoom.size}px` }}>
-        {sessionStats.totalTokens > 0 || messages.length > 0 ? (
-          <div className="mb-2 flex justify-end px-0.5">
-            <span className="text-[0.7em] tabular-nums text-[var(--color-muted)]">
-              Session: {formatTokenCount(sessionStats.totalTokens)} tok
+      <div
+        className="flex flex-col gap-2 border-t border-[var(--color-border)] px-3 py-2.5"
+        style={{ fontSize: `${agentZoom.size}px` }}
+      >
+        <div className="flex items-center justify-between gap-2">
+          <label htmlFor="ide-model" className="sr-only">
+            Model
+          </label>
+          <div className="relative min-w-0 max-w-[60%]">
+            <select
+              id="ide-model"
+              value={modelId}
+              onChange={(e) => onModelChange(e.target.value)}
+              disabled={!slug || busy}
+              title={activeModel?.description}
+              className="peer w-full min-w-0 appearance-none truncate rounded-md border border-[var(--color-border)] bg-[var(--color-panel-2)] py-1 pl-2 pr-6 text-[0.8125em] text-[var(--color-fg)] outline-none transition-colors focus:border-[var(--color-accent)] disabled:opacity-50"
+            >
+              {(models.length ? models : [resolveIdeModel(modelId) as ModelOption]).map(
+                (m) => (
+                  <option key={m.id} value={m.id} disabled={m.configured === false}>
+                    {m.label}
+                    {m.configured === false ? ' (no API key)' : ''}
+                  </option>
+                ),
+              )}
+            </select>
+            <ChevronDown
+              size={12}
+              className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[var(--color-muted)] peer-disabled:opacity-50"
+            />
+          </div>
+          {sessionStats.totalTokens > 0 || messages.length > 0 ? (
+            <span className="shrink-0 whitespace-nowrap text-[0.75em] tabular-nums text-[var(--color-muted)]">
+              {formatTokenCount(sessionStats.totalTokens)} tok
               {sessionStats.contextWindow
                 ? ` · ${formatTokenCount(sessionStats.contextUsed)}/${formatTokenCount(sessionStats.contextWindow)} ctx`
                 : ''}
             </span>
-          </div>
-        ) : null}
-        <div className="mb-2 flex items-center gap-2">
-          <label htmlFor="ide-model" className="shrink-0 text-[0.75em] text-[var(--color-muted)]">
-            Model
-          </label>
-          <select
-            id="ide-model"
-            value={modelId}
-            onChange={(e) => onModelChange(e.target.value)}
-            disabled={!slug || busy}
-            title={activeModel?.description}
-            className="min-w-0 flex-1 truncate rounded-md border border-[var(--color-border)] bg-[var(--color-panel-2)] px-2 py-1 text-[0.85em] outline-none focus:border-[var(--color-accent)] disabled:opacity-50"
-          >
-            {(models.length ? models : [resolveIdeModel(modelId) as ModelOption]).map(
-              (m) => (
-                <option key={m.id} value={m.id} disabled={m.configured === false}>
-                  {m.label}
-                  {m.configured === false ? ' (no API key)' : ''}
-                </option>
-              ),
-            )}
-          </select>
+          ) : null}
         </div>
         <div className="flex items-end gap-2">
           <textarea
@@ -729,12 +736,13 @@ export const AgentChat = forwardRef<
             placeholder={slug ? 'Edit this project…' : 'Select a project'}
             disabled={!slug || busy}
             rows={2}
-            className="min-h-0 flex-1 resize-none rounded-md border border-[var(--color-border)] bg-[var(--color-panel-2)] px-2 py-1.5 outline-none focus:border-[var(--color-accent)] disabled:opacity-50"
+            className="min-h-0 flex-1 resize-none rounded-lg border border-[var(--color-border)] bg-[var(--color-panel-2)] px-3 py-2 leading-snug outline-none transition-colors focus:border-[var(--color-accent)] disabled:opacity-50"
           />
           <button
             onClick={send}
             disabled={!slug || busy || !input.trim()}
-            className="flex h-9 w-9 items-center justify-center rounded-md bg-[var(--color-accent)] text-[var(--color-accent-fg)] hover:opacity-90 disabled:opacity-40"
+            title="Send"
+            className="flex h-9 w-9 shrink-0 items-center justify-center self-end rounded-lg bg-[var(--color-accent)] text-[var(--color-accent-fg)] transition-opacity hover:opacity-90 disabled:opacity-40"
           >
             <Send size={15} />
           </button>

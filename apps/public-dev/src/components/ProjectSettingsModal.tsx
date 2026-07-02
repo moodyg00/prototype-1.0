@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { CheckCircle2, Loader2, Plug, Settings, X } from 'lucide-react';
+import { CheckCircle2, ChevronDown, Loader2, Plug, Settings, X } from 'lucide-react';
 import type { ProjectMeta } from '@/src/lib/types';
 
 type DeployForm = {
@@ -180,13 +180,19 @@ export function ProjectSettingsModal({
                 <h3 className="text-xs uppercase tracking-wide text-[var(--color-muted)]">Deployment</h3>
                 <label className="block">
                   <span className="mb-1 block text-xs text-[var(--color-muted)]">Target</span>
-                  <select
-                    value={target}
-                    onChange={(e) => setTarget(e.target.value)}
-                    className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-panel-2)] px-2 py-1.5 text-sm outline-none focus:border-[var(--color-accent)]"
-                  >
-                    <option value="live">live</option>
-                  </select>
+                  <div className="relative">
+                    <select
+                      value={target}
+                      onChange={(e) => setTarget(e.target.value)}
+                      className="w-full appearance-none rounded-md border border-[var(--color-border)] bg-[var(--color-panel-2)] py-1.5 pl-2 pr-8 text-sm outline-none transition-colors focus:border-[var(--color-accent)]"
+                    >
+                      <option value="live">live</option>
+                    </select>
+                    <ChevronDown
+                      size={14}
+                      className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--color-muted)]"
+                    />
+                  </div>
                 </label>
                 <p className="rounded-md border border-[var(--color-border)] bg-[var(--color-panel-2)] p-2 text-xs text-[var(--color-muted)]">
                   Use host <strong>local</strong> to deploy to <code>apps/public-site/</code> (filesystem).

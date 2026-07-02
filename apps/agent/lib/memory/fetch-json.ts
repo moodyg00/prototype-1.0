@@ -15,8 +15,9 @@ export async function fetchJson<T = Record<string, unknown>>(url: string): Promi
     throw new Error(`Invalid JSON from ${url} (${res.status})`);
   }
   if (!res.ok) {
-    const err = (data as { error?: string }).error ?? `Request failed (${res.status})`;
-    throw new Error(err);
+    const body = data as { error?: string; hint?: string };
+    const err = body.error ?? `Request failed (${res.status})`;
+    throw new Error(body.hint ? `${err} — ${body.hint}` : err);
   }
   return data;
 }

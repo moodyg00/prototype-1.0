@@ -4,12 +4,12 @@ import { Database, GitBranch, Search } from 'lucide-react';
 import { toast } from 'sonner';
 
 import type { PaneRenderContext } from '@/lib/pane-types';
-import { dispatchAgentNavigate, setPendingWorkflowId } from '@/lib/agent-navigation';
+import { dispatchAgentNavigate, openAgentsStudio, setPendingWorkflowId } from '@/lib/agent-navigation';
 import { useMemory } from '../MemoryProvider';
 import { MemoryLoadingSkeleton, MemoryPaneShell, shortId, StatCard } from '../memory-pane-utils';
 
 export function MemoryOverviewPane({ context: _context }: { context: PaneRenderContext }) {
-  const { initialLoad, stats, scopeStats, workflows, setTab } = useMemory();
+  const { initialLoad, stats, scopeStats, workflows, setTab, agentId } = useMemory();
 
   if (initialLoad) {
     return (
@@ -117,6 +117,15 @@ export function MemoryOverviewPane({ context: _context }: { context: PaneRenderC
                 >
                   Quick ingest
                 </button>
+                {agentId ? (
+                  <button
+                    type="button"
+                    className="rounded border border-white/10 px-2 py-1 text-[10px] text-zinc-300 hover:bg-white/5"
+                    onClick={() => openAgentsStudio(agentId)}
+                  >
+                    Configure agent ({agentId})
+                  </button>
+                ) : null}
               </div>
             </>
           )}

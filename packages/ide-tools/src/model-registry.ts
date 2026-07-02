@@ -8,6 +8,7 @@ export async function isImageProviderConfigured(
     xai: () => Promise<boolean>;
     openai: () => Promise<boolean>;
     anthropic: () => Promise<boolean>;
+    openrouter?: () => Promise<boolean>;
     stability?: () => Promise<boolean>;
     replicate?: () => Promise<boolean>;
   },
@@ -15,6 +16,7 @@ export async function isImageProviderConfigured(
   if (provider === 'xai') return checks.xai();
   if (provider === 'openai') return checks.openai();
   if (provider === 'anthropic') return checks.anthropic();
+  if (provider === 'openrouter') return checks.openrouter?.() ?? false;
   if (provider === 'stability') return checks.stability?.() ?? false;
   if (provider === 'replicate') return checks.replicate?.() ?? false;
   return false;

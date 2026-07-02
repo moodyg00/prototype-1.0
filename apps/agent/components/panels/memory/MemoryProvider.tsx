@@ -125,25 +125,39 @@ export function MemoryProvider({ children }: { children: React.ReactNode }) {
 
   const refresh = useCallback(async () => {
     setLoading(true);
-    try {
-      const [s, w, scopes, agents] = await Promise.all([
-        fetchJson<{ documentCount: number; store: string }>('/api/memory/stats'),
+    const [statsSettled, workflowsSettled, scopesSettled, agentsSettled] =
+      await Promise.allSettled([
+        fetchJson<{ documentCount: number; store: string; error?: string; hint?: string }>(
+          '/api/memory/stats',
+        ),
         fetchJson<WorkflowsState>('/api/memory/workflows'),
         fetchJson<{ scopes?: ScopeStat[]; hint?: string }>('/api/memory/scopes'),
         fetchJson<{ agentIds?: string[]; hint?: string }>('/api/memory/agents'),
       ]);
-      setStats(s);
-      setWorkflows(w);
-      setScopeStats(scopes.scopes ?? []);
-      setKnownAgents(agents.agentIds ?? []);
-      const hint = scopes.hint ?? agents.hint;
-      if (hint) toast.message(hint, { duration: 8000 });
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to load memory stats');
-    } finally {
-      setLoading(false);
-      setInitialLoad(false);
+
+    if (statsSettled.status === 'fulfilled') {
+      setStats(statsSettled.value);
+    } else {
+      setStats(null);
+      const message =
+        statsSettled.reason instanceof Error
+          ? statsSettled.reason.message
+          : 'Memory stats unavailable';
+      toast.message(message, { duration: 12_000 });
     }
+
+    if (workflowsSettled.status === 'fulfilled') setWorkflows(workflowsSettled.value);
+    if (scopesSettled.status === 'fulfilled') {
+      setScopeStats(scopesSettled.value.scopes ?? []);
+      if (scopesSettled.value.hint) toast.message(scopesSettled.value.hint, { duration: 8000 });
+    }
+    if (agentsSettled.status === 'fulfilled') {
+      setKnownAgents(agentsSettled.value.agentIds ?? []);
+      if (agentsSettled.value.hint) toast.message(agentsSettled.value.hint, { duration: 8000 });
+    }
+
+    setLoading(false);
+    setInitialLoad(false);
   }, []);
 
   const loadCorpus = useCallback(async () => {

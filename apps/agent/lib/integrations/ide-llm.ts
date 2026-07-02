@@ -18,10 +18,15 @@ export async function resolveOpenAiApiKey(): Promise<string | null> {
   return process.env.OPENAI_API_KEY?.trim() || null;
 }
 
+export async function resolveOpenRouterApiKey(): Promise<string | null> {
+  return process.env.OPENROUTER_API_KEY?.trim() || null;
+}
+
 export async function isIdeProviderConfigured(provider: IdeLlmProvider): Promise<boolean> {
   if (provider === 'xai') return Boolean(await resolveXaiApiKey());
   if (provider === 'anthropic') return Boolean(await resolveAnthropicApiKey());
   if (provider === 'openai') return Boolean(await resolveOpenAiApiKey());
+  if (provider === 'openrouter') return Boolean(await resolveOpenRouterApiKey());
   return false;
 }
 
@@ -29,6 +34,7 @@ export async function resolveIdeProviderApiKey(provider: IdeLlmProvider): Promis
   if (provider === 'xai') return resolveXaiApiKey();
   if (provider === 'anthropic') return resolveAnthropicApiKey();
   if (provider === 'openai') return resolveOpenAiApiKey();
+  if (provider === 'openrouter') return resolveOpenRouterApiKey();
   return null;
 }
 
@@ -38,7 +44,9 @@ export function missingIdeProviderMessage(model: IdeModelOption): string {
       ? 'XAI_API_KEY'
       : model.provider === 'anthropic'
         ? 'ANTHROPIC_API_KEY'
-        : 'OPENAI_API_KEY';
+        : model.provider === 'openai'
+          ? 'OPENAI_API_KEY'
+          : 'OPENROUTER_API_KEY';
   return `No ${model.label} API key configured. Set ${env} in apps/agent/.env.local.`;
 }
 
@@ -83,6 +91,20 @@ export async function invokeIdeChat(opts: {
     const result = isOpenAiResponsesModel(model.id)
       ? await invokeOpenAiResponsesChat(openAiOpts)
       : await invokeOpenAiCompatibleChat(openAiOpts);
+    return { ...result, model };
+  }
+
+  if (model.provider === 'openrouter') {
+    const baseUrl = process.env.OPENROUTER_BASE_URL ?? 'https://openrouter.ai/api/v1';
+    const result = await invokeOpenAiCompatibleChat({
+      apiKey,
+      baseUrl,
+      model: model.id,
+      systemPrompt: opts.systemPrompt,
+      messages: opts.messages,
+      tools: opts.tools,
+      signal: opts.signal,
+    });
     return { ...result, model };
   }
 

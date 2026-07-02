@@ -10,7 +10,7 @@ export async function GET() {
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to list agents';
     return NextResponse.json({
-      agentIds: ['ceo', 'cfo', 'cto', 'coo', 'clo', 'default'],
+      agentIds: ['default'],
       error: message,
       hint: isMissingMemoryCatalogError(error) ? memoryCatalogHint() : undefined,
     });

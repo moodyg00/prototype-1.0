@@ -1,7 +1,8 @@
 'use client';
 
 import { FlasksChemistryIcon } from '@prototype/icons';
-import { Bell, ChevronDown, LayoutGrid, Search } from 'lucide-react';
+import { Bell, ChevronDown, LayoutGrid } from 'lucide-react';
+import { AgentHeaderSearch } from '@/components/shell/AgentHeaderSearch';
 import { useCallback, useEffect, useState } from 'react';
 import { useWorkspace } from '@/components/workspace/WorkspaceProvider';
 import { WorkspaceSwitcher } from '@/components/workspace/WorkspaceSwitcher';
@@ -59,14 +60,7 @@ export function AgentHeader() {
       </div>
 
       <div className="ml-auto flex items-center gap-2">
-        <div className="relative hidden w-64 lg:block">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
-          <input
-            className="input w-full pl-9"
-            placeholder="Search tools, runs, agents..."
-            aria-label="Search"
-          />
-        </div>
+        <AgentHeaderSearch />
 
         <button
           type="button"

@@ -14,7 +14,7 @@ const LEGACY_TOOL_ID_RENAMES: Record<string, ToolId> = {
 // which is exactly what caused the default layout to show a wall of duplicate
 // "Workflow" icons after `team`/`agents`/`documents`/`analytics`/`mobile`/`website`
 // were removed from `TOOLS`.
-const REMOVED_TOOL_IDS = new Set(['team', 'agents', 'documents', 'analytics', 'mobile', 'website']);
+const REMOVED_TOOL_IDS = new Set(['team', 'documents', 'analytics', 'mobile', 'website']);
 /** Stripped from tooltip bars on load — runner lives inside the workflow studio. */
 const TOOLBAR_STRIPPED_IDS = new Set(['runner']);
 

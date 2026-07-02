@@ -1,9 +1,10 @@
 import type { MemoryAgentBinding, MemoryScope } from '@prototype/memory';
 import type { Prisma } from '@prototype/db';
 
+import { withoutLegacyCsuiteAgentIds } from '../agents/legacy-csuite';
 import { prisma } from '../prisma';
 
-const DEFAULT_AGENT_IDS = ['ceo', 'cfo', 'cto', 'coo', 'clo', 'default'];
+const DEFAULT_AGENT_IDS = ['default'];
 
 function defaultBinding(agentId: string): MemoryAgentBinding {
   return {
@@ -67,7 +68,7 @@ export async function listKnownAgentIds(): Promise<string[]> {
     if (!prisma?.memoryAgentBinding) return [...DEFAULT_AGENT_IDS];
     const rows = await prisma.memoryAgentBinding.findMany({ select: { agentId: true } });
     const ids = new Set([...DEFAULT_AGENT_IDS, ...rows.map((r: { agentId: string }) => r.agentId)]);
-    return [...ids].sort();
+    return withoutLegacyCsuiteAgentIds([...ids]).sort();
   } catch {
     return [...DEFAULT_AGENT_IDS];
   }

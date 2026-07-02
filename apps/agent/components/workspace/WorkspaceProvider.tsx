@@ -22,7 +22,12 @@ import {
   saveSession,
   type LayoutSession,
 } from '@/lib/layout-store';
-import { getVisibleCanvasRect, zoomCanvasAtCenter, screenToCanvasWorld } from '@/lib/canvas-coords';
+import {
+  CANVAS_WORLD_CENTER,
+  getVisibleCanvasRect,
+  zoomCanvasAtCenter,
+  screenToCanvasWorld,
+} from '@/lib/canvas-coords';
 import { createFloatingPanel, defaultPanelId, type PanelInstance } from '@/lib/panels';
 import {
   defaultPaneForFeature,
@@ -109,6 +114,7 @@ interface WorkspaceContextValue {
   toggleCanvasPanLocked: () => void;
   zoomCanvasIn: () => void;
   zoomCanvasOut: () => void;
+  resetCanvasView: () => void;
   getBarTools: (barId: string) => ToolId[];
   handleBarToolClick: (barId: string, toolId: ToolId) => void;
   addToolToBar: (barId: string, toolId: ToolId) => void;
@@ -336,6 +342,17 @@ export function WorkspaceProvider({
 
   const zoomCanvasIn = useCallback(() => zoomCanvas('in'), [zoomCanvas]);
   const zoomCanvasOut = useCallback(() => zoomCanvas('out'), [zoomCanvas]);
+
+  const resetCanvasView = useCallback(() => {
+    const node = canvasViewportRef.current;
+    if (!node) return;
+    const rect = node.getBoundingClientRect();
+    setCanvasTransform({
+      x: rect.width / 2 - CANVAS_WORLD_CENTER,
+      y: rect.height / 2 - CANVAS_WORLD_CENTER,
+      scale: 1,
+    });
+  }, []);
 
   const registerCanvasViewport = useCallback((node: HTMLDivElement | null) => {
     canvasViewportRef.current = node;
@@ -1419,6 +1436,7 @@ export function WorkspaceProvider({
     toggleCanvasPanLocked,
     zoomCanvasIn,
     zoomCanvasOut,
+    resetCanvasView,
     getBarTools,
     handleBarToolClick,
     addToolToBar,

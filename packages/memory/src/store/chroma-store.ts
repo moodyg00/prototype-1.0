@@ -1,7 +1,7 @@
-import { ChromaClient } from 'chromadb';
+import { ChromaClient, type EmbeddingFunction } from 'chromadb';
 import { randomUUID } from 'crypto';
 
-import { getEmbedder } from '../embed';
+import { getEmbedder, type Embedder } from '../embed';
 import type { MemoryChunkRecord, RecallHit, RecallQuery } from '../types';
 import { scopeKey } from '../types';
 import type { MemoryStore } from './types';
@@ -10,6 +10,31 @@ export type ChromaStoreOptions = {
   url?: string;
   collectionName?: string;
 };
+
+function parseChromaUrl(url: string): { host: string; port: number; ssl: boolean } {
+  const parsed = new URL(url);
+  const ssl = parsed.protocol === 'https:';
+  const port = parsed.port
+    ? Number(parsed.port)
+    : ssl
+      ? 443
+      : parsed.protocol === 'http:'
+        ? 80
+        : 8000;
+  return { host: parsed.hostname, port, ssl };
+}
+
+/** Bridges our embedder to Chroma so we never need @chroma-core/default-embed. */
+function chromaEmbeddingFunction(embedder: Embedder): EmbeddingFunction {
+  return {
+    name: 'prototype-memory',
+    generate: (texts) => embedder.embedMany(texts),
+    generateForQueries: (texts) => embedder.embedMany(texts),
+    defaultSpace: () => 'cosine',
+    supportedSpaces: () => ['cosine', 'l2', 'ip'],
+    getConfig: () => ({}),
+  };
+}
 
 function chunkToMetadata(chunk: MemoryChunkRecord): Record<string, string | number | boolean> {
   const meta: Record<string, string | number | boolean> = {
@@ -34,11 +59,15 @@ export class ChromaMemoryStore implements MemoryStore {
   constructor(options: ChromaStoreOptions = {}) {
     const url = options.url ?? process.env.CHROMA_URL ?? 'http://localhost:8000';
     this.collectionName = options.collectionName ?? process.env.CHROMA_COLLECTION ?? 'mhp_memory';
-    this.client = new ChromaClient({ path: url });
+    const { host, port, ssl } = parseChromaUrl(url);
+    this.client = new ChromaClient({ host, port, ssl });
   }
 
   private async collection() {
-    return this.client.getOrCreateCollection({ name: this.collectionName });
+    return this.client.getOrCreateCollection({
+      name: this.collectionName,
+      embeddingFunction: chromaEmbeddingFunction(this.embedder),
+    });
   }
 
   async upsert(chunks: MemoryChunkRecord[]): Promise<void> {

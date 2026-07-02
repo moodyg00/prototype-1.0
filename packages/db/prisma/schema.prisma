@@ -239,6 +239,8 @@ model User {
   aiAlertsAsAgentUser                AiAlert[]                @relation("ai_alerts_agent_user_id_users")
   aiAlertsAsCreatedBy                AiAlert[]                @relation("ai_alerts_created_by_users")
   aiAlertsAsUpdatedBy                AiAlert[]                @relation("ai_alerts_updated_by_users")
+  aiModelsAsCreatedBy                AiModel[]                @relation("ai_models_created_by_users")
+  aiModelsAsUpdatedBy                AiModel[]                @relation("ai_models_updated_by_users")
   lowStockAlertsAsCreatedBy          LowStockAlert[]          @relation("low_stock_alerts_created_by_users")
   lowStockAlertsAsUpdatedBy          LowStockAlert[]          @relation("low_stock_alerts_updated_by_users")
   emailTemplatesAsReviewedBy         EmailTemplate[]          @relation("email_templates_reviewed_by_users")
@@ -2910,6 +2912,35 @@ model AiAlert {
   @@map("ai_alerts")
 }
 
+model AiModel {
+  id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  catalogId             String    @unique @map("catalog_id") @db.VarChar(120)
+  provider              String    @db.VarChar(80)
+  apiModelId            String?   @map("api_model_id") @db.VarChar(255)
+  label                 String    @db.VarChar(255)
+  description           String?
+  category              String    @db.VarChar(40) /// CHECK category IN ('text', 'image', 'video')
+  specializations       Json?     @default(dbgenerated("'[]'::jsonb")) @db.JsonB
+  capabilities          Json?     @default(dbgenerated("'[]'::jsonb")) @db.JsonB
+  contextWindowTokens   Int?      @map("context_window_tokens")
+  pricePerMInputTokens  Decimal?  @map("price_per_m_input_tokens") @db.Decimal(10, 6)
+  pricePerMOutputTokens Decimal?  @map("price_per_m_output_tokens") @db.Decimal(10, 6)
+  isActive              Boolean   @default(true) @map("is_active")
+  metadata              Json?     @db.JsonB
+  lastUpdatedAt         DateTime? @map("last_updated_at") @db.Timestamptz(6)
+  createdAt             DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime? @default(now()) @map("updated_at") @db.Timestamptz(6)
+  createdBy             String?   @map("created_by") @db.Uuid
+  updatedBy             String?   @map("updated_by") @db.Uuid
+  createdByRef          User?     @relation("ai_models_created_by_users", fields: [createdBy], references: [id], onDelete: SetNull)
+  updatedByRef          User?     @relation("ai_models_updated_by_users", fields: [updatedBy], references: [id], onDelete: SetNull)
+
+  @@index([provider])
+  @@index([category])
+  @@index([isActive])
+  @@map("ai_models")
+}
+
 model AgentMemoryEvent {
   id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   agentId   String   @map("agent_id") @db.VarChar(120)
@@ -3395,4 +3426,37 @@ model WorkflowExport {
   workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
 
   @@index([workflowId])
+}
+
+model AgentSmsThread {
+  id           String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  agentId      String            @map("agent_id") @db.VarChar(120)
+  contactPhone String            @map("contact_phone") @db.VarChar(40)
+  agentPhone   String            @map("agent_phone") @db.VarChar(40)
+  status       String            @default("active") /// CHECK status IN ('active', 'archived')
+  lastMessageAt DateTime?        @map("last_message_at") @db.Timestamptz(6)
+  createdAt    DateTime?         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime?         @default(now()) @map("updated_at") @db.Timestamptz(6)
+  messages     AgentSmsMessage[]
+
+  @@unique([agentId, contactPhone])
+  @@index([agentId])
+  @@index([status])
+  @@index([lastMessageAt])
+  @@map("agent_sms_threads")
+}
+
+model AgentSmsMessage {
+  id        String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  threadId  String         @map("thread_id") @db.Uuid
+  direction String         /// CHECK direction IN ('inbound', 'outbound')
+  body      String
+  twilioSid String?        @map("twilio_sid") @db.VarChar(64)
+  status    String         @default("delivered") @db.VarChar(40)
+  createdAt DateTime?      @default(now()) @map("created_at") @db.Timestamptz(6)
+  thread    AgentSmsThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@index([threadId])
+  @@index([createdAt])
+  @@map("agent_sms_messages")
 }

@@ -1,6 +1,8 @@
 'use client';
 
-import { Upload } from 'lucide-react';
+import { Upload, UserCog } from 'lucide-react';
+
+import { openAgentsStudio } from '@/lib/agent-navigation';
 
 import type { MediaLibraryFilters } from './types';
 
@@ -96,6 +98,17 @@ export function MediaLibraryFilterBar({
           </option>
         ))}
       </select>
+      {filters.agentId ? (
+        <button
+          type="button"
+          title="Open Agents studio"
+          className="inline-flex items-center gap-1 rounded-md border border-white/10 px-2 py-1.5 text-[10px] text-zinc-300 hover:bg-white/5"
+          onClick={() => openAgentsStudio(filters.agentId)}
+        >
+          <UserCog size={12} />
+          Agent
+        </button>
+      ) : null}
       <button
         type="button"
         onClick={onUpload}

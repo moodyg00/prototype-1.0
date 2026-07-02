@@ -1,0 +1,26 @@
+{
+  "default": {
+    "defaultModelId": "sora-2",
+    "productionDefaults": {
+      "frameRate": "30",
+      "durationSeconds": 6,
+      "resolution": "720p",
+      "aspectRatio": "16:9",
+      "syncMode": "auto",
+      "audioSync": "auto",
+      "auto": {
+        "cut": true,
+        "captions": false,
+        "broll": false,
+        "color": true,
+        "stabilize": false,
+        "upscale": false
+      },
+      "motionStrength": 50,
+      "interpolate": true,
+      "loop": false,
+      "seed": null,
+      "bpm": 120
+    }
+  }
+}

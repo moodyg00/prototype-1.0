@@ -270,7 +270,7 @@ If `*Panel.tsx` still exists alongside `panes/`, migration is partial — prefer
 
 ### Migrated features (current)
 
-`workflow`, `runs`, `browser`, `memory`, `photography`, `video`, `media-library`, `runner` — all in `MIGRATED_CATALOGS`.
+`workflow`, `runs`, `browser`, `memory`, `agents`, `photography`, `video`, `media-library`, `runner` — all in `MIGRATED_CATALOGS`.
 
 ### In-progress signals
 
@@ -317,3 +317,9 @@ Past chats: `~/.cursor/projects/.../agent-transcripts/*.jsonl` (outside repo).
 
 - `runnerFeatureCatalog`: single pane, `studios: []`.
 - Opens as canvas pane window; stripped from toolbar (`TOOLBAR_STRIPPED_IDS`).
+
+### Agents (studio + registry)
+
+- Catalog: chat, metadata, persona, memory, training, brain, tools — `agents.console` studio preset.
+- Provider: `AgentsProvider` — JSON registry via `/api/agents`, `selectedAgentId` shared across panes.
+- Phases 1–4 shipped: registry, chat, memory/brain/tools panes, training few-shot + export, `openAgentsStudio()`, header agent search, **Agents Desk** workspace preset, optional chat→memory ingest (`AGENT_CHAT_INGEST`).

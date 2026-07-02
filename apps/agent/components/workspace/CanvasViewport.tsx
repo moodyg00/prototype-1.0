@@ -6,6 +6,10 @@ import { PaneWindow } from '@/components/pane/PaneWindow';
 import { StudioWindow } from '@/components/pane/StudioWindow';
 import { CanvasGroupOverlay } from '@/components/workspace/CanvasGroupOverlay';
 import { useWorkspace } from '@/components/workspace/WorkspaceProvider';
+import {
+  CANVAS_WORLD_CENTER,
+  CANVAS_WORLD_SIZE,
+} from '@/lib/canvas-coords';
 import { isGroupVisibleInSelection } from '@/lib/canvas-groups';
 import { cn } from '@/lib/utils';
 
@@ -80,6 +84,27 @@ export function CanvasViewport() {
     registerCanvasViewport(ref.current);
     return () => registerCanvasViewport(null);
   }, [registerCanvasViewport]);
+
+  // Center a fresh session on the middle of the virtual canvas so it feels
+  // infinite from the start. Only runs once when the canvas is still at the
+  // default origin with no pan/zoom applied (handles hydration timing).
+  const centeredRef = useRef(false);
+  useEffect(() => {
+    if (centeredRef.current) return;
+    const node = ref.current;
+    if (!node) return;
+    if (session.canvas.x !== 0 || session.canvas.y !== 0 || session.canvas.scale !== 1) {
+      centeredRef.current = true;
+      return;
+    }
+    const rect = node.getBoundingClientRect();
+    setCanvasTransform({
+      x: rect.width / 2 - CANVAS_WORLD_CENTER,
+      y: rect.height / 2 - CANVAS_WORLD_CENTER,
+      scale: 1,
+    });
+    centeredRef.current = true;
+  }, [session.canvas, setCanvasTransform]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -182,8 +207,10 @@ export function CanvasViewport() {
     >
       <div
         ref={worldRef}
-        className="canvas-world relative h-[6000px] w-[8000px]"
+        className="canvas-world relative"
         style={{
+          width: CANVAS_WORLD_SIZE,
+          height: CANVAS_WORLD_SIZE,
           transform: `translate(${session.canvas.x}px, ${session.canvas.y}px) scale(${session.canvas.scale})`,
           transformOrigin: '0 0',
           backgroundImage: 'radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px)',

@@ -195,8 +195,13 @@ export function DeployModal({
                 </table>
               </div>
 
-              <label className="flex items-center gap-2 text-[var(--color-fg)]">
-                <input type="checkbox" checked={backup} onChange={(e) => setBackup(e.target.checked)} />
+              <label className="flex cursor-pointer items-center gap-2 text-[var(--color-fg)]">
+                <input
+                  type="checkbox"
+                  checked={backup}
+                  onChange={(e) => setBackup(e.target.checked)}
+                  className="h-3.5 w-3.5 cursor-pointer rounded-sm border-[var(--color-border)] bg-[var(--color-panel-2)]"
+                />
                 Create a backup of the current live docroot first (recommended)
               </label>
 

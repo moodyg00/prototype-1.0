@@ -23,9 +23,13 @@ export function screenToCanvasWorld(
   };
 }
 
-export const CANVAS_MIN_SCALE = 0.35;
+export const CANVAS_MIN_SCALE = 0.05;
 export const CANVAS_MAX_SCALE = 2.5;
 export const CANVAS_ZOOM_STEP = 1.12;
+
+/** Virtual canvas size in pixels. Large enough to feel infinite without unbounded DOM dimensions. */
+export const CANVAS_WORLD_SIZE = 200000;
+export const CANVAS_WORLD_CENTER = CANVAS_WORLD_SIZE / 2;
 
 export function clampCanvasScale(scale: number): number {
   return Math.min(CANVAS_MAX_SCALE, Math.max(CANVAS_MIN_SCALE, scale));

@@ -1,0 +1,17 @@
+{
+  "default": {
+    "id": "default",
+    "name": "default",
+    "status": "active",
+    "persona": {
+      "systemPrompt": ""
+    },
+    "tools": {
+      "enabledToolIds": []
+    },
+    "training": {
+      "examples": []
+    },
+    "updatedAt": "2026-07-02T12:46:06.666Z"
+  }
+}

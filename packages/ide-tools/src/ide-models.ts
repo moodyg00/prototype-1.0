@@ -1,4 +1,4 @@
-export type IdeLlmProvider = 'xai' | 'anthropic' | 'openai';
+export type IdeLlmProvider = 'xai' | 'anthropic' | 'openai' | 'openrouter';
 
 export type IdeModelOption = {
   id: string;
@@ -45,6 +45,27 @@ export const IDE_MODEL_OPTIONS: IdeModelOption[] = [
     provider: 'openai',
     description: 'Lighter Codex variant for faster iterations',
     contextWindowTokens: 192_000,
+  },
+  {
+    id: 'google/gemini-2.5-flash-preview:free',
+    label: 'Gemini 2.5 Flash (OpenRouter free)',
+    provider: 'openrouter',
+    description: 'Free tier — fast multimodal model via OpenRouter',
+    contextWindowTokens: 1_048_576,
+  },
+  {
+    id: 'deepseek/deepseek-chat-v3-0324:free',
+    label: 'DeepSeek V3 (OpenRouter free)',
+    provider: 'openrouter',
+    description: 'Free tier — strong coding/chat model via OpenRouter',
+    contextWindowTokens: 64_000,
+  },
+  {
+    id: 'meta-llama/llama-4-scout:free',
+    label: 'Llama 4 Scout (OpenRouter free)',
+    provider: 'openrouter',
+    description: 'Free tier — lightweight open model via OpenRouter',
+    contextWindowTokens: 128_000,
   },
 ];
 

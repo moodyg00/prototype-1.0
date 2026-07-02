@@ -1,6 +1,6 @@
 'use client';
 
-import { Group, Hand, Lock, LockOpen, Ungroup, ZoomIn, ZoomOut } from 'lucide-react';
+import { Group, Hand, Lock, LockOpen, RotateCcw, Ungroup, ZoomIn, ZoomOut } from 'lucide-react';
 import { useWorkspace } from '@/components/workspace/WorkspaceProvider';
 import { HoverRevealZone } from '@/components/ui/HoverRevealZone';
 import { collectGroupIdsFromSelection, validateCanvasGroupSelection } from '@/lib/canvas-groups';
@@ -24,6 +24,7 @@ export function CanvasControls() {
     toggleCanvasPanLocked,
     zoomCanvasIn,
     zoomCanvasOut,
+    resetCanvasView,
     canvasSelection,
     studioInstances,
     paneWindows,
@@ -62,6 +63,17 @@ export function CanvasControls() {
           title="Zoom out"
         >
           <ZoomOut className="h-4 w-4" />
+        </button>
+
+        <button
+          type="button"
+          className="flex items-center justify-center rounded-md text-zinc-400 transition-colors hover:bg-white/6 hover:text-zinc-100"
+          style={{ width: CONTROL_SIZE, height: CONTROL_SIZE }}
+          onClick={resetCanvasView}
+          aria-label="Reset view"
+          title="Reset view"
+        >
+          <RotateCcw className="h-4 w-4" />
         </button>
 
         <button

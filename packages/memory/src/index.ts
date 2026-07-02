@@ -5,3 +5,4 @@ export * from './embed';
 export * from './recall';
 export * from './pipeline';
 export * from './store';
+export * from './chroma-errors';

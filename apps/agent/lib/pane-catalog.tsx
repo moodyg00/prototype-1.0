@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { ToolViewHost } from '@/components/tools/ToolViewHost';
+import { agentsFeatureCatalog } from '@/components/panels/agents/agentsFeatureCatalog';
 import { mediaLibraryFeatureCatalog } from '@/components/panels/media-library/mediaLibraryFeatureCatalog';
 import { memoryFeatureCatalog } from '@/components/panels/memory/memoryFeatureCatalog';
 import { photographyFeatureCatalog } from '@/components/panels/photography/photographyFeatureCatalog';
@@ -52,6 +53,7 @@ function wrapLegacyFeature(featureId: ToolId): FeatureCatalog {
 }
 
 const MIGRATED_CATALOGS: Partial<Record<ToolId, FeatureCatalog>> = {
+  agents: agentsFeatureCatalog,
   'media-library': mediaLibraryFeatureCatalog,
   photography: photographyFeatureCatalog,
   video: videoProductionFeatureCatalog,

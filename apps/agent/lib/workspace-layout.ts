@@ -91,7 +91,7 @@ export function createOpsDeskWorkspace(): WorkspaceLayout {
     name: 'Ops Desk',
     description: 'Memory and runs in the right panel; workflow tools on the top bar.',
     tooltipBars: [
-      { id: 'top', side: 'top', tools: ['workflow', 'runs', 'memory', 'browser'] },
+      { id: 'top', side: 'top', tools: ['agents', 'workflow', 'runs', 'memory', 'browser'] },
       { id: 'left', side: 'left', tools: [] },
     ],
     panelContainers: [{ id: 'right', side: 'right', width: 420, panels: [] }],
@@ -100,6 +100,31 @@ export function createOpsDeskWorkspace(): WorkspaceLayout {
   };
 }
 
+/** Agents-first layout: console studio + memory on the bar. */
+export function createAgentsDeskWorkspace(): WorkspaceLayout {
+  return {
+    id: 'agents-desk',
+    name: 'Agents Desk',
+    description: 'Agent registry studio, memory, and workflow on the top bar.',
+    tooltipBars: [
+      {
+        id: 'top',
+        side: 'top',
+        tools: ['agents', 'memory', 'workflow', 'runs', 'media-library'],
+      },
+      { id: 'left', side: 'left', tools: [] },
+    ],
+    panelContainers: [{ id: 'right', side: 'right', width: 440, panels: [] }],
+    drawerTools: [],
+    defaultFloatingPanels: [],
+  };
+}
+
 export function seedLayouts(): WorkspaceLayout[] {
-  return [createDefaultWorkspace(), createMediaStudioWorkspace(), createOpsDeskWorkspace()];
+  return [
+    createDefaultWorkspace(),
+    createMediaStudioWorkspace(),
+    createOpsDeskWorkspace(),
+    createAgentsDeskWorkspace(),
+  ];
 }

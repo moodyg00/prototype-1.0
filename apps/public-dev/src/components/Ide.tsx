@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Editor from '@monaco-editor/react';
 import {
+  ChevronDown,
   Code2,
   Eraser,
   File as FileIcon,
@@ -480,18 +481,24 @@ export function Ide({ initialProjects }: { initialProjects: ProjectMeta[] }) {
           <span className="tracking-tight">Dev</span>
         </div>
         <div className="mx-1 h-5 w-px bg-[var(--color-border)]" />
-        <select
-          value={slug ?? ''}
-          onChange={(e) => setSlug(e.target.value)}
-          className="rounded-md border border-[var(--color-border)] bg-[var(--color-panel-2)] px-2 py-1 text-sm outline-none focus:border-[var(--color-accent)]"
-        >
-          {projects.length === 0 && <option value="">No projects</option>}
-          {projects.map((p) => (
-            <option key={p.slug} value={p.slug}>
-              {p.name} ({p.slug})
-            </option>
-          ))}
-        </select>
+        <div className="relative">
+          <select
+            value={slug ?? ''}
+            onChange={(e) => setSlug(e.target.value)}
+            className="peer appearance-none rounded-md border border-[var(--color-border)] bg-[var(--color-panel-2)] py-1 pl-2 pr-7 text-sm outline-none transition-colors focus:border-[var(--color-accent)]"
+          >
+            {projects.length === 0 && <option value="">No projects</option>}
+            {projects.map((p) => (
+              <option key={p.slug} value={p.slug}>
+                {p.name} ({p.slug})
+              </option>
+            ))}
+          </select>
+          <ChevronDown
+            size={13}
+            className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[var(--color-muted)]"
+          />
+        </div>
         <button
           onClick={() => setShowNewProject(true)}
           className="flex items-center gap-1 rounded-md border border-[var(--color-border)] px-2 py-1 text-sm hover:bg-[var(--color-panel-2)]"

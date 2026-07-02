@@ -116,9 +116,15 @@ export function missingLlmKey(ir: LangGraphIR): boolean {
 
 function buildLlmNode(node: LangGraphNodeIR) {
   return async (state: GraphState): Promise<Partial<GraphState>> => {
+    const promptOverride =
+      typeof state.memory?.agentChatSystemPrompt === 'string'
+        ? state.memory.agentChatSystemPrompt
+        : undefined;
+    const modelOverride =
+      typeof state.memory?.agentChatModel === 'string' ? state.memory.agentChatModel : undefined;
     const { text, tokens } = await invokeChatLlm({
-      model: node.model || 'grok-3-mini',
-      systemPrompt: node.systemPrompt || 'You are a helpful assistant.',
+      model: modelOverride || node.model || 'grok-3-mini',
+      systemPrompt: promptOverride || node.systemPrompt || 'You are a helpful assistant.',
       memoryContext: state.memoryContext,
       input: state.input,
       messages: state.messages ?? [],

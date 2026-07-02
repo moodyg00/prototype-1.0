@@ -1,7 +1,7 @@
 {
   "default": {
-    "defaultModelId": "dall-e-3",
-    "backupModelId": "grok-imagine",
+    "defaultModelId": "grok-imagine",
+    "backupModelId": "dall-e-3",
     "pinnedModelIds": []
   }
 }

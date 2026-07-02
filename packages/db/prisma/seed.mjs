@@ -9,6 +9,7 @@
  *   - settings
  *   - integrations (API credentials)
  *   - credentials (saved logins)
+ *   - ai_models (LLM / image / video model catalog)
  *
  * Ownership: every seeded row's created_by / updated_by is remapped to the
  * "owner" user, resolved at runtime by email (OWNER_EMAIL, default
@@ -233,6 +234,7 @@ async function main() {
     const settings = await seedTable('settings', ownerId);
     const integrations = await seedTable('integrations', ownerId);
     const credentials = await seedTable('credentials', ownerId);
+    const aiModels = await seedTable('ai_models', ownerId);
 
     await client.query('COMMIT');
 
@@ -250,6 +252,7 @@ async function main() {
     console.log(`  settings:          ${settings}`);
     console.log(`  integrations:      ${integrations}`);
     console.log(`  credentials:       ${credentials}`);
+    console.log(`  ai_models:         ${aiModels}`);
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;

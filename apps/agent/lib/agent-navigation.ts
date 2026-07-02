@@ -13,7 +13,11 @@ export type AgentNavigateDetail = {
   runId?: string;
   memoryTab?: 'overview' | 'corpus' | 'ingest' | 'bindings' | 'recall' | 'jobs';
   mediaId?: string;
+  /** Target pane inside the Agents studio (e.g. agents.training). */
+  agentsPane?: string;
 };
+
+export const AGENTS_CONSOLE_STUDIO_ID = 'agents.console';
 
 export const AGENT_MEDIA_REFERENCE_EVENT = 'agent:media-reference';
 
@@ -89,6 +93,38 @@ export function openPane(
 /** Deep-link: open a Feature studio preset as a floating window. */
 export function openStudio(toolId: ToolId, studioId: string): void {
   dispatchAgentNavigate({ toolId, studioId });
+}
+
+/** Open Agents console studio for a registry slug. */
+export function openAgentsStudio(
+  agentId: string,
+  options?: { paneId?: string; studioId?: string },
+): void {
+  setPendingAgentsFocus(agentId, options?.paneId);
+  dispatchAgentNavigate({
+    toolId: 'agents',
+    agentId,
+    studioId: options?.studioId ?? AGENTS_CONSOLE_STUDIO_ID,
+    paneId: options?.paneId,
+  });
+}
+
+const PENDING_AGENTS_AGENT = 'agent:pendingAgentsAgentId';
+const PENDING_AGENTS_PANE = 'agent:pendingAgentsPaneId';
+
+export function setPendingAgentsFocus(agentId: string, paneId?: string): void {
+  if (typeof window === 'undefined') return;
+  sessionStorage.setItem(PENDING_AGENTS_AGENT, agentId);
+  if (paneId) sessionStorage.setItem(PENDING_AGENTS_PANE, paneId);
+}
+
+export function consumePendingAgentsFocus(): { agentId: string | null; paneId: string | null } {
+  if (typeof window === 'undefined') return { agentId: null, paneId: null };
+  const agentId = sessionStorage.getItem(PENDING_AGENTS_AGENT);
+  const paneId = sessionStorage.getItem(PENDING_AGENTS_PANE);
+  sessionStorage.removeItem(PENDING_AGENTS_AGENT);
+  sessionStorage.removeItem(PENDING_AGENTS_PANE);
+  return { agentId, paneId };
 }
 
 export function setPendingWorkflowId(workflowId: string): void {

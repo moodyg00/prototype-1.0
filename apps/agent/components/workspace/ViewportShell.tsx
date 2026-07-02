@@ -9,6 +9,7 @@ import { PanelSlotView } from '@/components/workspace/PanelSlotView';
 import { TooltipBar } from '@/components/workspace/TooltipBar';
 import { useWorkspace } from '@/components/workspace/WorkspaceProvider';
 import { featureUsesDockedBar } from '@/lib/pane-catalog';
+import { AgentsProvider } from '@/components/panels/agents/AgentsProvider';
 import { MediaLibraryProvider } from '@/components/panels/media-library/MediaLibraryProvider';
 import { MemoryProvider } from '@/components/panels/memory/MemoryProvider';
 import { RunsProvider } from '@/components/panels/runs/RunsProvider';
@@ -28,6 +29,7 @@ export function ViewportShell() {
 
   return (
     <MediaLibraryProvider>
+      <AgentsProvider>
       <MemoryProvider>
       <RunsProvider>
       <BrowserProvider>
@@ -87,6 +89,7 @@ export function ViewportShell() {
       </BrowserProvider>
       </RunsProvider>
       </MemoryProvider>
+      </AgentsProvider>
     </MediaLibraryProvider>
   );
 }

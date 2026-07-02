@@ -7,6 +7,7 @@ import {
   HelpCircle,
   Images,
   Play,
+  UserCog,
   Video,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -20,7 +21,8 @@ export type ToolId =
   | 'video'
   | 'photography'
   | 'memory'
-  | 'media-library';
+  | 'media-library'
+  | 'agents';
 
 export interface ToolSurfaceHints {
   preferredOpen?: ToolSurface;
@@ -64,6 +66,16 @@ export const TOOLS: ToolDef[] = [
     surfaceHints: { preferredOpen: 'floating', floatingDefaultSize: { w: 960, h: 640 } },
   },
   { id: 'memory', label: 'Agent Memory', icon: Brain, description: 'Chroma vector memory — ingest/recall via visual workflows', source: 'core', status: 'built', defaultSize: { w: 720, h: 520 } },
+  {
+    id: 'agents',
+    label: 'Agents',
+    icon: UserCog,
+    description: 'Agent registry — chat, persona, memory, tools',
+    source: 'core',
+    status: 'built',
+    defaultSize: { w: 1100, h: 720 },
+    surfaceHints: { preferredOpen: 'floating', floatingDefaultSize: { w: 1100, h: 720 } },
+  },
   {
     id: 'media-library',
     label: 'Media Library',

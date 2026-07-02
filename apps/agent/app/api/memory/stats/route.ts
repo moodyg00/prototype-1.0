@@ -1,5 +1,10 @@
 import { NextResponse } from 'next/server';
-import { getMemoryStore } from '@prototype/memory';
+import {
+  chromaConnectionHint,
+  chromaConnectionSummary,
+  getMemoryStore,
+  isChromaConnectionError,
+} from '@prototype/memory';
 
 export async function GET() {
   try {
@@ -10,7 +15,16 @@ export async function GET() {
       ...stats,
     });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Failed to load stats';
-    return NextResponse.json({ store: 'unknown', documentCount: 0, error: message }, { status: 500 });
+    const raw = error instanceof Error ? error.message : 'Failed to load stats';
+    const chromaDown = isChromaConnectionError(raw);
+    return NextResponse.json(
+      {
+        store: 'unknown',
+        documentCount: 0,
+        error: chromaDown ? chromaConnectionSummary() : raw,
+        hint: chromaDown ? chromaConnectionHint() : undefined,
+      },
+      { status: 503 },
+    );
   }
 }

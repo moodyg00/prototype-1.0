@@ -1,5 +1,7 @@
 import { HumanMessage } from '@langchain/core/messages';
 
+import { graphStateFromAgentChatInput } from '@/lib/agents/agent-chat';
+
 import { compileToLangGraphIR } from './compiler';
 import { CATALOG_BY_TYPE } from './node-catalog';
 import { nodeExecutor, serializeState, type GraphState, type SerializedState } from './runtime';
@@ -66,14 +68,16 @@ export async function runStandardWorkflow(
   const nodeById = Object.fromEntries(def.nodes.map((n) => [n.id, n]));
   const irById = Object.fromEntries(ir.nodes.map((n) => [n.id, n]));
 
+  const agentChatSeed = graphStateFromAgentChatInput(input);
+
   let state: GraphState = {
-    messages: input ? [new HumanMessage(input)] : [],
-    input,
+    messages: agentChatSeed?.messages ?? (input ? [new HumanMessage(input)] : []),
+    input: agentChatSeed?.lastUserInput ?? input,
     output: '',
-    memory: {},
+    memory: agentChatSeed?.memory ?? {},
     routeTo: undefined,
     tokens: 0,
-    memoryContext: '',
+    memoryContext: agentChatSeed?.memoryContext ?? '',
     ide: {},
     ideMessages: [],
   };
