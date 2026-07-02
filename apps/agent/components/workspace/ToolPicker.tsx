@@ -4,7 +4,7 @@ import { Plus } from 'lucide-react';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/button';
-import { ALL_TOOL_IDS, getTool, type ToolId } from '@/lib/tools';
+import { TOOLBAR_TOOL_IDS, getTool, type ToolId } from '@/lib/tools';
 
 type MenuAlign = 'start' | 'end';
 
@@ -56,7 +56,7 @@ export function ToolPicker({
 
   const anchorRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-  const available = ALL_TOOL_IDS.filter((toolId) => !existing.includes(toolId));
+  const available = TOOLBAR_TOOL_IDS.filter((toolId) => !existing.includes(toolId));
 
   const updatePosition = useCallback(() => {
     const anchor = anchorRef.current;

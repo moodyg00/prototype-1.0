@@ -16,6 +16,7 @@ export interface PanelInstance {
   barId?: string;
   containerId?: string;
   detached?: boolean;
+  groupId?: string;
 }
 
 export function defaultPanelId(toolId: ToolId, suffix = ''): string {

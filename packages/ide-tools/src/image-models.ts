@@ -6,6 +6,8 @@ export type ImageModelOption = {
   id: string;
   label: string;
   provider: ImageLlmProvider;
+  /** Provider API model id when it differs from the studio catalog id. */
+  apiModelId?: string;
   description: string;
   capabilities: ImageModelCapability[];
 };
@@ -16,7 +18,8 @@ export const IMAGE_MODEL_OPTIONS: ImageModelOption[] = [
     id: 'grok-imagine',
     label: 'Grok Imagine',
     provider: 'xai',
-    description: 'xAI image generation when XAI_API_KEY is set',
+    apiModelId: 'grok-imagine-image',
+    description: 'xAI Grok Imagine image generation (XAI_API_KEY)',
     capabilities: ['text2img', 'img2img', 'edit'],
   },
   {
@@ -48,6 +51,10 @@ export const DEFAULT_BACKUP_IMAGE_MODEL_ID = 'dall-e-3';
 export function resolveImageModel(modelId?: string | null): ImageModelOption {
   const id = modelId?.trim() || DEFAULT_IMAGE_MODEL_ID;
   return IMAGE_MODEL_OPTIONS.find((m) => m.id === id) ?? IMAGE_MODEL_OPTIONS[0]!;
+}
+
+export function resolveImageApiModelId(model: ImageModelOption): string {
+  return model.apiModelId?.trim() || model.id;
 }
 
 export type AgentImageModelPrefs = {

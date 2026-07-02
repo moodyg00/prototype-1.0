@@ -4,11 +4,12 @@ import React, { useCallback, useRef } from 'react';
 import {
   ReactFlow,
   Background,
-  Controls,
   MiniMap,
   addEdge,
   useNodesState,
   useEdgesState,
+  useReactFlow,
+  useStore,
   type Connection,
   type NodeTypes,
   type Node,
@@ -18,6 +19,9 @@ import {
   BackgroundVariant,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import { Maximize2, ZoomIn, ZoomOut } from 'lucide-react';
+
+import { HoverRevealZone } from '@/components/ui/HoverRevealZone';
 
 import type { WorkflowNodeData } from '../../lib/workflow/types';
 import { CATALOG_BY_TYPE } from '../../lib/workflow/node-catalog';
@@ -27,6 +31,55 @@ const nodeTypes: NodeTypes = {
   // Cast needed: React Flow NodeTypes constraint uses base Record type
   workflowNode: WorkflowNodeComponent as React.ComponentType<NodeProps>,
 };
+
+// Custom zoom/fit-view cluster, styled to match the app's own canvas chrome
+// (see components/workspace/CanvasControls.tsx) instead of shipping React
+// Flow's unstyled default <Controls/> squares.
+const CONTROL_SIZE = 28;
+
+function WorkflowCanvasControls() {
+  const { zoomIn, zoomOut, fitView } = useReactFlow();
+  const zoom = useStore(s => s.transform[2]);
+
+  return (
+    <div className="flex items-center gap-1 rounded-lg border border-white/12 bg-[#111113]/95 p-1 shadow-lg backdrop-blur-sm">
+      <button
+        type="button"
+        onClick={() => zoomOut({ duration: 150 })}
+        title="Zoom out"
+        aria-label="Zoom out"
+        className="flex items-center justify-center rounded-md text-zinc-400 transition-colors hover:bg-white/10 hover:text-zinc-100"
+        style={{ width: CONTROL_SIZE, height: CONTROL_SIZE }}
+      >
+        <ZoomOut size={14} />
+      </button>
+      <span className="min-w-9 text-center text-[10px] font-mono tabular-nums text-zinc-500 select-none">
+        {Math.round(zoom * 100)}%
+      </span>
+      <button
+        type="button"
+        onClick={() => zoomIn({ duration: 150 })}
+        title="Zoom in"
+        aria-label="Zoom in"
+        className="flex items-center justify-center rounded-md text-zinc-400 transition-colors hover:bg-white/10 hover:text-zinc-100"
+        style={{ width: CONTROL_SIZE, height: CONTROL_SIZE }}
+      >
+        <ZoomIn size={14} />
+      </button>
+      <div className="mx-0.5 h-4 w-px bg-white/10" aria-hidden />
+      <button
+        type="button"
+        onClick={() => fitView({ padding: 0.2, duration: 250 })}
+        title="Fit view"
+        aria-label="Fit view"
+        className="flex items-center justify-center rounded-md text-zinc-400 transition-colors hover:bg-white/10 hover:text-zinc-100"
+        style={{ width: CONTROL_SIZE, height: CONTROL_SIZE }}
+      >
+        <Maximize2 size={13} />
+      </button>
+    </div>
+  );
+}
 
 interface WorkflowCanvasProps {
   nodes: Node<WorkflowNodeData>[];
@@ -192,6 +245,7 @@ export function WorkflowCanvas({
         nodesDraggable={!readonly}
         nodesConnectable={!readonly}
         elementsSelectable={!readonly}
+        deleteKeyCode={readonly ? null : ['Backspace', 'Delete']}
         fitView
         fitViewOptions={{ padding: 0.2 }}
         minZoom={0.2}
@@ -205,18 +259,24 @@ export function WorkflowCanvas({
           size={1}
           color="rgba(255,255,255,0.07)"
         />
-        <Controls
-          className="!bg-zinc-900 !border-white/10 !rounded-lg"
-          showInteractive={false}
-        />
-        <MiniMap
-          className="!bg-zinc-900 !border-white/10 !rounded-lg"
-          nodeColor={(n) => {
-            const d = n.data as WorkflowNodeData;
-            return d.color ?? '#6366f1';
-          }}
-          maskColor="rgba(0,0,0,0.5)"
-        />
+        <Panel position="bottom-right" className="!m-0 !p-0">
+          <HoverRevealZone padding={12} className="min-h-[150px] min-w-[200px]">
+            <MiniMap
+              className="!rounded-lg !border !border-white/12 !bg-[#111113]/95 !shadow-lg"
+              style={{ width: 200, height: 150 }}
+              nodeColor={(n) => {
+                const d = n.data as WorkflowNodeData;
+                return d.color ?? '#6366f1';
+              }}
+              maskColor="rgba(0,0,0,0.55)"
+            />
+          </HoverRevealZone>
+        </Panel>
+        <Panel position="bottom-left" className="!m-0 !p-0">
+          <HoverRevealZone padding={12}>
+            <WorkflowCanvasControls />
+          </HoverRevealZone>
+        </Panel>
         {selectedNodeId && (
           <Panel position="top-left" className="pointer-events-none">
             <div className="text-[10px] text-zinc-500 font-mono px-2 py-1 bg-zinc-900/70 rounded border border-white/5">

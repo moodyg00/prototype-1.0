@@ -2,10 +2,12 @@
 
 import React, { useState } from 'react';
 import { NODE_CATALOG, CATEGORY_ORDER, CATEGORY_LABELS } from '../../lib/workflow/node-catalog';
+import { getNodeIcon } from '../../lib/workflow/node-icons';
 import type { NodeTypeDefinition } from '../../lib/workflow/types';
 import { ChevronDown, ChevronRight, Search } from 'lucide-react';
 
 function NodeTypeCard({ def }: { def: NodeTypeDefinition }) {
+  const Icon = getNodeIcon(def.icon);
   const onDragStart = (e: React.DragEvent) => {
     e.dataTransfer.setData('application/workflow-node-type', def.type);
     e.dataTransfer.effectAllowed = 'move';
@@ -15,13 +17,16 @@ function NodeTypeCard({ def }: { def: NodeTypeDefinition }) {
     <div
       draggable
       onDragStart={onDragStart}
-      className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-white/5 cursor-grab active:cursor-grabbing select-none group transition-colors"
+      title={def.description}
+      className="flex items-center gap-2.5 px-2 py-1.5 rounded-md hover:bg-white/[0.06] cursor-grab active:cursor-grabbing select-none group transition-colors"
     >
       <div
-        className="w-2 h-2 rounded-full shrink-0"
-        style={{ background: def.color }}
-      />
-      <span className="text-xs text-zinc-300 group-hover:text-white transition-colors truncate">{def.label}</span>
+        className="w-6 h-6 rounded-md flex items-center justify-center shrink-0 ring-1 ring-inset ring-white/10 group-hover:ring-white/20 transition-all"
+        style={{ background: `color-mix(in srgb, ${def.color} 22%, #18181b)` }}
+      >
+        <Icon size={13} style={{ color: def.color }} strokeWidth={2} />
+      </div>
+      <span className="text-[12px] leading-tight text-zinc-300 group-hover:text-white transition-colors truncate">{def.label}</span>
     </div>
   );
 }

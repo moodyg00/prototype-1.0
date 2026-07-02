@@ -3,6 +3,7 @@
 :root {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --brand-green: #39ff14;
 }
 
 @theme inline {
@@ -230,6 +231,29 @@ body {
 .canvas-viewport.is-panning,
 .canvas-viewport:active {
   cursor: grabbing;
+}
+
+.panel-shell.canvas-window-selected {
+  border-color: rgba(57, 255, 20, 0.75);
+  box-shadow:
+    0 0 0 2px rgba(57, 255, 20, 0.45),
+    0 0 0 6px rgba(57, 255, 20, 0.1),
+    0 8px 40px rgba(0, 0, 0, 0.5),
+    0 0 28px rgba(57, 255, 20, 0.12);
+}
+
+.panel-titlebar.canvas-window-titlebar-selected {
+  background: rgba(57, 255, 20, 0.08);
+  border-bottom-color: rgba(57, 255, 20, 0.28);
+}
+
+.canvas-window-selected-badge {
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
+  background: var(--brand-green);
+  box-shadow: 0 0 8px rgba(57, 255, 20, 0.85);
+  flex-shrink: 0;
 }
 
 .panel-shell {

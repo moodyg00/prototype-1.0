@@ -1,5 +1,6 @@
 import {
   IMAGE_MODEL_OPTIONS,
+  resolveImageApiModelId,
   resolveImageModel,
   type ImageModelOption,
 } from '@prototype/ide-tools/image-models';
@@ -38,7 +39,11 @@ function stubPngBuffer(): Buffer {
   );
 }
 
-async function generateWithXai(prompt: string, apiKey: string): Promise<Buffer | null> {
+async function generateWithXai(
+  prompt: string,
+  apiKey: string,
+  apiModelId: string,
+): Promise<Buffer> {
   const res = await fetch(`${XAI_BASE_URL}/images/generations`, {
     method: 'POST',
     headers: {
@@ -46,17 +51,38 @@ async function generateWithXai(prompt: string, apiKey: string): Promise<Buffer |
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'grok-2-image',
+      model: apiModelId,
       prompt,
       n: 1,
       response_format: 'b64_json',
     }),
   });
-  if (!res.ok) return null;
-  const data = (await res.json()) as { data?: Array<{ b64_json?: string }> };
+  if (!res.ok) {
+    let detail = res.statusText;
+    try {
+      const err = (await res.json()) as { error?: string; message?: string };
+      detail = err.error ?? err.message ?? detail;
+    } catch {
+      /* ignore parse errors */
+    }
+    throw new Error(`xAI image generation failed (${res.status}): ${detail}`);
+  }
+  const data = (await res.json()) as {
+    data?: Array<{ b64_json?: string; url?: string }>;
+  };
   const b64 = data.data?.[0]?.b64_json;
-  if (!b64) return null;
-  return Buffer.from(b64, 'base64');
+  if (b64) return Buffer.from(b64, 'base64');
+
+  const url = data.data?.[0]?.url;
+  if (url) {
+    const imageRes = await fetch(url);
+    if (!imageRes.ok) {
+      throw new Error(`xAI image download failed (${imageRes.status})`);
+    }
+    return Buffer.from(await imageRes.arrayBuffer());
+  }
+
+  throw new Error('xAI image generation returned no image data');
 }
 
 async function generateWithOpenAi(prompt: string, apiKey: string, modelId: string): Promise<Buffer | null> {
@@ -91,8 +117,8 @@ export async function generateImageForPhotography(opts: {
   if (model.provider === 'xai') {
     const key = await resolveXaiApiKey();
     if (key) {
-      const buf = await generateWithXai(opts.prompt, key);
-      if (buf) return { buffer: buf, mimeType: 'image/png', generationId, stub: false };
+      const buf = await generateWithXai(opts.prompt, key, resolveImageApiModelId(model));
+      return { buffer: buf, mimeType: 'image/png', generationId, stub: false };
     }
   }
 

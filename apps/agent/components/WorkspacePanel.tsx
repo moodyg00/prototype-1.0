@@ -10,6 +10,9 @@ import { getTool } from '@/lib/tools';
 interface WorkspacePanelProps {
   panel: PanelInstance;
   scale: number;
+  selected?: boolean;
+  resizeLocked?: boolean;
+  onSelect?: (additive: boolean) => void;
   onFocus: (id: string) => void;
   onClose: (id: string) => void;
   onMinimize: (id: string) => void;
@@ -20,6 +23,9 @@ interface WorkspacePanelProps {
 export function WorkspacePanel({
   panel,
   scale,
+  selected = false,
+  resizeLocked = false,
+  onSelect,
   onFocus,
   onClose,
   onMinimize,
@@ -28,6 +34,13 @@ export function WorkspacePanel({
 }: WorkspacePanelProps) {
   const tool = getTool(panel.toolId);
   const Icon = tool.icon;
+
+  const handleDrag = useCallback(
+    (_: unknown, d: { x: number; y: number }) => {
+      if (panel.groupId) onMove(panel.id, d.x, d.y);
+    },
+    [panel.groupId, panel.id, onMove],
+  );
 
   const handleDragStop = useCallback(
     (_: unknown, d: { x: number; y: number }) => onMove(panel.id, d.x, d.y),
@@ -48,16 +61,28 @@ export function WorkspacePanel({
       minHeight={panel.minimized ? 40 : 240}
       scale={scale}
       dragHandleClassName="panel-drag-handle"
+      onDrag={panel.groupId ? handleDrag : undefined}
       onDragStop={handleDragStop}
       onResizeStop={handleResizeStop}
       onMouseDown={() => onFocus(panel.id)}
       style={{ zIndex: panel.zIndex, position: 'absolute' }}
-      enableResizing={!panel.minimized}
+      enableResizing={!panel.minimized && !resizeLocked}
       cancel=".panel-btn"
     >
-      <div className="panel-shell" style={{ height: '100%' }}>
-        <div className="panel-titlebar panel-drag-handle">
+      <div
+        className={`panel-shell ${selected ? 'canvas-window-selected' : ''}`}
+        style={{ height: '100%' }}
+        onPointerDown={(e) => e.stopPropagation()}
+      >
+        <div
+          className={`panel-titlebar panel-drag-handle ${selected ? 'canvas-window-titlebar-selected' : ''}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelect?.(e.shiftKey);
+          }}
+        >
           <div className="flex min-w-0 items-center gap-2">
+            {selected ? <span className="canvas-window-selected-badge" aria-hidden /> : null}
             <Icon size={13} className="shrink-0 text-zinc-400" />
             <span className="truncate text-xs font-medium">{tool.label}</span>
           </div>

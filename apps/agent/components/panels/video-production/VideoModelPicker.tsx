@@ -18,7 +18,7 @@ export function VideoModelPicker({
   onBackupChange: (id: string) => void;
 }) {
   const selectClass =
-    'w-full rounded-md border border-white/10 bg-black/40 px-2 py-1.5 text-[11px] text-zinc-200';
+    'w-full rounded-md border border-white/10 bg-black/40 px-2 py-1.5 text-[11px] text-zinc-200 outline-none transition-colors focus:border-violet-500/50';
 
   return (
     <div className="grid gap-2 sm:grid-cols-2">

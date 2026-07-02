@@ -1,4 +1,15 @@
 import { createFloatingPanel, type PanelInstance } from './panels';
+import { defaultPaneForFeature, isFeatureMigrated } from './pane-catalog';
+import { insertPaneStackBelow } from './panel-layout';
+import {
+  createInstanceId,
+  legacyPaneId,
+  type CanvasGroup,
+  type PaneInstance,
+  type PaneWindowInstance,
+  type SplitNode,
+  type StudioInstance,
+} from './pane-types';
 import { migrateLegacyToolId, migrateToolIdList } from './tool-id-migration';
 import type { ToolId } from './tools';
 import {
@@ -55,8 +66,95 @@ function migrateSessionToolLists(record: Record<string, string[]> | undefined): 
   return out;
 }
 
+/** Builds a Panel-slot pane tree by stacking one wrapper pane per legacy open tool id. */
+function buildPaneTreeFromToolIds(toolIds: ToolId[]): {
+  root: SplitNode | null;
+  paneInstances: Record<string, PaneInstance>;
+} {
+  let root: SplitNode | null = null;
+  const paneInstances: Record<string, PaneInstance> = {};
+  for (const toolId of toolIds) {
+    const paneId = legacyPaneId(toolId);
+    const instanceId = createInstanceId(paneId);
+    paneInstances[instanceId] = { instanceId, paneId, featureId: toolId };
+    root = insertPaneStackBelow(root, instanceId, 'full');
+  }
+  return { root, paneInstances };
+}
+
+/**
+ * One-time migration: legacy bar/canvas floats for catalog-migrated tools → paneWindows.
+ */
+function migrateFloatingPanelsToPaneWindows(session: LayoutSession): LayoutSession {
+  const paneWindows = [...session.paneWindows];
+  const paneInstances = { ...session.paneInstances };
+  const floatingPanels: PanelInstance[] = [];
+
+  for (const panel of session.floatingPanels) {
+    const toolId = panel.toolId;
+    if (!isFeatureMigrated(toolId)) {
+      floatingPanels.push(panel);
+      continue;
+    }
+
+    const paneDef = defaultPaneForFeature(toolId);
+    const instanceId = createInstanceId(paneDef.id);
+    paneInstances[instanceId] = { instanceId, paneId: paneDef.id, featureId: toolId };
+    const win: PaneWindowInstance = {
+      id: panel.id.startsWith('pane-window-') ? panel.id : `pane-window-${panel.id}`,
+      instanceId,
+      paneId: paneDef.id,
+      featureId: toolId,
+      x: panel.x,
+      y: panel.y,
+      w: panel.w,
+      h: panel.h,
+      minimized: panel.minimized,
+      zIndex: panel.zIndex,
+      originBarId: panel.barId,
+    };
+    paneWindows.push(win);
+  }
+
+  return { ...session, floatingPanels, paneInstances, paneWindows };
+}
+
+/**
+ * One-time migration from the old container-cards model (`containerOpenPanels: Record<containerId, ToolId[]>`)
+ * to the pane split-tree model. Runs whenever a persisted session predates `paneSchemaVersion`.
+ */
+function migratePaneSchema(session: LayoutSession): LayoutSession {
+  let next = session;
+
+  if (next.paneSchemaVersion < 1) {
+    const panelPaneTrees: Record<string, SplitNode | null> = { ...next.panelPaneTrees };
+    const paneInstances: Record<string, PaneInstance> = { ...next.paneInstances };
+
+    for (const [containerId, toolIds] of Object.entries(next.containerOpenPanels ?? {})) {
+      if (panelPaneTrees[containerId]) continue;
+      const built = buildPaneTreeFromToolIds(toolIds as ToolId[]);
+      panelPaneTrees[containerId] = built.root;
+      Object.assign(paneInstances, built.paneInstances);
+    }
+
+    next = {
+      ...next,
+      panelPaneTrees,
+      paneInstances,
+      paneSchemaVersion: 1,
+    };
+  }
+
+  if (next.paneSchemaVersion < 2) {
+    next = migrateFloatingPanelsToPaneWindows(next);
+    next = { ...next, paneSchemaVersion: 2 };
+  }
+
+  return next;
+}
+
 function migrateSession(session: LayoutSession): LayoutSession {
-  return {
+  const migrated = {
     ...session,
     floatingPanels: session.floatingPanels
       .map((panel) => {
@@ -70,7 +168,10 @@ function migrateSession(session: LayoutSession): LayoutSession {
     runtimeBarTools: migrateSessionToolLists(session.runtimeBarTools),
     runtimeContainerPanels: migrateSessionToolLists(session.runtimeContainerPanels),
   };
+  return migratePaneSchema(migrated);
 }
+
+const PANE_SCHEMA_VERSION = 2;
 
 const LAYOUTS_KEY = 'agent-workspace-layouts';
 const ACTIVE_KEY = 'agent-active-workspace';
@@ -90,6 +191,20 @@ export interface LayoutSession {
   canvas: { x: number; y: number; scale: number };
   canvasZoomLocked: boolean;
   canvasPanLocked: boolean;
+  /** Global registry of placed Pane instances, keyed by instanceId. Shared by panelPaneTrees, paneWindows & studioInstances. */
+  paneInstances: Record<string, PaneInstance>;
+  /** Panel-slot split trees, keyed by panelContainer id. */
+  panelPaneTrees: Record<string, SplitNode | null>;
+  /** Panes detached from a Panel onto the canvas as their own floating Window. */
+  paneWindows: PaneWindowInstance[];
+  /** Studio presets opened as a floating canvas Window. */
+  studioInstances: StudioInstance[];
+  /** Bumped once the legacy `containerOpenPanels` model has been migrated into panelPaneTrees. */
+  paneSchemaVersion: number;
+  /** Persisted workflow id per feature scope (studio instance id or pane scope). */
+  scopeWorkflowIds: Record<string, string>;
+  /** Canvas window groups for move/scale together. */
+  canvasGroups: CanvasGroup[];
 }
 
 type PersistedSession = Partial<LayoutSession> & { canvasLocked?: boolean };
@@ -122,6 +237,9 @@ function mergePersistedSession(layout: WorkspaceLayout, parsed: PersistedSession
     canvas: parsed.canvas ?? defaults.canvas,
     canvasZoomLocked: lockFlags.canvasZoomLocked,
     canvasPanLocked: lockFlags.canvasPanLocked,
+    paneSchemaVersion: parsed.paneSchemaVersion ?? 0,
+    scopeWorkflowIds: parsed.scopeWorkflowIds ?? {},
+    canvasGroups: parsed.canvasGroups ?? [],
   };
 }
 
@@ -142,8 +260,13 @@ export function createDefaultSession(layout: WorkspaceLayout): LayoutSession {
   );
 
   const containerOpenPanels: Record<string, string[]> = {};
+  const panelPaneTrees: Record<string, SplitNode | null> = {};
+  const paneInstances: Record<string, PaneInstance> = {};
   for (const container of layout.panelContainers) {
     containerOpenPanels[container.id] = [...container.panels];
+    const built = buildPaneTreeFromToolIds(container.panels);
+    panelPaneTrees[container.id] = built.root;
+    Object.assign(paneInstances, built.paneInstances);
   }
 
   return {
@@ -157,6 +280,13 @@ export function createDefaultSession(layout: WorkspaceLayout): LayoutSession {
     canvas: getLayoutCanvasDefaults(),
     canvasZoomLocked: false,
     canvasPanLocked: false,
+    paneInstances,
+    panelPaneTrees,
+    paneWindows: [],
+    studioInstances: [],
+    paneSchemaVersion: PANE_SCHEMA_VERSION,
+    scopeWorkflowIds: {},
+    canvasGroups: [],
   };
 }
 

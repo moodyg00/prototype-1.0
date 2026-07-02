@@ -12,11 +12,14 @@ export function MediaDetailDrawer({
   onClose,
   onUpdated,
   onDeleted,
+  inline = false,
 }: {
   item: MediaLibraryItem;
   onClose: () => void;
   onUpdated: () => void;
   onDeleted: () => void;
+  /** Renders without the fixed-width overlay chrome, filling its host instead (used by DetailPane). */
+  inline?: boolean;
 }) {
   const [altText, setAltText] = useState(item.altText ?? '');
   const [saving, setSaving] = useState(false);
@@ -53,7 +56,13 @@ export function MediaDetailDrawer({
   }
 
   return (
-    <div className="flex h-full w-72 shrink-0 flex-col border-l border-white/10 bg-zinc-950/90">
+    <div
+      className={
+        inline
+          ? 'flex h-full min-h-0 w-full flex-col bg-zinc-950'
+          : 'flex h-full w-72 shrink-0 flex-col border-l border-white/10 bg-zinc-950/90'
+      }
+    >
       <div className="flex items-center justify-between border-b border-white/10 px-3 py-2">
         <span className="text-[11px] font-medium text-zinc-200">Details</span>
         <button type="button" onClick={onClose} className="text-zinc-500 hover:text-zinc-300">

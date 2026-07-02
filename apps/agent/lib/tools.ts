@@ -2,9 +2,10 @@ import {
   Activity,
   Bot,
   Brain,
+  Camera,
   GitBranch,
   HelpCircle,
-  Image as ImageIcon,
+  Images,
   Play,
   Video,
 } from 'lucide-react';
@@ -55,7 +56,7 @@ export const TOOLS: ToolDef[] = [
   {
     id: 'photography',
     label: 'Photography',
-    icon: ImageIcon,
+    icon: Camera,
     description: 'AI image studio — prompts, models, queue',
     source: 'core',
     status: 'built',
@@ -66,7 +67,7 @@ export const TOOLS: ToolDef[] = [
   {
     id: 'media-library',
     label: 'Media Library',
-    icon: ImageIcon,
+    icon: Images,
     description: 'Agent media — upload, grid, filters, infinite scroll',
     source: 'core',
     status: 'built',
@@ -76,6 +77,9 @@ export const TOOLS: ToolDef[] = [
 ];
 
 export const ALL_TOOL_IDS: ToolId[] = TOOLS.map((tool) => tool.id);
+
+/** Toolbar-eligible tools. Runner is embedded in the workflow studio instead. */
+export const TOOLBAR_TOOL_IDS: ToolId[] = ALL_TOOL_IDS.filter((id) => id !== 'runner');
 
 const UNKNOWN_TOOL_FALLBACK: ToolDef = {
   id: 'workflow',

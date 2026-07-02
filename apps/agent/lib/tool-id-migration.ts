@@ -15,6 +15,8 @@ const LEGACY_TOOL_ID_RENAMES: Record<string, ToolId> = {
 // "Workflow" icons after `team`/`agents`/`documents`/`analytics`/`mobile`/`website`
 // were removed from `TOOLS`.
 const REMOVED_TOOL_IDS = new Set(['team', 'agents', 'documents', 'analytics', 'mobile', 'website']);
+/** Stripped from tooltip bars on load — runner lives inside the workflow studio. */
+const TOOLBAR_STRIPPED_IDS = new Set(['runner']);
 
 const VALID_TOOL_IDS = new Set<string>(ALL_TOOL_IDS);
 
@@ -32,7 +34,8 @@ export function migrateLegacyToolId(id: string): ToolId | null {
 export function migrateToolIdList(ids: string[]): ToolId[] {
   const migrated = ids
     .map((id) => migrateLegacyToolId(id))
-    .filter((id): id is ToolId => id !== null);
+    .filter((id): id is ToolId => id !== null)
+    .filter((id) => !TOOLBAR_STRIPPED_IDS.has(id));
   // Multiple legacy ids can collapse onto the same tool (e.g. the old
   // `visual-browser`/`pure-browser`/`browser` trio all became `browser`).
   return [...new Set(migrated)];

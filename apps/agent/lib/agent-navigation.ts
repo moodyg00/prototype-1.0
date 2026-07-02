@@ -1,5 +1,13 @@
+import type { ToolId } from './tools';
+
 export type AgentNavigateDetail = {
-  toolId: 'workflow' | 'memory' | 'runs' | 'media-library' | 'photography' | 'video';
+  toolId: ToolId;
+  /** Open a specific pane in the first (or target) panel slot. */
+  paneId?: string;
+  /** Open a studio preset as a floating window. */
+  studioId?: string;
+  /** Target panel container id when adding a pane. */
+  containerId?: string;
   workflowId?: string;
   agentId?: string;
   runId?: string;
@@ -45,9 +53,42 @@ const PENDING_RUN_ID = 'agent:pendingRunId';
 
 export const AGENT_NAVIGATE_EVENT = 'agent:navigate';
 
+export const WORKFLOW_DISPOSE_SCOPE_EVENT = 'workflow:dispose-scope';
+export const WORKFLOW_SCOPE_PERSIST_EVENT = 'workflow:scope-persist';
+export const WORKFLOW_LOAD_SCOPE_EVENT = 'workflow:load-scope';
+
+export function dispatchWorkflowLoadScope(scopeId: string, workflowId: string): void {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent(WORKFLOW_LOAD_SCOPE_EVENT, { detail: { scopeId, workflowId } }));
+}
+
+export function dispatchWorkflowDisposeScope(scopeId: string): void {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent(WORKFLOW_DISPOSE_SCOPE_EVENT, { detail: { scopeId } }));
+}
+
+export function dispatchWorkflowScopePersist(scopeId: string, workflowId: string): void {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent(WORKFLOW_SCOPE_PERSIST_EVENT, { detail: { scopeId, workflowId } }));
+}
+
 export function dispatchAgentNavigate(detail: AgentNavigateDetail): void {
   if (typeof window === 'undefined') return;
   window.dispatchEvent(new CustomEvent(AGENT_NAVIGATE_EVENT, { detail }));
+}
+
+/** Deep-link: open a Feature pane in a panel slot (or floating via workspace handler). */
+export function openPane(
+  toolId: ToolId,
+  paneId: string,
+  options?: { containerId?: string; agentId?: string; mediaId?: string },
+): void {
+  dispatchAgentNavigate({ toolId, paneId, ...options });
+}
+
+/** Deep-link: open a Feature studio preset as a floating window. */
+export function openStudio(toolId: ToolId, studioId: string): void {
+  dispatchAgentNavigate({ toolId, studioId });
 }
 
 export function setPendingWorkflowId(workflowId: string): void {

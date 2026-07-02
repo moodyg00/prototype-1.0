@@ -224,3 +224,63 @@ export function chromeRectToStyle(rect: ChromeRect): CSSProperties {
   if (rect.height !== undefined) style.height = rect.height;
   return style;
 }
+
+export const PANEL_SNAP_DISTANCE = 48;
+
+interface ScreenRect {
+  top: number;
+  left: number;
+  right: number;
+  bottom: number;
+}
+
+/** Converts a chrome-layer rect (absolute within the viewport shell) to screen coordinates. */
+export function chromeRectToScreenBounds(
+  rect: ChromeRect,
+  viewportWidth: number,
+  viewportHeight: number,
+  headerHeight = 0,
+): ScreenRect {
+  const top = (rect.top ?? headerHeight) + headerHeight;
+  const bottom = rect.bottom !== undefined ? viewportHeight - rect.bottom : viewportHeight;
+  const left = rect.left ?? (rect.right !== undefined && rect.width !== undefined
+    ? viewportWidth - rect.right - rect.width
+    : 0);
+  const right = rect.right !== undefined
+    ? viewportWidth - rect.right
+    : left + (rect.width ?? 0);
+  return { top, left, right, bottom };
+}
+
+function distanceToPanelSnapEdge(side: PinSide, bounds: ScreenRect, x: number, y: number): number {
+  if (y < bounds.top || y > bounds.bottom) return Infinity;
+  if (side === 'left') return Math.abs(x - bounds.right);
+  if (side === 'right') return Math.abs(x - bounds.left);
+  if (x < bounds.left || x > bounds.right) return Infinity;
+  if (side === 'top') return Math.abs(y - bounds.bottom);
+  return Math.abs(y - bounds.top);
+}
+
+/** Returns the panel container id when a detached pane window is dragged near an edge slot. */
+export function findPanelSnapTarget(
+  layout: WorkspaceLayout,
+  viewportWidth: number,
+  viewportHeight: number,
+  screenX: number,
+  screenY: number,
+  headerHeight = 0,
+): string | null {
+  let best: { id: string; dist: number } | null = null;
+
+  for (const container of layout.panelContainers) {
+    const rect = getContainerRect(layout, container.id);
+    if (!rect) continue;
+    const bounds = chromeRectToScreenBounds(rect, viewportWidth, viewportHeight, headerHeight);
+    const dist = distanceToPanelSnapEdge(container.side, bounds, screenX, screenY);
+    if (dist <= PANEL_SNAP_DISTANCE && (!best || dist < best.dist)) {
+      best = { id: container.id, dist };
+    }
+  }
+
+  return best?.id ?? null;
+}

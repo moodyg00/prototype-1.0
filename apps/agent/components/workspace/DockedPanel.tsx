@@ -1,10 +1,12 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { chromeRectToStyle, getDockedPanelRect } from '@/lib/chrome-layout';
+import { PaneHost } from '@/components/pane/PaneHost';
 import { ToolViewHost } from '@/components/tools/ToolViewHost';
 import { DETACH_THRESHOLD, useWorkspace } from '@/components/workspace/WorkspaceProvider';
+import { defaultPaneForFeature, isFeatureMigrated } from '@/lib/pane-catalog';
 import { getTool, type ToolId } from '@/lib/tools';
 import type { PinSide } from '@/lib/workspace-layout';
 
@@ -23,6 +25,16 @@ export function DockedPanel({
   const dragRef = useRef<{ x: number; y: number; active: boolean }>({ x: 0, y: 0, active: false });
   const [dragging, setDragging] = useState(false);
   const rect = getDockedPanelRect(activeLayout, barSide);
+  const migrated = isFeatureMigrated(toolId);
+
+  const dockedInstance = useMemo(
+    () => ({
+      instanceId: `docked-${barId}-${toolId}`,
+      paneId: defaultPaneForFeature(toolId).id,
+      featureId: toolId,
+    }),
+    [barId, toolId],
+  );
 
   const onPointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     dragRef.current = { x: event.clientX, y: event.clientY, active: true };
@@ -88,7 +100,16 @@ export function DockedPanel({
         </button>
       </div>
       <div className="panel-body min-h-0 flex-1">
-        <ToolViewHost toolId={toolId} surface="docked" barId={barId} />
+        {migrated ? (
+          <PaneHost
+            instance={dockedInstance}
+            placement="panel"
+            showChrome={false}
+            onClose={() => handleBarToolClick(barId, toolId)}
+          />
+        ) : (
+          <ToolViewHost toolId={toolId} surface="docked" barId={barId} />
+        )}
       </div>
     </div>
   );

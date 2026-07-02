@@ -42,28 +42,31 @@ export function ScopeMatrix({
     <div className="rounded-lg border border-white/10 bg-black/30 p-3">
       <div className="text-[10px] uppercase tracking-wider text-zinc-500">{label}</div>
       <div className="mt-2 flex flex-col gap-1.5 text-[11px]">
-        <label className="flex items-center gap-2 text-zinc-300">
+        <label className="flex items-center gap-2 text-zinc-300 cursor-pointer">
           <input
             type="checkbox"
             checked={hasScope(scopes, 'global')}
             onChange={(e) => onChange(toggleScope(scopes, 'global', undefined, e.target.checked))}
+            className="h-3 w-3 accent-violet-500"
           />
           global
         </label>
-        <label className="flex items-center gap-2 text-zinc-300">
+        <label className="flex items-center gap-2 text-zinc-300 cursor-pointer">
           <input
             type="checkbox"
             checked={hasScope(scopes, 'agent', agentId)}
             onChange={(e) => onChange(toggleScope(scopes, 'agent', agentId, e.target.checked))}
+            className="h-3 w-3 accent-violet-500"
           />
           agent:{agentId}
         </label>
         {GROUP_PRESETS.map((g) => (
-          <label key={g} className="flex items-center gap-2 text-zinc-400">
+          <label key={g} className="flex items-center gap-2 text-zinc-400 cursor-pointer">
             <input
               type="checkbox"
               checked={hasScope(scopes, 'group', g)}
               onChange={(e) => onChange(toggleScope(scopes, 'group', g, e.target.checked))}
+              className="h-3 w-3 accent-violet-500"
             />
             group:{g}
           </label>
@@ -73,11 +76,11 @@ export function ScopeMatrix({
             value={customGroup}
             onChange={(e) => setCustomGroup(e.target.value)}
             placeholder="custom group id"
-            className="flex-1 rounded border border-white/10 bg-black/40 px-2 py-1 text-[10px]"
+            className="flex-1 rounded border border-white/10 bg-black/40 px-2 py-1 text-[10px] outline-none transition-colors focus:border-violet-500/50"
           />
           <button
             type="button"
-            className="rounded border border-white/10 px-2 text-[10px] hover:bg-white/5"
+            className="rounded border border-white/10 px-2 text-[10px] transition-colors hover:bg-white/5"
             onClick={() => {
               const g = customGroup.trim();
               if (!g) return;
